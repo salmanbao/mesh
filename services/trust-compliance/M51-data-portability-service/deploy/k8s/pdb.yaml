@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: M51-data-portability-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: M51-data-portability-service

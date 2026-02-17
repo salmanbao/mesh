@@ -1,0 +1,6 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: M38-content-license-verification-config
+data:
+  CONFIG_PATH: /app/configs/default.yaml

@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: M78-logging-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: M78-logging-service

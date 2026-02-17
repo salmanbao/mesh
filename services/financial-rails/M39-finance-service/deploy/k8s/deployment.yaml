@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: M39-finance-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: M39-finance-service
+  template:
+    metadata:
+      labels:
+        app: M39-finance-service
+    spec:
+      containers:
+        - name: api
+          image: M39-finance-service:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090

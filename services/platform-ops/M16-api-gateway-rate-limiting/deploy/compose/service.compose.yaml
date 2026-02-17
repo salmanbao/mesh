@@ -1,0 +1,10 @@
+services:
+  m16-api-gateway-rate-limiting:
+    build:
+      context: ../../services/platform-ops/M16-api-gateway-rate-limiting
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

@@ -1,0 +1,10 @@
+services:
+  m06-media-processing-pipeline:
+    build:
+      context: ../../services/data-ai/M06-media-processing-pipeline
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

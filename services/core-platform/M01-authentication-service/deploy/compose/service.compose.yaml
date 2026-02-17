@@ -1,0 +1,10 @@
+services:
+  m01-authentication-service:
+    build:
+      context: ../../services/core-platform/M01-authentication-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

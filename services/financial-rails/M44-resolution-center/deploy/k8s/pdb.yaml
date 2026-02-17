@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: M44-resolution-center
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: M44-resolution-center

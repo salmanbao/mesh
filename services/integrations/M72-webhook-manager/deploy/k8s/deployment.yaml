@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: M72-webhook-manager
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: M72-webhook-manager
+  template:
+    metadata:
+      labels:
+        app: M72-webhook-manager
+    spec:
+      containers:
+        - name: api
+          image: M72-webhook-manager:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090

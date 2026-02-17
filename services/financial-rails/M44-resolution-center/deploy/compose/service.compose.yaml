@@ -1,0 +1,10 @@
+services:
+  m44-resolution-center:
+    build:
+      context: ../../services/financial-rails/M44-resolution-center
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

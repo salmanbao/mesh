@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: M03-notification-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: M03-notification-service

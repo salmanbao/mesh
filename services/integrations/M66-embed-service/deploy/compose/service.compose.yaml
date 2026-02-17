@@ -1,0 +1,10 @@
+services:
+  m66-embed-service:
+    build:
+      context: ../../services/integrations/M66-embed-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

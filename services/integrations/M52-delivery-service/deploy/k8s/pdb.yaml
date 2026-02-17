@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: M52-delivery-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: M52-delivery-service

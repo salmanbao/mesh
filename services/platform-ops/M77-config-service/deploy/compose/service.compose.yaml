@@ -1,0 +1,10 @@
+services:
+  m77-config-service:
+    build:
+      context: ../../services/platform-ops/M77-config-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

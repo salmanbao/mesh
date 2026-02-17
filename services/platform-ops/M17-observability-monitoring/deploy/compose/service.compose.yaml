@@ -1,0 +1,10 @@
+services:
+  m17-observability-monitoring:
+    build:
+      context: ../../services/platform-ops/M17-observability-monitoring
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

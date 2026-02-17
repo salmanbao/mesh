@@ -1,0 +1,11 @@
+service:
+  id: M41-Reward-Engine
+  cluster: financial-rails
+  http_port: 8080
+  grpc_port: 9090
+dependencies:
+  postgres_url: ${POSTGRES_URL}
+  redis_url: ${REDIS_URL}
+  kafka_brokers: ${KAFKA_BROKERS}
+observability:
+  otlp_endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}

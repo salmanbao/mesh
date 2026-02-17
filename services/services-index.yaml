@@ -1,0 +1,596 @@
+version: 1
+generated_by: mesh/scripts/generate-mesh-index.sh
+services:
+  - service_id: M01-Authentication-Service
+    architecture: microservice
+    cluster: core-platform
+    module_path: mesh/services/core-platform/M01-authentication-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - EVENT:auth.2fa.required
+      - EVENT:user.deleted
+      - EVENT:user.registered
+      - http
+  - service_id: M02-Profile-Service
+    architecture: microservice
+    cluster: core-platform
+    module_path: mesh/services/core-platform/M02-profile-service
+    dbr_deps:
+      - M01-Authentication-Service
+    event_deps:
+      - user.deleted
+      - user.registered
+    provides:
+      - EVENT:user.profile_updated
+      - http
+  - service_id: M03-Notification-Service
+    architecture: microservice
+    cluster: integrations
+    module_path: mesh/services/integrations/M03-notification-service
+    dbr_deps:
+      []
+    event_deps:
+      - auth.2fa.required
+      - campaign.budget_updated
+      - campaign.created
+      - campaign.launched
+      - dispute.created
+      - payout.failed
+      - payout.paid
+      - submission.approved
+      - submission.rejected
+      - transaction.failed
+      - user.registered
+    provides:
+      - http
+  - service_id: M05-Billing-Service
+    architecture: microservice
+    cluster: financial-rails
+    module_path: mesh/services/financial-rails/M05-billing-service
+    dbr_deps:
+      - M01-Authentication-Service
+      - M09-Content-Library-Marketplace
+      - M15-Platform-Fee-Engine
+      - M39-Finance-Service
+      - M61-Subscription-Service
+    event_deps:
+      - payout.failed
+      - payout.paid
+    provides:
+      - http
+  - service_id: M06-Media-Processing-Pipeline
+    architecture: microservice
+    cluster: data-ai
+    module_path: mesh/services/data-ai/M06-media-processing-pipeline
+    dbr_deps:
+      - M04-Campaign-Service
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M10-Social-Integration-Verification-Service
+    architecture: microservice
+    cluster: integrations
+    module_path: mesh/services/integrations/M10-social-integration-verification-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - EVENT:social.account.connected
+      - EVENT:social.compliance.violation
+      - EVENT:social.followers_synced
+      - EVENT:social.post.validated
+      - EVENT:social.status_changed
+      - http
+  - service_id: M11-Distribution-Tracking-Service
+    architecture: microservice
+    cluster: integrations
+    module_path: mesh/services/integrations/M11-distribution-tracking-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - EVENT:tracking.metrics.updated
+      - http
+  - service_id: M12-Fraud-Detection-Engine
+    architecture: microservice
+    cluster: trust-compliance
+    module_path: mesh/services/trust-compliance/M12-fraud-detection-engine
+    dbr_deps:
+      - M08-Voting-Engine
+      - M11-Distribution-Tracking-Service
+      - M26-Submission-Service
+      - M48-Reputation-Service
+    event_deps:
+      - tracking.metrics.updated
+      - vote.created
+    provides:
+      - http
+  - service_id: M13-Escrow-Ledger-Service
+    architecture: microservice
+    cluster: financial-rails
+    module_path: mesh/services/financial-rails/M13-escrow-ledger-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - EVENT:escrow.hold_created
+      - EVENT:escrow.hold_fully_released
+      - EVENT:escrow.partial_release
+      - EVENT:escrow.refund_processed
+      - http
+  - service_id: M14-Payout-Settlement-Service
+    architecture: microservice
+    cluster: financial-rails
+    module_path: mesh/services/financial-rails/M14-payout-settlement-service
+    dbr_deps:
+      - M01-Authentication-Service
+      - M02-Profile-Service
+      - M05-Billing-Service
+      - M13-Escrow-Ledger-Service
+      - M36-Risk-Service
+      - M39-Finance-Service
+      - M41-Reward-Engine
+    event_deps:
+      - reward.payout_eligible
+    provides:
+      - EVENT:payout.failed
+      - EVENT:payout.paid
+      - EVENT:payout.processing
+      - http
+  - service_id: M16-API-Gateway-Rate-Limiting
+    architecture: microservice
+    cluster: platform-ops
+    module_path: mesh/services/platform-ops/M16-api-gateway-rate-limiting
+    dbr_deps:
+      - M01-Authentication-Service
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M17-Observability-Monitoring
+    architecture: microservice
+    cluster: platform-ops
+    module_path: mesh/services/platform-ops/M17-observability-monitoring
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M18-Cache-State-Management
+    architecture: microservice
+    cluster: platform-ops
+    module_path: mesh/services/platform-ops/M18-cache-state-management
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M19-Storage-Lifecycle-Management
+    architecture: microservice
+    cluster: platform-ops
+    module_path: mesh/services/platform-ops/M19-storage-lifecycle-management
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M25-Auto-Clipping-AI
+    architecture: microservice
+    cluster: data-ai
+    module_path: mesh/services/data-ai/M25-auto-clipping-ai
+    dbr_deps:
+      - M24-Clipping-Tool-Service
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M30-Social-Integration-Service
+    architecture: microservice
+    cluster: integrations
+    module_path: mesh/services/integrations/M30-social-integration-service
+    dbr_deps:
+      - M10-Social-Integration-Verification-Service
+    event_deps:
+      - social.account.connected
+      - social.compliance.violation
+      - social.followers_synced
+      - social.post.validated
+      - social.status_changed
+    provides:
+      - http
+  - service_id: M36-Risk-Service
+    architecture: microservice
+    cluster: trust-compliance
+    module_path: mesh/services/trust-compliance/M36-risk-service
+    dbr_deps:
+      - M01-Authentication-Service
+      - M02-Profile-Service
+      - M12-Fraud-Detection-Engine
+      - M35-Moderation-Service
+      - M44-Resolution-Center
+      - M48-Reputation-Service
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M38-Content-License-Verification
+    architecture: microservice
+    cluster: trust-compliance
+    module_path: mesh/services/trust-compliance/M38-content-license-verification
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M39-Finance-Service
+    architecture: microservice
+    cluster: financial-rails
+    module_path: mesh/services/financial-rails/M39-finance-service
+    dbr_deps:
+      - M01-Authentication-Service
+      - M04-Campaign-Service
+      - M09-Content-Library-Marketplace
+      - M13-Escrow-Ledger-Service
+      - M15-Platform-Fee-Engine
+      - M60-Product-Service
+    event_deps:
+      []
+    provides:
+      - EVENT:transaction.failed
+      - EVENT:transaction.refunded
+      - EVENT:transaction.succeeded
+      - http
+  - service_id: M41-Reward-Engine
+    architecture: microservice
+    cluster: financial-rails
+    module_path: mesh/services/financial-rails/M41-reward-engine
+    dbr_deps:
+      - M01-Authentication-Service
+      - M04-Campaign-Service
+      - M08-Voting-Engine
+      - M11-Distribution-Tracking-Service
+      - M26-Submission-Service
+    event_deps:
+      - submission.auto_approved
+      - submission.cancelled
+      - submission.verified
+      - submission.view_locked
+      - tracking.metrics.updated
+    provides:
+      - EVENT:reward.calculated
+      - EVENT:reward.payout_eligible
+      - http
+  - service_id: M44-Resolution-Center
+    architecture: microservice
+    cluster: financial-rails
+    module_path: mesh/services/financial-rails/M44-resolution-center
+    dbr_deps:
+      - M35-Moderation-Service
+    event_deps:
+      - payout.failed
+      - submission.approved
+    provides:
+      - EVENT:dispute.created
+      - EVENT:dispute.resolved
+      - EVENT:transaction.refunded
+      - http
+  - service_id: M45-Community-Service
+    architecture: microservice
+    cluster: integrations
+    module_path: mesh/services/integrations/M45-community-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M50-Consent-Service
+    architecture: microservice
+    cluster: trust-compliance
+    module_path: mesh/services/trust-compliance/M50-consent-service
+    dbr_deps:
+      []
+    event_deps:
+      - user.deleted
+    provides:
+      - EVENT:consent.deletion_requested
+      - EVENT:consent.updated
+      - EVENT:consent.withdrawn
+      - http
+  - service_id: M51-Data-Portability-Service
+    architecture: microservice
+    cluster: trust-compliance
+    module_path: mesh/services/trust-compliance/M51-data-portability-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - EVENT:export.completed
+      - EVENT:export.failed
+      - http
+  - service_id: M52-Delivery-Service
+    architecture: microservice
+    cluster: integrations
+    module_path: mesh/services/integrations/M52-delivery-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M54-Analytics-Service
+    architecture: microservice
+    cluster: data-ai
+    module_path: mesh/services/data-ai/M54-analytics-service
+    dbr_deps:
+      - M08-Voting-Engine
+      - M10-Social-Integration-Verification-Service
+      - M11-Distribution-Tracking-Service
+      - M26-Submission-Service
+      - M39-Finance-Service
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M55-Dashboard-Service
+    architecture: microservice
+    cluster: data-ai
+    module_path: mesh/services/data-ai/M55-dashboard-service
+    dbr_deps:
+      - M02-Profile-Service
+      - M05-Billing-Service
+      - M09-Content-Library-Marketplace
+      - M13-Escrow-Ledger-Service
+      - M22-Onboarding-Service
+      - M39-Finance-Service
+      - M41-Reward-Engine
+      - M47-Gamification-Service
+      - M54-Analytics-Service
+      - M60-Product-Service
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M56-Predictive-Analytics
+    architecture: microservice
+    cluster: data-ai
+    module_path: mesh/services/data-ai/M56-predictive-analytics
+    dbr_deps:
+      - M54-Analytics-Service
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M57-AI-Service
+    architecture: microservice
+    cluster: data-ai
+    module_path: mesh/services/data-ai/M57-ai-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M58-Content-Recommendation-Engine
+    architecture: microservice
+    cluster: data-ai
+    module_path: mesh/services/data-ai/M58-content-recommendation-engine
+    dbr_deps:
+      - M23-Campaign-Discovery-Service
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M66-Embed-Service
+    architecture: microservice
+    cluster: integrations
+    module_path: mesh/services/integrations/M66-embed-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M67-Event-Bus
+    architecture: microservice
+    cluster: platform-ops
+    module_path: mesh/services/platform-ops/M67-event-bus
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M68-Retention-Service
+    architecture: microservice
+    cluster: trust-compliance
+    module_path: mesh/services/trust-compliance/M68-retention-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M69-Legal-Service
+    architecture: microservice
+    cluster: trust-compliance
+    module_path: mesh/services/trust-compliance/M69-legal-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M70-Developer-Portal
+    architecture: microservice
+    cluster: integrations
+    module_path: mesh/services/integrations/M70-developer-portal
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M71-Integration-Hub
+    architecture: microservice
+    cluster: integrations
+    module_path: mesh/services/integrations/M71-integration-hub
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M72-Webhook-Manager
+    architecture: microservice
+    cluster: integrations
+    module_path: mesh/services/integrations/M72-webhook-manager
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M73-Support-Service
+    architecture: microservice
+    cluster: integrations
+    module_path: mesh/services/integrations/M73-support-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M77-Config-Service
+    architecture: microservice
+    cluster: platform-ops
+    module_path: mesh/services/platform-ops/M77-config-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M78-Logging-Service
+    architecture: microservice
+    cluster: platform-ops
+    module_path: mesh/services/platform-ops/M78-logging-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M79-Monitoring-Service
+    architecture: microservice
+    cluster: platform-ops
+    module_path: mesh/services/platform-ops/M79-monitoring-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M80-Tracing-Service
+    architecture: microservice
+    cluster: platform-ops
+    module_path: mesh/services/platform-ops/M80-tracing-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M83-CDN-Management-Service
+    architecture: microservice
+    cluster: platform-ops
+    module_path: mesh/services/platform-ops/M83-cdn-management-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M84-Data-Migration-Service
+    architecture: microservice
+    cluster: platform-ops
+    module_path: mesh/services/platform-ops/M84-data-migration-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M89-Affiliate-Service
+    architecture: microservice
+    cluster: integrations
+    module_path: mesh/services/integrations/M89-affiliate-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - EVENT:affiliate.attribution.created
+      - EVENT:affiliate.click.tracked
+      - http
+  - service_id: M91-License-Service
+    architecture: microservice
+    cluster: trust-compliance
+    module_path: mesh/services/trust-compliance/M91-license-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M95-Referral-Analytics-Service
+    architecture: microservice
+    cluster: data-ai
+    module_path: mesh/services/data-ai/M95-referral-analytics-service
+    dbr_deps:
+      - M89-Affiliate-Service
+    event_deps:
+      []
+    provides:
+      - http
+  - service_id: M96-Referral-Fraud-Detection-Service
+    architecture: microservice
+    cluster: trust-compliance
+    module_path: mesh/services/trust-compliance/M96-referral-fraud-detection-service
+    dbr_deps:
+      - M89-Affiliate-Service
+    event_deps:
+      - affiliate.attribution.created
+      - affiliate.click.tracked
+      - transaction.succeeded
+      - user.registered
+    provides:
+      - http
+  - service_id: M97-Team-Service
+    architecture: microservice
+    cluster: core-platform
+    module_path: mesh/services/core-platform/M97-team-service
+    dbr_deps:
+      []
+    event_deps:
+      []
+    provides:
+      - EVENT:team.created
+      - EVENT:team.invite.accepted
+      - EVENT:team.invite.sent
+      - EVENT:team.member.added
+      - EVENT:team.member.removed
+      - EVENT:team.role.changed
+      - http

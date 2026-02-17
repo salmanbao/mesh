@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: M01-authentication-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: M01-authentication-service
+  template:
+    metadata:
+      labels:
+        app: M01-authentication-service
+    spec:
+      containers:
+        - name: api
+          image: M01-authentication-service:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090

@@ -1,0 +1,10 @@
+services:
+  m57-ai-service:
+    build:
+      context: ../../services/data-ai/M57-ai-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

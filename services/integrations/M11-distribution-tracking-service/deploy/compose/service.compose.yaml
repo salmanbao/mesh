@@ -1,0 +1,10 @@
+services:
+  m11-distribution-tracking-service:
+    build:
+      context: ../../services/integrations/M11-distribution-tracking-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

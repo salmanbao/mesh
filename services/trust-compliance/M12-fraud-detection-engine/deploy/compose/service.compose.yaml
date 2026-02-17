@@ -1,0 +1,10 @@
+services:
+  m12-fraud-detection-engine:
+    build:
+      context: ../../services/trust-compliance/M12-fraud-detection-engine
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

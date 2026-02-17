@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: M16-api-gateway-rate-limiting
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: M16-api-gateway-rate-limiting

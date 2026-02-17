@@ -1,0 +1,6 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: M51-data-portability-service-config
+data:
+  CONFIG_PATH: /app/configs/default.yaml

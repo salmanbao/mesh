@@ -1,0 +1,10 @@
+services:
+  m79-monitoring-service:
+    build:
+      context: ../../services/platform-ops/M79-monitoring-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

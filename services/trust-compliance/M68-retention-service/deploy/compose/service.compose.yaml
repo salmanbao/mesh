@@ -1,0 +1,10 @@
+services:
+  m68-retention-service:
+    build:
+      context: ../../services/trust-compliance/M68-retention-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

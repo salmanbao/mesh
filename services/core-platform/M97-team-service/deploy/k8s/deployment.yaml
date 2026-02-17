@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: M97-team-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: M97-team-service
+  template:
+    metadata:
+      labels:
+        app: M97-team-service
+    spec:
+      containers:
+        - name: api
+          image: M97-team-service:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090

@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: M79-monitoring-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: M79-monitoring-service

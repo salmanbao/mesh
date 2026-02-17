@@ -1,0 +1,10 @@
+services:
+  m19-storage-lifecycle-management:
+    build:
+      context: ../../services/platform-ops/M19-storage-lifecycle-management
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}
