@@ -15,6 +15,33 @@ spec:
       containers:
         - name: api
           image: M01-authentication-service:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: M01-authentication-service-config
+            - secretRef:
+                name: M01-authentication-service-secrets
           ports:
             - containerPort: 8080
+              name: http
             - containerPort: 9090
+              name: grpc
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

@@ -1,7 +1,19 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+
+	"github.com/viralforge/mesh/services/core-platform/M01-authentication-service/internal/app/bootstrap"
+)
 
 func main() {
-    fmt.Println("M01-Authentication-Service API placeholder")
+	ctx := context.Background()
+	runtime, err := bootstrap.NewRuntime(ctx, "configs/default.yaml")
+	if err != nil {
+		log.Fatalf("bootstrap api runtime: %v", err)
+	}
+	if err := runtime.RunAPI(ctx); err != nil {
+		log.Fatalf("run api: %v", err)
+	}
 }

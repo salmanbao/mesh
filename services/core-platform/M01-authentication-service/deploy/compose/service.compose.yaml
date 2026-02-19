@@ -3,8 +3,17 @@ services:
     build:
       context: ../../services/core-platform/M01-authentication-service
       dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+      - "9090:9090"
     env_file:
       - ../../.env.example
+    environment:
+      DB_URL: ${POSTGRES_URL}
+      REDIS_URL: ${REDIS_URL}
+      HTTP_PORT: 8080
+      GRPC_PORT: 9090
+      JWT_ALLOW_EPHEMERAL: "true"
     networks: [mesh]
 networks:
   mesh: {}

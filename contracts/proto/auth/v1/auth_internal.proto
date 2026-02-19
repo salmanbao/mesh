@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package viralforge.auth.v1;
+
+option go_package = "github.com/viralforge/mesh/contracts/proto/auth/v1;authv1";
+
+service AuthInternalService {
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc GetPublicKeys(GetPublicKeysRequest) returns (GetPublicKeysResponse);
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  string user_id = 2;
+  string email = 3;
+  string role = 4;
+  int64 expires_at = 5;
+}
+
+message GetPublicKeysRequest {}
+
+message GetPublicKeysResponse {
+  repeated JWK keys = 1;
+}
+
+message JWK {
+  string kid = 1;
+  string kty = 2;
+  string alg = 3;
+  string n = 4;
+  string e = 5;
+}

@@ -4,3 +4,10 @@ metadata:
   name: M01-authentication-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+  HTTP_PORT: "8080"
+  GRPC_PORT: "9090"
+  TOKEN_EXPIRY_HOURS: "24"
+  SESSION_EXPIRY_DAYS: "30"
+  SESSION_ABSOLUTE_DAYS: "90"
+  FAILED_LOGIN_THRESHOLD: "5"
+  ACCOUNT_LOCKOUT_MINUTES: "30"

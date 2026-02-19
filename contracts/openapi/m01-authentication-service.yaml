@@ -1,0 +1,128 @@
+openapi: 3.0.3
+info:
+  title: M01 Authentication Service
+  version: 1.0.0
+  description: REST contract baseline for M01 in mesh.
+servers:
+  - url: /auth/v1
+paths:
+  /register:
+    post:
+      summary: Register a new user
+      responses:
+        "201":
+          description: Created
+  /login:
+    post:
+      summary: Login with email and password
+      responses:
+        "200":
+          description: OK
+  /2fa/verify:
+    post:
+      summary: Verify second factor and issue JWT
+      responses:
+        "200":
+          description: OK
+  /2fa/setup:
+    post:
+      summary: Enable or disable 2FA method
+      responses:
+        "200":
+          description: OK
+  /password/reset-request:
+    post:
+      summary: Request password reset
+      responses:
+        "200":
+          description: OK
+  /password/reset:
+    post:
+      summary: Reset password with token
+      responses:
+        "200":
+          description: OK
+  /email/verify-request:
+    post:
+      summary: Request verification email
+      responses:
+        "200":
+          description: OK
+  /email/verify:
+    post:
+      summary: Verify email address token
+      responses:
+        "200":
+          description: OK
+  /refresh:
+    post:
+      summary: Refresh JWT token
+      responses:
+        "200":
+          description: OK
+  /logout:
+    post:
+      summary: Revoke current session
+      responses:
+        "200":
+          description: OK
+  /sessions:
+    get:
+      summary: List active sessions
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Revoke all sessions
+      responses:
+        "200":
+          description: OK
+  /sessions/{session_id}:
+    delete:
+      summary: Revoke one session
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+  /login-history:
+    get:
+      summary: List login attempts
+      responses:
+        "200":
+          description: OK
+  /oidc/authorize:
+    get:
+      summary: Begin OIDC authorization flow
+      responses:
+        "302":
+          description: Redirect
+  /oidc/callback:
+    get:
+      summary: Handle OIDC callback
+      responses:
+        "302":
+          description: Redirect
+  /oidc/link:
+    post:
+      summary: Link OIDC provider to authenticated account
+      responses:
+        "200":
+          description: OK
+  /oidc/link/{provider}:
+    delete:
+      summary: Unlink OIDC provider from authenticated account
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
