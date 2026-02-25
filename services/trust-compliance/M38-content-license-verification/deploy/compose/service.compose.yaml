@@ -1,10 +1,11 @@
 services:
   m38-content-license-verification:
     build:
-      context: ../../services/trust-compliance/M38-content-license-verification
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

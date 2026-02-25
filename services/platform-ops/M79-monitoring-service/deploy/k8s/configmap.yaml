@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M79-monitoring-service-config
+  name: m79-monitoring-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M14-payout-settlement-service
+  name: m14-payout-settlement-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M14-payout-settlement-service
+      app: m14-payout-settlement-service
   template:
     metadata:
       labels:
-        app: M14-payout-settlement-service
+        app: m14-payout-settlement-service
     spec:
       containers:
         - name: api
-          image: M14-payout-settlement-service:latest
+          image: m14-payout-settlement-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

@@ -123,51 +123,332 @@ func TestOIDCAuthorizeAndCallback(t *testing.T) {
 	f := newFixture()
 	ctx := context.Background()
 
-	const (
-		redirectURI = "https://app.example.com/auth/callback"
-		state       = "state-123"
-		nonce       = "nonce-123"
-	)
+	const redirectURI = "https://app.example.com/auth/callback"
 
-	authURL, err := f.service.OIDCAuthorize(ctx, "google", redirectURI, state, nonce, "oidc@example.com")
+	authRes, err := f.service.OIDCAuthorize(ctx, "google", redirectURI, "", "oidc@example.com", "127.0.0.1")
 	if err != nil {
 		t.Fatalf("oidc authorize failed: %v", err)
 	}
-	if !strings.Contains(authURL, "state=state-123") {
-		t.Fatalf("expected state in authorize url, got: %s", authURL)
+	if authRes.State == "" {
+		t.Fatalf("expected generated state in authorize response")
+	}
+	if !strings.Contains(authRes.AuthorizeURL, "state=") {
+		t.Fatalf("expected state in authorize url, got: %s", authRes.AuthorizeURL)
 	}
 
-	callbackURL, err := f.service.OIDCCallback(ctx, "code-ok", state)
+	callbackRes, err := f.service.OIDCCallback(ctx, "code-ok", authRes.State)
 	if err != nil {
 		t.Fatalf("oidc callback failed: %v", err)
 	}
-	u, err := url.Parse(callbackURL)
+	u, err := url.Parse(callbackRes.RedirectURL)
 	if err != nil {
 		t.Fatalf("parse callback redirect: %v", err)
 	}
 	if u.Fragment == "" || !strings.Contains(u.Fragment, "token=") {
-		t.Fatalf("expected token fragment in callback redirect, got: %s", callbackURL)
+		t.Fatalf("expected token fragment in callback redirect, got: %s", callbackRes.RedirectURL)
+	}
+}
+
+func TestRegisterRejectsOIDCFields(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture()
+	ctx := context.Background()
+
+	_, err := f.service.Register(ctx, application.RegisterRequest{
+		Email:             "user@example.com",
+		Password:          "SecurePass123!",
+		Provider:          "google",
+		AuthorizationCode: "code-ok",
+		TermsAccepted:     true,
+	}, "")
+	if !errors.Is(err, domain.ErrOIDCFlowRequired) {
+		t.Fatalf("expected ErrOIDCFlowRequired, got %v", err)
+	}
+}
+
+func TestOIDCCallbackStateReplayRejected(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture()
+	ctx := context.Background()
+	authRes, err := f.service.OIDCAuthorize(ctx, "google", "https://app.example.com/auth/callback", "", "oidc@example.com", "127.0.0.1")
+	if err != nil {
+		t.Fatalf("oidc authorize failed: %v", err)
+	}
+
+	if _, err := f.service.OIDCCallback(ctx, "code-ok", authRes.State); err != nil {
+		t.Fatalf("first callback failed: %v", err)
+	}
+	if _, err := f.service.OIDCCallback(ctx, "code-ok", authRes.State); !errors.Is(err, domain.ErrUnauthorized) {
+		t.Fatalf("expected unauthorized on replayed state, got %v", err)
+	}
+}
+
+func TestOIDCCallbackDoesNotLinkByUnverifiedEmail(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture()
+	ctx := context.Background()
+
+	localUser, err := f.service.Register(ctx, application.RegisterRequest{
+		Email:         "oidc@example.com",
+		Password:      "SecurePass123!",
+		TermsAccepted: true,
+	}, "")
+	if err != nil {
+		t.Fatalf("local register failed: %v", err)
+	}
+
+	f.oidcVerifier.mu.Lock()
+	f.oidcVerifier.identities["code-unverified"] = ports.OIDCIdentity{
+		Provider:      "google",
+		Issuer:        "https://accounts.google.com",
+		Subject:       "provider-sub-2",
+		ProviderSub:   "provider-sub-2",
+		Email:         "oidc@example.com",
+		EmailVerified: false,
+		Name:          "OIDC Unverified",
+	}
+	f.oidcVerifier.mu.Unlock()
+
+	authRes, err := f.service.OIDCAuthorize(ctx, "google", "https://app.example.com/auth/callback", "", "", "127.0.0.1")
+	if err != nil {
+		t.Fatalf("oidc authorize failed: %v", err)
+	}
+
+	callbackRes, err := f.service.OIDCCallback(ctx, "code-unverified", authRes.State)
+	if err != nil {
+		t.Fatalf("oidc callback failed: %v", err)
+	}
+	if callbackRes.UserID == localUser.UserID {
+		t.Fatalf("expected unverified email not to link existing local user")
+	}
+}
+
+func TestOIDCCallbackConcurrentFindOrCreateIsIdempotent(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture()
+	ctx := context.Background()
+
+	auth1, err := f.service.OIDCAuthorize(ctx, "google", "https://app.example.com/auth/callback", "", "", "127.0.0.1")
+	if err != nil {
+		t.Fatalf("first authorize failed: %v", err)
+	}
+	auth2, err := f.service.OIDCAuthorize(ctx, "google", "https://app.example.com/auth/callback", "", "", "127.0.0.1")
+	if err != nil {
+		t.Fatalf("second authorize failed: %v", err)
+	}
+
+	var (
+		r1 application.OIDCCallbackResult
+		r2 application.OIDCCallbackResult
+		e1 error
+		e2 error
+		wg sync.WaitGroup
+	)
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		r1, e1 = f.service.OIDCCallback(ctx, "code-ok", auth1.State)
+	}()
+	go func() {
+		defer wg.Done()
+		r2, e2 = f.service.OIDCCallback(ctx, "code-ok", auth2.State)
+	}()
+	wg.Wait()
+
+	if e1 != nil || e2 != nil {
+		t.Fatalf("expected both callbacks to succeed, got err1=%v err2=%v", e1, e2)
+	}
+	if r1.UserID == uuid.Nil || r2.UserID == uuid.Nil {
+		t.Fatalf("expected valid user ids from callbacks")
+	}
+	if r1.UserID != r2.UserID {
+		t.Fatalf("expected idempotent user resolution under concurrency, got %s and %s", r1.UserID, r2.UserID)
+	}
+}
+
+func TestOIDCCallbackRegistrationIncompleteAndComplete(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture()
+	ctx := context.Background()
+
+	f.oidcVerifier.mu.Lock()
+	f.oidcVerifier.identities["code-incomplete"] = ports.OIDCIdentity{
+		Provider:      "google",
+		Issuer:        "https://accounts.google.com",
+		Subject:       "provider-sub-incomplete",
+		ProviderSub:   "provider-sub-incomplete",
+		Email:         "",
+		EmailVerified: false,
+		Name:          "OIDC Incomplete",
+	}
+	f.oidcVerifier.mu.Unlock()
+
+	authRes, err := f.service.OIDCAuthorize(ctx, "google", "https://app.example.com/auth/callback", "", "", "127.0.0.1")
+	if err != nil {
+		t.Fatalf("oidc authorize failed: %v", err)
+	}
+
+	callbackRes, err := f.service.OIDCCallback(ctx, "code-incomplete", authRes.State)
+	if err != nil {
+		t.Fatalf("oidc callback failed: %v", err)
+	}
+	if !callbackRes.RegistrationIncomplete {
+		t.Fatalf("expected registration_incomplete response")
+	}
+	if callbackRes.CompletionToken == "" {
+		t.Fatalf("expected completion token")
+	}
+	if callbackRes.Token != "" {
+		t.Fatalf("did not expect final token before completion")
+	}
+
+	completeRes, err := f.service.RegisterComplete(ctx, application.RegisterCompleteRequest{
+		CompletionToken: callbackRes.CompletionToken,
+		Role:            "INFLUENCER",
+	})
+	if err != nil {
+		t.Fatalf("register complete failed: %v", err)
+	}
+	if completeRes.UserID == uuid.Nil || completeRes.Token == "" || completeRes.SessionID == uuid.Nil {
+		t.Fatalf("expected full auth response after registration completion")
+	}
+
+	if _, err := f.service.RegisterComplete(ctx, application.RegisterCompleteRequest{
+		CompletionToken: callbackRes.CompletionToken,
+	}); !errors.Is(err, domain.ErrUnauthorized) {
+		t.Fatalf("expected completion token replay rejection, got %v", err)
+	}
+}
+
+func TestRegisterRateLimitedByIP(t *testing.T) {
+	t.Parallel()
+
+	cfg := defaultTestConfig()
+	cfg.RegisterRateLimitIPThreshold = 2
+	cfg.RegisterRateLimitIdentifierThreshold = 100
+	cfg.RegisterRateLimitWindow = 5 * time.Minute
+
+	f := newFixtureWithConfig(cfg)
+	ctx := context.Background()
+
+	if _, err := f.service.Register(ctx, application.RegisterRequest{
+		Email:         "rate-limit-a@example.com",
+		Password:      "SecurePass123!",
+		TermsAccepted: true,
+		IPAddress:     "127.0.0.1",
+	}, ""); err != nil {
+		t.Fatalf("first register should pass: %v", err)
+	}
+	if _, err := f.service.Register(ctx, application.RegisterRequest{
+		Email:         "rate-limit-b@example.com",
+		Password:      "SecurePass123!",
+		TermsAccepted: true,
+		IPAddress:     "127.0.0.1",
+	}, ""); !errors.Is(err, domain.ErrRateLimited) {
+		t.Fatalf("expected rate limited error, got %v", err)
+	}
+}
+
+func TestDeleteAccountEmitsUserDeleted(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture()
+	ctx := context.Background()
+
+	_, err := f.service.Register(ctx, application.RegisterRequest{
+		Email:         "delete-me@example.com",
+		Password:      "SecurePass123!",
+		TermsAccepted: true,
+	}, "")
+	if err != nil {
+		t.Fatalf("register failed: %v", err)
+	}
+
+	loginRes, err := f.service.Login(ctx, application.LoginRequest{
+		Email:    "delete-me@example.com",
+		Password: "SecurePass123!",
+	})
+	if err != nil {
+		t.Fatalf("login failed: %v", err)
+	}
+
+	if err := f.service.DeleteAccount(ctx, loginRes.Token); err != nil {
+		t.Fatalf("delete account failed: %v", err)
+	}
+
+	user, err := f.users.GetByEmail(ctx, "delete-me@example.com")
+	if err != nil {
+		t.Fatalf("load user failed: %v", err)
+	}
+	if user.IsActive {
+		t.Fatalf("expected user to be deactivated")
+	}
+	if user.DeletedAt == nil {
+		t.Fatalf("expected deleted_at to be set")
+	}
+	if len(f.outbox.events) == 0 {
+		t.Fatalf("expected outbox event for user deletion")
+	}
+	if got := f.outbox.events[len(f.outbox.events)-1].EventType; got != "user.deleted" {
+		t.Fatalf("expected user.deleted event, got %s", got)
 	}
 }
 
 func newFixture() *fixture {
+	return newFixtureWithConfig(defaultTestConfig())
+}
+
+func defaultTestConfig() application.Config {
+	return application.Config{
+		DefaultRole:                               "INFLUENCER",
+		TokenTTL:                                  24 * time.Hour,
+		SessionTTL:                                30 * 24 * time.Hour,
+		SessionAbsoluteTTL:                        90 * 24 * time.Hour,
+		FailedLoginThreshold:                      5,
+		LockoutDuration:                           30 * time.Minute,
+		RegisterOIDCFieldMode:                     "reject",
+		OIDCAllowEmailLinking:                     true,
+		OIDCCompletionTokenTTL:                    10 * time.Minute,
+		RegisterRateLimitIPThreshold:              50,
+		RegisterRateLimitIdentifierThreshold:      10,
+		RegisterRateLimitWindow:                   time.Minute,
+		OIDCAuthorizeRateLimitIPThreshold:         100,
+		OIDCAuthorizeRateLimitIdentifierThreshold: 30,
+		OIDCAuthorizeRateLimitWindow:              time.Minute,
+	}
+}
+
+func newFixtureWithConfig(cfg application.Config) *fixture {
 	users := &fakeUsers{
 		byEmail: make(map[string]domain.User),
 		byID:    make(map[uuid.UUID]domain.User),
 	}
 	sessions := &fakeSessions{byID: make(map[uuid.UUID]domain.Session)}
 	loginAttempts := &fakeLoginAttempts{}
+	outbox := &fakeOutbox{}
 	idem := &fakeIdempotency{records: map[string]ports.IdempotencyRecord{}}
 	lockouts := &fakeLockouts{state: map[string]ports.LockoutState{}}
 	revocations := &fakeRevocations{revoked: map[uuid.UUID]bool{}}
 	recovery := &fakeRecovery{}
 	credentials := &fakeCredentials{users: users}
 	mfa := &fakeMFA{methods: map[uuid.UUID][]string{}}
-	oidc := &fakeOIDC{byProviderSubject: map[string]uuid.UUID{}, connections: map[uuid.UUID]map[string]bool{}}
+	oidc := &fakeOIDC{
+		byIssuerSubject:  map[string]uuid.UUID{},
+		connections:      map[uuid.UUID]map[string]bool{},
+		tokens:           map[string]ports.OIDCTokenRecord{},
+		connectionStatus: map[string]string{},
+	}
 	oidcVerifier := &fakeOIDCVerifier{
 		identities: map[string]ports.OIDCIdentity{
 			"code-ok": {
 				Provider:      "google",
+				Issuer:        "https://accounts.google.com",
+				Subject:       "provider-sub-1",
 				ProviderSub:   "provider-sub-1",
 				Email:         "oidc@example.com",
 				EmailVerified: true,
@@ -180,45 +461,43 @@ func newFixture() *fixture {
 	signer := &fakeSigner{tokens: map[string]ports.AuthClaims{}}
 
 	svc := application.NewService(application.Dependencies{
-		Config: application.Config{
-			DefaultRole:          "INFLUENCER",
-			TokenTTL:             24 * time.Hour,
-			SessionTTL:           30 * 24 * time.Hour,
-			SessionAbsoluteTTL:   90 * 24 * time.Hour,
-			FailedLoginThreshold: 5,
-			LockoutDuration:      30 * time.Minute,
-		},
-		Users:         users,
-		Sessions:      sessions,
-		LoginAttempts: loginAttempts,
-		Outbox:        &fakeOutbox{},
-		Idempotency:   idem,
-		Recovery:      recovery,
-		Credentials:   credentials,
-		MFA:           mfa,
-		OIDC:          oidc,
-		Lockouts:      lockouts,
-		Revocations:   revocations,
-		Challenges:    challenges,
-		OIDCState:     oidcStates,
-		OIDCVerifier:  oidcVerifier,
-		Hasher:        &fakeHasher{},
-		TokenSigner:   signer,
+		Config:                 cfg,
+		Users:                  users,
+		Sessions:               sessions,
+		LoginAttempts:          loginAttempts,
+		Outbox:                 outbox,
+		Idempotency:            idem,
+		Recovery:               recovery,
+		Credentials:            credentials,
+		MFA:                    mfa,
+		OIDC:                   oidc,
+		Lockouts:               lockouts,
+		Revocations:            revocations,
+		Challenges:             challenges,
+		OIDCState:              oidcStates,
+		RegistrationCompletion: &fakeRegistrationCompletionStore{items: map[string]ports.RegistrationCompletion{}},
+		OIDCVerifier:           oidcVerifier,
+		Hasher:                 &fakeHasher{},
+		TokenSigner:            signer,
 	})
 
 	return &fixture{
-		service:    svc,
-		users:      users,
-		mfa:        mfa,
-		challenges: challenges,
+		service:      svc,
+		users:        users,
+		mfa:          mfa,
+		challenges:   challenges,
+		outbox:       outbox,
+		oidcVerifier: oidcVerifier,
 	}
 }
 
 type fixture struct {
-	service    *application.Service
-	users      *fakeUsers
-	mfa        *fakeMFA
-	challenges *fakeChallenges
+	service      *application.Service
+	users        *fakeUsers
+	mfa          *fakeMFA
+	challenges   *fakeChallenges
+	outbox       *fakeOutbox
+	oidcVerifier *fakeOIDCVerifier
 }
 
 type fakeUsers struct {
@@ -265,6 +544,21 @@ func (f *fakeUsers) GetByID(_ context.Context, userID uuid.UUID) (domain.User, e
 		return domain.User{}, domain.ErrNotFound
 	}
 	return u, nil
+}
+
+func (f *fakeUsers) Deactivate(_ context.Context, userID uuid.UUID, deactivatedAt time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.byID[userID]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	u.IsActive = false
+	u.DeletedAt = &deactivatedAt
+	u.UpdatedAt = deactivatedAt
+	f.byID[userID] = u
+	f.byEmail[u.Email] = u
+	return nil
 }
 
 type fakeSessions struct {
@@ -353,14 +647,25 @@ func (f *fakeLoginAttempts) ListByUser(context.Context, uuid.UUID, int, int, *ti
 	return nil, nil
 }
 
-type fakeOutbox struct{}
+type fakeOutbox struct {
+	mu     sync.Mutex
+	events []ports.OutboxEvent
+}
 
-func (f *fakeOutbox) Enqueue(context.Context, ports.OutboxEvent) error { return nil }
-func (f *fakeOutbox) FetchUnpublished(context.Context, int) ([]ports.OutboxRecord, error) {
+func (f *fakeOutbox) Enqueue(_ context.Context, event ports.OutboxEvent) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.events = append(f.events, event)
+	return nil
+}
+func (f *fakeOutbox) ClaimUnpublished(context.Context, int, string, time.Time) ([]ports.OutboxRecord, error) {
 	return nil, nil
 }
-func (f *fakeOutbox) MarkPublished(context.Context, uuid.UUID, time.Time) error { return nil }
-func (f *fakeOutbox) MarkFailed(context.Context, uuid.UUID, string, time.Time) error {
+func (f *fakeOutbox) MarkPublished(context.Context, uuid.UUID, string, time.Time) error { return nil }
+func (f *fakeOutbox) MarkFailed(context.Context, uuid.UUID, string, string, time.Time) error {
+	return nil
+}
+func (f *fakeOutbox) MarkDeadLettered(context.Context, uuid.UUID, string, string, time.Time) error {
 	return nil
 }
 
@@ -564,27 +869,29 @@ func (f *fakeMFA) ConsumeBackupCode(context.Context, uuid.UUID, string, time.Tim
 }
 
 type fakeOIDC struct {
-	mu                sync.Mutex
-	byProviderSubject map[string]uuid.UUID
-	connections       map[uuid.UUID]map[string]bool
+	mu               sync.Mutex
+	byIssuerSubject  map[string]uuid.UUID
+	connections      map[uuid.UUID]map[string]bool
+	tokens           map[string]ports.OIDCTokenRecord
+	connectionStatus map[string]string
 }
 
-func (f *fakeOIDC) FindUserByProviderSubject(_ context.Context, provider, providerUserID string) (uuid.UUID, error) {
+func (f *fakeOIDC) FindUserByIssuerSubject(_ context.Context, issuer, subject string) (uuid.UUID, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	key := provider + ":" + providerUserID
-	id, ok := f.byProviderSubject[key]
+	key := issuer + ":" + subject
+	id, ok := f.byIssuerSubject[key]
 	if !ok {
 		return uuid.Nil, domain.ErrNotFound
 	}
 	return id, nil
 }
 
-func (f *fakeOIDC) UpsertConnection(_ context.Context, userID uuid.UUID, provider, providerUserID, _ string, _ bool, _ time.Time) error {
+func (f *fakeOIDC) UpsertConnection(_ context.Context, userID uuid.UUID, issuer, subject, provider, _ string, _ bool, _ time.Time) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	key := provider + ":" + providerUserID
-	f.byProviderSubject[key] = userID
+	key := issuer + ":" + subject
+	f.byIssuerSubject[key] = userID
 	if f.connections[userID] == nil {
 		f.connections[userID] = map[string]bool{}
 	}
@@ -606,6 +913,43 @@ func (f *fakeOIDC) DeleteConnection(_ context.Context, userID uuid.UUID, provide
 	}
 	delete(f.connections[userID], provider)
 	return true, nil
+}
+
+func (f *fakeOIDC) UpsertToken(_ context.Context, userID uuid.UUID, provider, accessToken, refreshToken string, expiresAt *time.Time, _ time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	key := userID.String() + ":" + provider
+	f.tokens[key] = ports.OIDCTokenRecord{
+		UserID:       userID,
+		Provider:     provider,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresAt:    expiresAt,
+	}
+	return nil
+}
+
+func (f *fakeOIDC) ListTokensExpiringBefore(_ context.Context, before time.Time, limit int) ([]ports.OIDCTokenRecord, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	items := make([]ports.OIDCTokenRecord, 0)
+	for _, item := range f.tokens {
+		if item.ExpiresAt == nil || !item.ExpiresAt.After(before) {
+			items = append(items, item)
+		}
+		if limit > 0 && len(items) >= limit {
+			break
+		}
+	}
+	return items, nil
+}
+
+func (f *fakeOIDC) UpdateConnectionStatus(_ context.Context, userID uuid.UUID, provider, status string, _ time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	key := userID.String() + ":" + provider
+	f.connectionStatus[key] = status
+	return nil
 }
 
 type fakeChallenges struct {
@@ -668,6 +1012,36 @@ func (f *fakeOIDCStateStore) Delete(_ context.Context, state string) error {
 	return nil
 }
 
+type fakeRegistrationCompletionStore struct {
+	mu    sync.Mutex
+	items map[string]ports.RegistrationCompletion
+}
+
+func (f *fakeRegistrationCompletionStore) Put(_ context.Context, token string, value ports.RegistrationCompletion, _ time.Duration) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.items[token] = value
+	return nil
+}
+
+func (f *fakeRegistrationCompletionStore) Get(_ context.Context, token string) (*ports.RegistrationCompletion, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	item, ok := f.items[token]
+	if !ok {
+		return nil, nil
+	}
+	cp := item
+	return &cp, nil
+}
+
+func (f *fakeRegistrationCompletionStore) Delete(_ context.Context, token string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.items, token)
+	return nil
+}
+
 type fakeOIDCVerifier struct {
 	mu         sync.Mutex
 	identities map[string]ports.OIDCIdentity
@@ -692,7 +1066,25 @@ func (f *fakeOIDCVerifier) ExchangeCode(_ context.Context, provider, code, _, _,
 		return ports.OIDCIdentity{}, domain.ErrUnauthorized
 	}
 	identity.Provider = provider
+	if strings.TrimSpace(identity.Issuer) == "" {
+		identity.Issuer = "https://accounts.google.com"
+	}
+	if strings.TrimSpace(identity.Subject) == "" {
+		identity.Subject = identity.ProviderSub
+	}
 	return identity, nil
+}
+
+func (f *fakeOIDCVerifier) RefreshToken(_ context.Context, provider string, refreshToken string) (ports.OIDCTokenSet, error) {
+	if strings.TrimSpace(refreshToken) == "" {
+		return ports.OIDCTokenSet{}, domain.ErrUnauthorized
+	}
+	expiresAt := time.Now().UTC().Add(time.Hour)
+	return ports.OIDCTokenSet{
+		AccessToken:  "refreshed-" + provider + "-" + refreshToken,
+		RefreshToken: refreshToken,
+		ExpiresAt:    &expiresAt,
+	}, nil
 }
 
 type fakeHasher struct{}

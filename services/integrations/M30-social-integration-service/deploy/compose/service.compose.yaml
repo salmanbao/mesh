@@ -1,10 +1,11 @@
 services:
   m30-social-integration-service:
     build:
-      context: ../../services/integrations/M30-social-integration-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

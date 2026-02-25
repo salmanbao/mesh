@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M78-logging-service-config
+  name: m78-logging-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

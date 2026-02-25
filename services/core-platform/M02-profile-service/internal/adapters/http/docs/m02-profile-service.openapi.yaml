@@ -1,0 +1,1110 @@
+openapi: 3.0.3
+info:
+  title: M02 Profile Service API
+  version: 1.0.0
+  description: |
+    REST contract for M02 profile-service.
+    Response envelopes used by the runtime:
+    - Success with data: `{ "status": "success", "data": ... }`
+    - Success with message: `{ "status": "success", "message": "..." }`
+    - Error: `{ "status": "error", "code": "...", "message": "..." }`
+servers:
+  - url: /
+tags:
+  - name: Health
+  - name: Profiles
+  - name: Admin
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      operationId: m02Healthz
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessageResponse"
+              example:
+                status: success
+                message: ok
+
+  /readyz:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      operationId: m02Readyz
+      responses:
+        "200":
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessageResponse"
+              example:
+                status: success
+                message: ready
+
+  /v1/profiles/{username}:
+    get:
+      tags: [Profiles]
+      summary: Get public profile
+      description: Public read endpoint; can return 301 when username has an active redirect mapping.
+      operationId: getPublicProfile
+      parameters:
+        - in: path
+          name: username
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Public profile returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicProfileResponseEnvelope"
+        "301":
+          description: Username moved permanently
+          headers:
+            Location:
+              description: New profile URL.
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/profiles/username-availability:
+    get:
+      tags: [Profiles]
+      summary: Check username availability
+      operationId: checkUsernameAvailability
+      parameters:
+        - in: query
+          name: username
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Username availability state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsernameAvailabilityResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/profiles/me:
+    get:
+      tags: [Profiles]
+      summary: Get authenticated profile
+      operationId: getMyProfile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponseEnvelope"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      tags: [Profiles]
+      summary: Update profile fields
+      operationId: updateMyProfile
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+          description: Optional idempotency key for safe retries.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/profiles/me/username:
+    put:
+      tags: [Profiles]
+      summary: Change username
+      operationId: changeUsername
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeUsernameRequest"
+      responses:
+        "200":
+          description: Username updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/profiles/me/avatar:
+    post:
+      tags: [Profiles]
+      summary: Upload avatar image
+      operationId: uploadAvatar
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "202":
+          description: Avatar accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvatarUploadResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/profiles/me/social-links:
+    post:
+      tags: [Profiles]
+      summary: Add social link
+      operationId: addSocialLink
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddSocialLinkRequest"
+      responses:
+        "201":
+          description: Social link created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SocialLinkResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/profiles/me/social-links/{platform}:
+    delete:
+      tags: [Profiles]
+      summary: Delete social link by platform
+      operationId: deleteSocialLink
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: platform
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Social link removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessageResponse"
+              example:
+                status: success
+                message: Social link removed
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/profiles/me/payout-methods:
+    post:
+      tags: [Profiles]
+      summary: Create payout method
+      operationId: createPayoutMethod
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutPayoutMethodRequest"
+      responses:
+        "201":
+          description: Payout method created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayoutMethodResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/profiles/me/payout-methods/{method_type}:
+    put:
+      tags: [Profiles]
+      summary: Update payout method
+      operationId: updatePayoutMethod
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: method_type
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutPayoutMethodRequest"
+      responses:
+        "200":
+          description: Payout method updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayoutMethodResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/profiles/me/kyc/documents:
+    post:
+      tags: [Profiles]
+      summary: Upload KYC document
+      operationId: uploadKycDocument
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [document_type, file]
+              properties:
+                document_type:
+                  type: string
+                  enum: [passport, government_id, drivers_license, proof_of_address]
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: KYC document accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KYCDocumentResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/profiles/me/kyc/status:
+    get:
+      tags: [Profiles]
+      summary: Get KYC status and uploaded documents
+      operationId: getKycStatus
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: KYC status returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KYCStatusResponseEnvelope"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/admin/profiles:
+    get:
+      tags: [Admin]
+      summary: List pending profile/KYC review queue
+      operationId: adminListProfiles
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - in: query
+          name: offset
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Queue items returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminListProfilesResponseEnvelope"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/admin/kyc/queue:
+    get:
+      tags: [Admin]
+      summary: List KYC queue
+      description: Runtime currently returns the same payload shape and data source as `/v1/admin/profiles`.
+      operationId: adminListKycQueue
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - in: query
+          name: offset
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Queue items returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminListProfilesResponseEnvelope"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/admin/kyc/{user_id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve KYC for user
+      operationId: adminApproveKyc
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: KYC approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminKYCApproveResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/admin/kyc/{user_id}/reject:
+    post:
+      tags: [Admin]
+      summary: Reject KYC for user
+      operationId: adminRejectKyc
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminKYCRejectRequest"
+      responses:
+        "200":
+          description: KYC rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminKYCRejectResponseEnvelope"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    ValidationError:
+      description: Input validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            code: VALIDATION_ERROR
+            message: invalid json body
+    UnauthorizedError:
+      description: Invalid or missing credentials
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            code: UNAUTHORIZED
+            message: invalid or missing credentials
+    ForbiddenError:
+      description: Caller is authenticated but not authorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            code: FORBIDDEN
+            message: admin role required
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            code: NOT_FOUND
+            message: resource not found
+    ConflictError:
+      description: Conflict or idempotency collision
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            code: CONFLICT
+            message: conflict
+    RateLimitError:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            code: RATE_LIMIT_EXCEEDED
+            message: rate limit exceeded
+    ServiceUnavailableError:
+      description: Downstream dependency unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            code: SERVICE_UNAVAILABLE
+            message: service unavailable
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            code: INTERNAL_ERROR
+            message: internal server error
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [status, code, message]
+      properties:
+        status:
+          type: string
+          enum: [error]
+        code:
+          type: string
+        message:
+          type: string
+
+    SuccessMessageResponse:
+      type: object
+      required: [status, message]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        message:
+          type: string
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+        bio:
+          type: string
+        is_private:
+          type: boolean
+        is_unlisted:
+          type: boolean
+        hide_statistics:
+          type: boolean
+        analytics_opt_out:
+          type: boolean
+
+    ChangeUsernameRequest:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+
+    AddSocialLinkRequest:
+      type: object
+      required: [platform, profile_url]
+      properties:
+        platform:
+          type: string
+        profile_url:
+          type: string
+          format: uri
+        oauth_connection_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    PutPayoutMethodRequest:
+      type: object
+      required: [method_type]
+      properties:
+        method_type:
+          type: string
+          enum: [stripe_connect, paypal, usdc_polygon, btc, eth]
+        stripe_account_id:
+          type: string
+        email:
+          type: string
+          format: email
+        wallet_address:
+          type: string
+        wallet_address_confirmation:
+          type: string
+
+    ProfileStatsView:
+      type: object
+      properties:
+        total_earnings_ytd:
+          type: number
+          format: double
+        submission_count:
+          type: integer
+        approval_rate:
+          type: number
+          format: double
+        follower_count:
+          type: integer
+
+    SocialLinkView:
+      type: object
+      required: [platform, profile_url, verified]
+      properties:
+        platform:
+          type: string
+        handle:
+          type: string
+        profile_url:
+          type: string
+          format: uri
+        verified:
+          type: boolean
+
+    PayoutMethodView:
+      type: object
+      required: [method_type, verification_status]
+      properties:
+        method_type:
+          type: string
+        verification_status:
+          type: string
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    KYCDocumentView:
+      type: object
+      required: [document_type, status, uploaded_at]
+      properties:
+        document_type:
+          type: string
+        status:
+          type: string
+        uploaded_at:
+          type: string
+          format: date-time
+        reviewed_at:
+          type: string
+          format: date-time
+          nullable: true
+        rejection_reason:
+          type: string
+
+    ProfileResponse:
+      type: object
+      required: [username, display_name]
+      properties:
+        profile_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        display_name:
+          type: string
+        bio:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+        banner_url:
+          type: string
+          format: uri
+        kyc_status:
+          type: string
+        is_private:
+          type: boolean
+        is_unlisted:
+          type: boolean
+        hide_statistics:
+          type: boolean
+        analytics_opt_out:
+          type: boolean
+        social_links:
+          type: array
+          items:
+            $ref: "#/components/schemas/SocialLinkView"
+        payout_methods:
+          type: array
+          items:
+            $ref: "#/components/schemas/PayoutMethodView"
+        statistics:
+          $ref: "#/components/schemas/ProfileStatsView"
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/KYCDocumentView"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        member_since:
+          type: string
+          format: date-time
+        message:
+          type: string
+
+    PublicProfileResponse:
+      type: object
+      required: [username, display_name]
+      properties:
+        username:
+          type: string
+        display_name:
+          type: string
+        bio:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+        is_private:
+          type: boolean
+        message:
+          type: string
+        social_links:
+          type: array
+          items:
+            $ref: "#/components/schemas/SocialLinkView"
+        statistics:
+          $ref: "#/components/schemas/ProfileStatsView"
+        member_since:
+          type: string
+          format: date-time
+
+    UsernameAvailabilityResponse:
+      type: object
+      required: [username, available]
+      properties:
+        username:
+          type: string
+        available:
+          type: boolean
+        reason:
+          type: string
+
+    AvatarUploadResponse:
+      type: object
+      required: [upload_id, status, message]
+      properties:
+        upload_id:
+          type: string
+        status:
+          type: string
+        message:
+          type: string
+
+    AdminPagination:
+      type: object
+      required: [limit, offset]
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    AdminListProfilesData:
+      type: object
+      required: [profiles, pagination]
+      properties:
+        profiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfileResponse"
+        pagination:
+          $ref: "#/components/schemas/AdminPagination"
+
+    AdminKYCApproveResponse:
+      type: object
+      required: [user_id, kyc_status]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        kyc_status:
+          type: string
+
+    AdminKYCRejectRequest:
+      type: object
+      required: [rejection_reason]
+      properties:
+        rejection_reason:
+          type: string
+
+    AdminKYCRejectResponse:
+      type: object
+      required: [user_id, kyc_status, rejection_reason]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        kyc_status:
+          type: string
+        rejection_reason:
+          type: string
+
+    ProfileResponseEnvelope:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: "#/components/schemas/ProfileResponse"
+
+    PublicProfileResponseEnvelope:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: "#/components/schemas/PublicProfileResponse"
+
+    UsernameAvailabilityResponseEnvelope:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: "#/components/schemas/UsernameAvailabilityResponse"
+
+    AvatarUploadResponseEnvelope:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: "#/components/schemas/AvatarUploadResponse"
+
+    SocialLinkResponseEnvelope:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: "#/components/schemas/SocialLinkView"
+
+    PayoutMethodResponseEnvelope:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: "#/components/schemas/PayoutMethodView"
+
+    KYCDocumentResponseEnvelope:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: "#/components/schemas/KYCDocumentView"
+
+    KYCStatusResponseEnvelope:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: "#/components/schemas/ProfileResponse"
+
+    AdminListProfilesResponseEnvelope:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: "#/components/schemas/AdminListProfilesData"
+
+    AdminKYCApproveResponseEnvelope:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: "#/components/schemas/AdminKYCApproveResponse"
+
+    AdminKYCRejectResponseEnvelope:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          $ref: "#/components/schemas/AdminKYCRejectResponse"

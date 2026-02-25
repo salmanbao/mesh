@@ -24,18 +24,23 @@ func TestOIDCAuthorizeAndCallbackHTTPContract(t *testing.T) {
 	svc := newOIDCContractService()
 	router := httpadapter.NewRouter(httpadapter.NewHandler(svc))
 
-	authorizeReq := httptest.NewRequest(http.MethodGet, "/auth/v1/oidc/authorize?provider=google&redirect_uri=https://app.example.com/auth/callback&state=state-1&nonce=nonce-1", nil)
+	authorizeReq := httptest.NewRequest(http.MethodGet, "/auth/v1/oidc/authorize?provider=google&redirect_uri=https://app.example.com/auth/callback", nil)
 	authorizeRes := httptest.NewRecorder()
 	router.ServeHTTP(authorizeRes, authorizeReq)
 	if authorizeRes.Code != http.StatusFound {
 		t.Fatalf("expected 302 authorize response, got %d", authorizeRes.Code)
 	}
 	location := authorizeRes.Header().Get("Location")
-	if !strings.Contains(location, "state=state-1") {
-		t.Fatalf("expected state in authorize location, got %s", location)
+	locURL, err := url.Parse(location)
+	if err != nil {
+		t.Fatalf("parse authorize location: %v", err)
+	}
+	state := locURL.Query().Get("state")
+	if state == "" {
+		t.Fatalf("expected generated state in authorize location, got %s", location)
 	}
 
-	callbackReq := httptest.NewRequest(http.MethodGet, "/auth/v1/oidc/callback?code=code-ok&state=state-1", nil)
+	callbackReq := httptest.NewRequest(http.MethodGet, "/auth/v1/oidc/callback?code=code-ok&state="+url.QueryEscape(state), nil)
 	callbackRes := httptest.NewRecorder()
 	router.ServeHTTP(callbackRes, callbackReq)
 	if callbackRes.Code != http.StatusFound {
@@ -69,12 +74,15 @@ func newOIDCContractService() *application.Service {
 	users := &contractUsers{byEmail: map[string]domain.User{}, byID: map[uuid.UUID]domain.User{}}
 	return application.NewService(application.Dependencies{
 		Config: application.Config{
-			DefaultRole:          "INFLUENCER",
-			TokenTTL:             24 * time.Hour,
-			SessionTTL:           30 * 24 * time.Hour,
-			SessionAbsoluteTTL:   90 * 24 * time.Hour,
-			FailedLoginThreshold: 5,
-			LockoutDuration:      30 * time.Minute,
+			DefaultRole:             "INFLUENCER",
+			TokenTTL:                24 * time.Hour,
+			SessionTTL:              30 * 24 * time.Hour,
+			SessionAbsoluteTTL:      90 * 24 * time.Hour,
+			FailedLoginThreshold:    5,
+			LockoutDuration:         30 * time.Minute,
+			RegisterOIDCFieldMode:   "reject",
+			OIDCAllowEmailLinking:   true,
+			OIDCCompletionTokenTTL:  10 * time.Minute,
 		},
 		Users:         users,
 		Sessions:      &contractSessions{items: map[uuid.UUID]domain.Session{}},
@@ -89,6 +97,7 @@ func newOIDCContractService() *application.Service {
 		Revocations:   noopRevocations{},
 		Challenges:    noopChallengeStore{},
 		OIDCState:     &contractOIDCStateStore{items: map[string]ports.OIDCAuthState{}},
+		RegistrationCompletion: noopRegistrationCompletion{},
 		OIDCVerifier:  contractOIDCVerifier{},
 		Hasher:        noopHasher{},
 		TokenSigner:   &contractSigner{tokens: map[string]ports.AuthClaims{}},
@@ -110,10 +119,21 @@ func (contractOIDCVerifier) ExchangeCode(_ context.Context, provider, code, _, _
 	}
 	return ports.OIDCIdentity{
 		Provider:      provider,
+		Issuer:        "https://accounts.google.com",
+		Subject:       "provider-sub-" + code,
 		ProviderSub:   "provider-sub-" + code,
 		Email:         "oidc@example.com",
 		EmailVerified: true,
 		Name:          "OIDC User",
+	}, nil
+}
+
+func (contractOIDCVerifier) RefreshToken(_ context.Context, provider string, refreshToken string) (ports.OIDCTokenSet, error) {
+	expiresAt := time.Now().UTC().Add(time.Hour)
+	return ports.OIDCTokenSet{
+		AccessToken:  "refresh-" + provider + "-" + refreshToken,
+		RefreshToken: refreshToken,
+		ExpiresAt:    &expiresAt,
 	}, nil
 }
 
@@ -159,6 +179,21 @@ func (c *contractUsers) GetByID(_ context.Context, id uuid.UUID) (domain.User, e
 		return domain.User{}, domain.ErrNotFound
 	}
 	return u, nil
+}
+
+func (c *contractUsers) Deactivate(_ context.Context, id uuid.UUID, deactivatedAt time.Time) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	u, ok := c.byID[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	u.IsActive = false
+	u.DeletedAt = &deactivatedAt
+	u.UpdatedAt = deactivatedAt
+	c.byID[id] = u
+	c.byEmail[u.Email] = u
+	return nil
 }
 
 type contractSessions struct {
@@ -210,20 +245,20 @@ type contractOIDCRepo struct {
 	connections map[string]uuid.UUID
 }
 
-func (c *contractOIDCRepo) FindUserByProviderSubject(_ context.Context, provider, providerUserID string) (uuid.UUID, error) {
+func (c *contractOIDCRepo) FindUserByIssuerSubject(_ context.Context, issuer, subject string) (uuid.UUID, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	id, ok := c.connections[provider+":"+providerUserID]
+	id, ok := c.connections[issuer+":"+subject]
 	if !ok {
 		return uuid.Nil, domain.ErrNotFound
 	}
 	return id, nil
 }
 
-func (c *contractOIDCRepo) UpsertConnection(_ context.Context, userID uuid.UUID, provider, providerUserID, _ string, _ bool, _ time.Time) error {
+func (c *contractOIDCRepo) UpsertConnection(_ context.Context, userID uuid.UUID, issuer, subject, _ string, _ string, _ bool, _ time.Time) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.connections[provider+":"+providerUserID] = userID
+	c.connections[issuer+":"+subject] = userID
 	return nil
 }
 
@@ -232,6 +267,15 @@ func (c *contractOIDCRepo) CountConnections(_ context.Context, _ uuid.UUID) (int
 }
 func (c *contractOIDCRepo) DeleteConnection(_ context.Context, _ uuid.UUID, _ string) (bool, error) {
 	return true, nil
+}
+func (c *contractOIDCRepo) UpsertToken(context.Context, uuid.UUID, string, string, string, *time.Time, time.Time) error {
+	return nil
+}
+func (c *contractOIDCRepo) ListTokensExpiringBefore(context.Context, time.Time, int) ([]ports.OIDCTokenRecord, error) {
+	return nil, nil
+}
+func (c *contractOIDCRepo) UpdateConnectionStatus(context.Context, uuid.UUID, string, string, time.Time) error {
+	return nil
 }
 
 type contractOIDCStateStore struct {
@@ -343,11 +387,14 @@ func (noopLoginAttempts) ListByUser(context.Context, uuid.UUID, int, int, *time.
 type noopOutbox struct{}
 
 func (noopOutbox) Enqueue(context.Context, ports.OutboxEvent) error { return nil }
-func (noopOutbox) FetchUnpublished(context.Context, int) ([]ports.OutboxRecord, error) {
+func (noopOutbox) ClaimUnpublished(context.Context, int, string, time.Time) ([]ports.OutboxRecord, error) {
 	return nil, nil
 }
-func (noopOutbox) MarkPublished(context.Context, uuid.UUID, time.Time) error { return nil }
-func (noopOutbox) MarkFailed(context.Context, uuid.UUID, string, time.Time) error {
+func (noopOutbox) MarkPublished(context.Context, uuid.UUID, string, time.Time) error { return nil }
+func (noopOutbox) MarkFailed(context.Context, uuid.UUID, string, string, time.Time) error {
+	return nil
+}
+func (noopOutbox) MarkDeadLettered(context.Context, uuid.UUID, string, string, time.Time) error {
 	return nil
 }
 
@@ -386,4 +433,16 @@ func (noopMFA) ReplaceBackupCodes(context.Context, uuid.UUID, []string, time.Tim
 }
 func (noopMFA) ConsumeBackupCode(context.Context, uuid.UUID, string, time.Time) (bool, error) {
 	return false, nil
+}
+
+type noopRegistrationCompletion struct{}
+
+func (noopRegistrationCompletion) Put(context.Context, string, ports.RegistrationCompletion, time.Duration) error {
+	return nil
+}
+func (noopRegistrationCompletion) Get(context.Context, string) (*ports.RegistrationCompletion, error) {
+	return nil, nil
+}
+func (noopRegistrationCompletion) Delete(context.Context, string) error {
+	return nil
 }

@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M95-referral-analytics-service
+  name: m95-referral-analytics-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M95-referral-analytics-service
+      app: m95-referral-analytics-service
   template:
     metadata:
       labels:
-        app: M95-referral-analytics-service
+        app: m95-referral-analytics-service
     spec:
       containers:
         - name: api
-          image: M95-referral-analytics-service:latest
+          image: m95-referral-analytics-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

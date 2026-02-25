@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mesh Rollout Orchestration"
+  short_description: "Plan and execute dependency-safe multi-service rollout."
+  default_prompt: "Use $mesh-rollout-orchestration to sequence and track mesh-wide microservice delivery by dependency tiers."

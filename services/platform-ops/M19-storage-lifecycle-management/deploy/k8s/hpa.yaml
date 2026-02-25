@@ -1,12 +1,12 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: M19-storage-lifecycle-management
+  name: m19-storage-lifecycle-management
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: M19-storage-lifecycle-management
+    name: m19-storage-lifecycle-management
   minReplicas: 2
   maxReplicas: 5
   metrics:
@@ -16,3 +16,4 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
+

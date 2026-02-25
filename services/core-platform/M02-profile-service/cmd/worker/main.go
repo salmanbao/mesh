@@ -1,7 +1,19 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+
+	"github.com/viralforge/mesh/services/core-platform/M02-profile-service/internal/app/bootstrap"
+)
 
 func main() {
-    fmt.Println("M02-Profile-Service worker placeholder")
+	ctx := context.Background()
+	runtime, err := bootstrap.NewRuntime(ctx, "configs/default.yaml")
+	if err != nil {
+		log.Fatalf("bootstrap worker runtime: %v", err)
+	}
+	if err := runtime.RunWorker(ctx); err != nil {
+		log.Fatalf("run worker: %v", err)
+	}
 }

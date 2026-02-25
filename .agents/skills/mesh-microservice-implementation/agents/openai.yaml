@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mesh Microservice Implementation"
+  short_description: "Build mesh services from canonical ViralForge specs."
+  default_prompt: "Use $mesh-microservice-implementation to implement the requested mesh microservice changes with canonical-spec alignment."

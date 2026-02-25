@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mesh Swagger Documentation"
+  short_description: "Document mesh REST endpoints with complete OpenAPI request/response coverage."
+  default_prompt: "Use $mesh-swagger-endpoint-documentation to add or update complete Swagger/OpenAPI docs for all service endpoints."

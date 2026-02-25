@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M45-community-service-config
+  name: m45-community-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

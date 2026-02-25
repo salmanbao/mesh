@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M13-escrow-ledger-service
+  name: m13-escrow-ledger-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M13-escrow-ledger-service
+      app: m13-escrow-ledger-service
   template:
     metadata:
       labels:
-        app: M13-escrow-ledger-service
+        app: m13-escrow-ledger-service
     spec:
       containers:
         - name: api
-          image: M13-escrow-ledger-service:latest
+          image: m13-escrow-ledger-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

@@ -1,10 +1,11 @@
 services:
   m14-payout-settlement-service:
     build:
-      context: ../../services/financial-rails/M14-payout-settlement-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

@@ -6,3 +6,6 @@ Canonical event schemas used by mesh services.
 - `auth.2fa.required.json`
 - `user.registered.json`
 - `user.deleted.json`
+
+## M02 Profile Events
+- `user.profile_updated.json`

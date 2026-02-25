@@ -1,0 +1,26 @@
+name: Mesh Gates
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'services/**'
+      - 'docs/**'
+      - 'contracts/**'
+      - 'tooling/**'
+      - 'go.work'
+      - 'go.work.sum'
+  push:
+    branches:
+      - main
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run mesh gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash ./scripts/run-mesh-gates.sh

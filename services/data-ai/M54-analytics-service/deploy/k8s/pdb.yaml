@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M54-analytics-service
+  name: m54-analytics-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M54-analytics-service
+      app: m54-analytics-service
+

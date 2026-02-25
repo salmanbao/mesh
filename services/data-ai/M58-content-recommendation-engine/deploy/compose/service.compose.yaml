@@ -1,10 +1,11 @@
 services:
   m58-content-recommendation-engine:
     build:
-      context: ../../services/data-ai/M58-content-recommendation-engine
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

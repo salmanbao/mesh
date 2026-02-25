@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: m16-api-gateway-rate-limiting
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: m16-api-gateway-rate-limiting
+  template:
+    metadata:
+      labels:
+        app: m16-api-gateway-rate-limiting
+    spec:
+      containers:
+        - name: api
+          image: m16-api-gateway-rate-limiting:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090

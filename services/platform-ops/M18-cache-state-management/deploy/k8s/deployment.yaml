@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M18-cache-state-management
+  name: m18-cache-state-management
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M18-cache-state-management
+      app: m18-cache-state-management
   template:
     metadata:
       labels:
-        app: M18-cache-state-management
+        app: m18-cache-state-management
     spec:
       containers:
         - name: api
-          image: M18-cache-state-management:latest
+          image: m18-cache-state-management:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

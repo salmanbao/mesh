@@ -1,10 +1,11 @@
 services:
   m70-developer-portal:
     build:
-      context: ../../services/integrations/M70-developer-portal
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

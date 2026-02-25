@@ -1,0 +1,5 @@
+interface:
+  display_name: "Mesh Testing and Quality"
+  short_description: "Run targeted tests and quality checks for mesh services."
+  default_prompt: "Use $mesh-testing-and-quality to add or run tests and produce a quality sign-off for mesh changes."
+

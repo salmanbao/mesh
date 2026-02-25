@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M89-affiliate-service
+  name: m89-affiliate-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M89-affiliate-service
+      app: m89-affiliate-service
   template:
     metadata:
       labels:
-        app: M89-affiliate-service
+        app: m89-affiliate-service
     spec:
       containers:
         - name: api
-          image: M89-affiliate-service:latest
+          image: m89-affiliate-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

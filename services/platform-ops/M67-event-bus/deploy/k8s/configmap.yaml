@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M67-event-bus-config
+  name: m67-event-bus-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

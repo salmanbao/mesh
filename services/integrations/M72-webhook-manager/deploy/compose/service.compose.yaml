@@ -1,10 +1,11 @@
 services:
   m72-webhook-manager:
     build:
-      context: ../../services/integrations/M72-webhook-manager
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

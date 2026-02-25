@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M95-referral-analytics-service
+  name: m95-referral-analytics-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M95-referral-analytics-service
+      app: m95-referral-analytics-service
+

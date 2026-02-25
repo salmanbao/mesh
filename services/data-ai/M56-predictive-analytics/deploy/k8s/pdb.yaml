@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M56-predictive-analytics
+  name: m56-predictive-analytics
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M56-predictive-analytics
+      app: m56-predictive-analytics
+

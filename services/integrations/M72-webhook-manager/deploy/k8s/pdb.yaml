@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M72-webhook-manager
+  name: m72-webhook-manager
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M72-webhook-manager
+      app: m72-webhook-manager
+

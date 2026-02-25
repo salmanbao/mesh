@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: m83-cdn-management-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: m83-cdn-management-service
+  template:
+    metadata:
+      labels:
+        app: m83-cdn-management-service
+    spec:
+      containers:
+        - name: api
+          image: m83-cdn-management-service:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090

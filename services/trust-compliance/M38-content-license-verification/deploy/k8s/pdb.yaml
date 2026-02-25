@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M38-content-license-verification
+  name: m38-content-license-verification
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M38-content-license-verification
+      app: m38-content-license-verification
+

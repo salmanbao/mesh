@@ -1,0 +1,10 @@
+services:
+  m96-referral-fraud-detection-service:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    env_file:
+      - ../../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M41-reward-engine
+  name: m41-reward-engine
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M41-reward-engine
+      app: m41-reward-engine
+

@@ -3,7 +3,6 @@ package http
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -37,7 +36,14 @@ func recoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				slog.Error("panic recovered", "panic", rec)
+				httpLogger().ErrorContext(r.Context(), "panic recovered",
+					"operation", "http_panic_recovery",
+					"outcome", "failure",
+					"request_id", requestIDFromContext(r.Context()),
+					"method", r.Method,
+					"path", r.URL.Path,
+					"panic", rec,
+				)
 				writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
 			}
 		}()
@@ -45,16 +51,59 @@ func recoverMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+type statusRecorder struct {
+	http.ResponseWriter
+	statusCode int
+	bytes      int
+}
+
+func (r *statusRecorder) WriteHeader(statusCode int) {
+	r.statusCode = statusCode
+	r.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (r *statusRecorder) Write(payload []byte) (int, error) {
+	if r.statusCode == 0 {
+		r.statusCode = http.StatusOK
+	}
+	n, err := r.ResponseWriter.Write(payload)
+	r.bytes += n
+	return n, err
+}
+
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		next.ServeHTTP(w, r)
-		slog.Info("http request",
+		recorder := &statusRecorder{ResponseWriter: w}
+		next.ServeHTTP(recorder, r)
+
+		statusCode := recorder.statusCode
+		if statusCode == 0 {
+			statusCode = http.StatusOK
+		}
+		outcome := "success"
+		if statusCode >= 400 {
+			outcome = "failure"
+		}
+
+		fields := []any{
+			"operation", "http_request",
+			"outcome", outcome,
 			"method", r.Method,
 			"path", r.URL.Path,
+			"status_code", statusCode,
+			"bytes", recorder.bytes,
 			"duration_ms", time.Since(start).Milliseconds(),
 			"request_id", requestIDFromContext(r.Context()),
-		)
+		}
+		switch {
+		case statusCode >= 500:
+			httpLogger().ErrorContext(r.Context(), "http request completed", fields...)
+		case statusCode >= 400:
+			httpLogger().WarnContext(r.Context(), "http request completed", fields...)
+		default:
+			httpLogger().InfoContext(r.Context(), "http request completed", fields...)
+		}
 	})
 }
 
@@ -88,6 +137,8 @@ func mapDomainError(err error) (int, string, string) {
 		return http.StatusUnauthorized, "INVALID_CREDENTIALS", "invalid email or password"
 	case errors.Is(err, domain.ErrAccountLocked):
 		return http.StatusTooManyRequests, "ACCOUNT_LOCKED", "account temporarily locked"
+	case errors.Is(err, domain.ErrRateLimited):
+		return http.StatusTooManyRequests, "RATE_LIMITED", "too many requests"
 	case errors.Is(err, domain.ErrSessionExpired):
 		return http.StatusUnauthorized, "SESSION_EXPIRED", "session expired"
 	case errors.Is(err, domain.ErrSessionRevoked):
@@ -96,6 +147,8 @@ func mapDomainError(err error) (int, string, string) {
 		return http.StatusUnauthorized, "TOKEN_EXPIRED", "token expired"
 	case errors.Is(err, domain.ErrConflict), errors.Is(err, domain.ErrIdempotencyConflict):
 		return http.StatusConflict, "CONFLICT", err.Error()
+	case errors.Is(err, domain.ErrOIDCFlowRequired):
+		return http.StatusBadRequest, "OIDC_FLOW_REQUIRED", "oidc_flow_required"
 	case errors.Is(err, domain.ErrCannotUnlinkLastAuth):
 		return http.StatusBadRequest, "CANNOT_UNLINK_LAST_METHOD", err.Error()
 	case errors.Is(err, domain.ErrNotFound):

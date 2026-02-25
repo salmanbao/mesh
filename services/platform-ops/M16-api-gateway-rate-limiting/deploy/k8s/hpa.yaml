@@ -1,12 +1,12 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: M16-api-gateway-rate-limiting
+  name: m16-api-gateway-rate-limiting
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: M16-api-gateway-rate-limiting
+    name: m16-api-gateway-rate-limiting
   minReplicas: 2
   maxReplicas: 5
   metrics:
@@ -16,3 +16,4 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
+

@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M52-delivery-service
+  name: m52-delivery-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M52-delivery-service
+      app: m52-delivery-service
   template:
     metadata:
       labels:
-        app: M52-delivery-service
+        app: m52-delivery-service
     spec:
       containers:
         - name: api
-          image: M52-delivery-service:latest
+          image: m52-delivery-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

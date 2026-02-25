@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M38-content-license-verification
+  name: m38-content-license-verification
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M38-content-license-verification
+      app: m38-content-license-verification
   template:
     metadata:
       labels:
-        app: M38-content-license-verification
+        app: m38-content-license-verification
     spec:
       containers:
         - name: api
-          image: M38-content-license-verification:latest
+          image: m38-content-license-verification:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

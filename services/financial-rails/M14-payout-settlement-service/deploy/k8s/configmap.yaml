@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M14-payout-settlement-service-config
+  name: m14-payout-settlement-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

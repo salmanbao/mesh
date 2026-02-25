@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M57-ai-service
+  name: m57-ai-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M57-ai-service
+      app: m57-ai-service
   template:
     metadata:
       labels:
-        app: M57-ai-service
+        app: m57-ai-service
     spec:
       containers:
         - name: api
-          image: M57-ai-service:latest
+          image: m57-ai-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

@@ -1,9 +1,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M01-authentication-service-config
+  name: m01-authentication-service-config
+  labels:
+    app.kubernetes.io/name: m01-authentication-service
+    app.kubernetes.io/part-of: mesh
 data:
-  CONFIG_PATH: /app/configs/default.yaml
   HTTP_PORT: "8080"
   GRPC_PORT: "9090"
   TOKEN_EXPIRY_HOURS: "24"
@@ -11,3 +13,7 @@ data:
   SESSION_ABSOLUTE_DAYS: "90"
   FAILED_LOGIN_THRESHOLD: "5"
   ACCOUNT_LOCKOUT_MINUTES: "30"
+  OIDC_HTTP_TIMEOUT_SECONDS: "8"
+  OUTBOX_POLL_SECONDS: "2"
+  OUTBOX_BATCH_SIZE: "100"
+

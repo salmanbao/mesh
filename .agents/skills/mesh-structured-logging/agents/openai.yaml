@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mesh Structured Logging"
+  short_description: "Add consistent structured logging across a full mesh service."
+  default_prompt: "Use $mesh-structured-logging to implement end-to-end structured logging in a mesh microservice."

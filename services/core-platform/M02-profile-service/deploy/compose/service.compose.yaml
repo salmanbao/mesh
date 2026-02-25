@@ -1,10 +1,37 @@
 services:
   m02-profile-service:
     build:
-      context: ../../services/core-platform/M02-profile-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
+    environment:
+      AUTH_GRPC_URL: m01-authentication-service:9090
+      KAFKA_BROKERS: m67-event-bus:9092
+      KAFKA_CONSUMER_GROUP: m02-profile-service
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-}
+      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
+      KMS_KEY_ID: ${KMS_KEY_ID:-}
+      CLAMAV_ADDRESS: ${CLAMAV_ADDRESS:-}
+    networks: [mesh]
+  m02-profile-service-worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    command: ["/out/worker"]
+    env_file:
+      - ../../../.env.example
+    environment:
+      AUTH_GRPC_URL: m01-authentication-service:9090
+      KAFKA_BROKERS: m67-event-bus:9092
+      KAFKA_CONSUMER_GROUP: m02-profile-service
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-}
+      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
+      KMS_KEY_ID: ${KMS_KEY_ID:-}
+      CLAMAV_ADDRESS: ${CLAMAV_ADDRESS:-}
     networks: [mesh]
 networks:
   mesh: {}
+

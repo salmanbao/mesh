@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: m02-profile-service-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: m02-profile-service-worker
+  template:
+    metadata:
+      labels:
+        app: m02-profile-service-worker
+    spec:
+      containers:
+        - name: worker
+          image: m02-profile-service:latest
+          envFrom:
+            - configMapRef:
+                name: m02-profile-service-config
+          command: ["/out/worker"]

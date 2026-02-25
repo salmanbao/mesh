@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: m71-integration-hub
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: m71-integration-hub

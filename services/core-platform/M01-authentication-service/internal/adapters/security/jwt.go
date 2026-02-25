@@ -16,12 +16,15 @@ import (
 	"github.com/viralforge/mesh/services/core-platform/M01-authentication-service/internal/ports"
 )
 
+// JWTSigner implements RS256 token signing/parsing for M01 auth sessions.
+// Keys are held at adapter level so application layer stays crypto-library agnostic.
 type JWTSigner struct {
 	kid        string
 	privateKey *rsa.PrivateKey
 	publicKey  *rsa.PublicKey
 }
 
+// NewJWTSigner builds a signer from configured PEM keys.
 func NewJWTSigner(kid, privateKeyPEM, publicKeyPEM string) (*JWTSigner, error) {
 	if kid == "" {
 		return nil, errors.New("jwt key id (kid) is required")
@@ -46,6 +49,8 @@ func NewJWTSigner(kid, privateKeyPEM, publicKeyPEM string) (*JWTSigner, error) {
 	}, nil
 }
 
+// NewEphemeralJWTSigner creates an in-memory keypair for local/dev use.
+// This exists to unblock runtime startup when static keys are intentionally absent.
 func NewEphemeralJWTSigner(kid string) (*JWTSigner, error) {
 	if kid == "" {
 		kid = "ephemeral-key-1"

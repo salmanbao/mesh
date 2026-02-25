@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M68-retention-service-config
+  name: m68-retention-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

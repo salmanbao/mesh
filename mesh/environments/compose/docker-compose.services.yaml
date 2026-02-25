@@ -1,0 +1,346 @@
+services:
+  m01-authentication-service:
+    build:
+      context: ../../services/core-platform/M01-authentication-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m02-profile-service:
+    build:
+      context: ../../services/core-platform/M02-profile-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m03-notification-service:
+    build:
+      context: ../../services/integrations/M03-notification-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m05-billing-service:
+    build:
+      context: ../../services/financial-rails/M05-billing-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m06-media-processing-pipeline:
+    build:
+      context: ../../services/data-ai/M06-media-processing-pipeline
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m10-social-integration-verification-service:
+    build:
+      context: ../../services/integrations/M10-social-integration-verification-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m11-distribution-tracking-service:
+    build:
+      context: ../../services/integrations/M11-distribution-tracking-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m12-fraud-detection-engine:
+    build:
+      context: ../../services/trust-compliance/M12-fraud-detection-engine
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m13-escrow-ledger-service:
+    build:
+      context: ../../services/financial-rails/M13-escrow-ledger-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m14-payout-settlement-service:
+    build:
+      context: ../../services/financial-rails/M14-payout-settlement-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m16-api-gateway-rate-limiting:
+    build:
+      context: ../../services/platform-ops/M16-api-gateway-rate-limiting
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m17-observability-monitoring:
+    build:
+      context: ../../services/platform-ops/M17-observability-monitoring
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m18-cache-state-management:
+    build:
+      context: ../../services/platform-ops/M18-cache-state-management
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m19-storage-lifecycle-management:
+    build:
+      context: ../../services/platform-ops/M19-storage-lifecycle-management
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m25-auto-clipping-ai:
+    build:
+      context: ../../services/data-ai/M25-auto-clipping-ai
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m30-social-integration-service:
+    build:
+      context: ../../services/integrations/M30-social-integration-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m36-risk-service:
+    build:
+      context: ../../services/trust-compliance/M36-risk-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m38-content-license-verification:
+    build:
+      context: ../../services/trust-compliance/M38-content-license-verification
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m39-finance-service:
+    build:
+      context: ../../services/financial-rails/M39-finance-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m41-reward-engine:
+    build:
+      context: ../../services/financial-rails/M41-reward-engine
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m44-resolution-center:
+    build:
+      context: ../../services/financial-rails/M44-resolution-center
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m45-community-service:
+    build:
+      context: ../../services/integrations/M45-community-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m50-consent-service:
+    build:
+      context: ../../services/trust-compliance/M50-consent-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m51-data-portability-service:
+    build:
+      context: ../../services/trust-compliance/M51-data-portability-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m52-delivery-service:
+    build:
+      context: ../../services/integrations/M52-delivery-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m54-analytics-service:
+    build:
+      context: ../../services/data-ai/M54-analytics-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m55-dashboard-service:
+    build:
+      context: ../../services/data-ai/M55-dashboard-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m56-predictive-analytics:
+    build:
+      context: ../../services/data-ai/M56-predictive-analytics
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m57-ai-service:
+    build:
+      context: ../../services/data-ai/M57-ai-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m58-content-recommendation-engine:
+    build:
+      context: ../../services/data-ai/M58-content-recommendation-engine
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m66-embed-service:
+    build:
+      context: ../../services/integrations/M66-embed-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m67-event-bus:
+    build:
+      context: ../../services/platform-ops/M67-event-bus
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m68-retention-service:
+    build:
+      context: ../../services/trust-compliance/M68-retention-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m69-legal-service:
+    build:
+      context: ../../services/trust-compliance/M69-legal-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m70-developer-portal:
+    build:
+      context: ../../services/integrations/M70-developer-portal
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m71-integration-hub:
+    build:
+      context: ../../services/integrations/M71-integration-hub
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m72-webhook-manager:
+    build:
+      context: ../../services/integrations/M72-webhook-manager
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m73-support-service:
+    build:
+      context: ../../services/integrations/M73-support-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m77-config-service:
+    build:
+      context: ../../services/platform-ops/M77-config-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m78-logging-service:
+    build:
+      context: ../../services/platform-ops/M78-logging-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m79-monitoring-service:
+    build:
+      context: ../../services/platform-ops/M79-monitoring-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m80-tracing-service:
+    build:
+      context: ../../services/platform-ops/M80-tracing-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m83-cdn-management-service:
+    build:
+      context: ../../services/platform-ops/M83-cdn-management-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m84-data-migration-service:
+    build:
+      context: ../../services/platform-ops/M84-data-migration-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m89-affiliate-service:
+    build:
+      context: ../../services/integrations/M89-affiliate-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m91-license-service:
+    build:
+      context: ../../services/trust-compliance/M91-license-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m95-referral-analytics-service:
+    build:
+      context: ../../services/data-ai/M95-referral-analytics-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m96-referral-fraud-detection-service:
+    build:
+      context: ../../services/trust-compliance/M96-referral-fraud-detection-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+  m97-team-service:
+    build:
+      context: ../../services/core-platform/M97-team-service
+      dockerfile: Dockerfile
+    env_file:
+      - ../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

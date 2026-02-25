@@ -1,10 +1,11 @@
 services:
   m69-legal-service:
     build:
-      context: ../../services/trust-compliance/M69-legal-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

@@ -1,0 +1,24 @@
+run:
+  timeout: 5m
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - depguard
+linters-settings:
+  depguard:
+    rules:
+      service_boundary:
+        list-mode: lax
+        files:
+          - $all
+        allow:
+          - $gostd
+          - github.com/viralforge/mesh/services/integrations/M10-social-integration-verification-service
+          - github.com/viralforge/mesh/platform
+          - github.com/viralforge/mesh/contracts
+        deny:
+          - pkg: github.com/viralforge/mesh/services/
+            desc: cross-service imports are forbidden; use contracts and network boundaries
+          - pkg: github.com/viralforge/solomon/
+            desc: do not import Solomon runtime code into mesh services

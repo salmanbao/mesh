@@ -1,10 +1,11 @@
 services:
   m52-delivery-service:
     build:
-      context: ../../services/integrations/M52-delivery-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

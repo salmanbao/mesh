@@ -2,54 +2,37 @@ package grpc
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
+	"github.com/google/uuid"
+	authv1 "github.com/viralforge/mesh/contracts/gen/go/auth/v1"
+	"github.com/viralforge/mesh/services/core-platform/M01-authentication-service/internal/application"
+	"github.com/viralforge/mesh/services/core-platform/M01-authentication-service/internal/domain"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/structpb"
-
-	"github.com/viralforge/mesh/services/core-platform/M01-authentication-service/internal/application"
 )
 
-type AuthInternalService interface {
-	ValidateToken(context.Context, *structpb.Struct) (*structpb.Struct, error)
-	GetPublicKeys(context.Context, *emptypb.Empty) (*structpb.Struct, error)
-}
-
+// AuthInternalServer exposes M01 internal auth RPCs.
+// This adapter keeps transport/error mapping concerns outside application logic.
 type AuthInternalServer struct {
+	authv1.UnimplementedAuthInternalServiceServer
 	service *application.Service
 }
 
+// NewAuthInternalServer constructs the gRPC auth server adapter.
 func NewAuthInternalServer(service *application.Service) *AuthInternalServer {
 	return &AuthInternalServer{service: service}
 }
 
-func Register(server grpc.ServiceRegistrar, svc AuthInternalService) {
-	server.RegisterService(&grpc.ServiceDesc{
-		ServiceName: "viralforge.auth.v1.AuthInternalService",
-		HandlerType: (*AuthInternalService)(nil),
-		Methods: []grpc.MethodDesc{
-			{
-				MethodName: "ValidateToken",
-				Handler:    validateTokenHandler(svc),
-			},
-			{
-				MethodName: "GetPublicKeys",
-				Handler:    getPublicKeysHandler(svc),
-			},
-		},
-		Streams:  []grpc.StreamDesc{},
-		Metadata: "mesh/contracts/proto/auth/v1/auth_internal.proto",
-	}, svc)
+// Register binds the auth internal service to a gRPC registrar.
+func Register(server grpc.ServiceRegistrar, svc *AuthInternalServer) {
+	authv1.RegisterAuthInternalServiceServer(server, svc)
 }
 
-func (s *AuthInternalServer) ValidateToken(ctx context.Context, req *structpb.Struct) (*structpb.Struct, error) {
-	tokenVal := req.GetFields()["token"]
-	if tokenVal == nil {
-		return nil, status.Error(codes.InvalidArgument, "missing token")
-	}
-	token := tokenVal.GetStringValue()
+func (s *AuthInternalServer) ValidateToken(ctx context.Context, req *authv1.ValidateTokenRequest) (*authv1.ValidateTokenResponse, error) {
+	token := req.GetToken()
 	if token == "" {
 		return nil, status.Error(codes.InvalidArgument, "missing token")
 	}
@@ -59,77 +42,68 @@ func (s *AuthInternalServer) ValidateToken(ctx context.Context, req *structpb.St
 		return nil, status.Error(codes.Unauthenticated, "invalid token")
 	}
 
-	resp, err := structpb.NewStruct(map[string]any{
-		"valid":      true,
-		"user_id":    claims.UserID.String(),
-		"email":      claims.Email,
-		"role":       claims.Role,
-		"expires_at": claims.ExpiresAt.Unix(),
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "build response: %v", err)
-	}
-	return resp, nil
+	return &authv1.ValidateTokenResponse{
+		Valid:     true,
+		UserId:    claims.UserID.String(),
+		Email:     claims.Email,
+		Role:      claims.Role,
+		ExpiresAt: claims.ExpiresAt.Unix(),
+	}, nil
 }
 
-func (s *AuthInternalServer) GetPublicKeys(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
+func (s *AuthInternalServer) GetPublicKeys(ctx context.Context, _ *authv1.GetPublicKeysRequest) (*authv1.GetPublicKeysResponse, error) {
 	keys, err := s.service.PublicJWKs()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "get keys: %v", err)
 	}
-	resp, err := structpb.NewStruct(map[string]any{
-		"keys": keys,
-	})
+
+	out := make([]*authv1.JWK, 0, len(keys))
+	for _, item := range keys {
+		out = append(out, &authv1.JWK{
+			Kid: valueAsString(item["kid"]),
+			Kty: valueAsString(item["kty"]),
+			Alg: valueAsString(item["alg"]),
+			N:   valueAsString(item["n"]),
+			E:   valueAsString(item["e"]),
+		})
+	}
+
+	return &authv1.GetPublicKeysResponse{Keys: out}, nil
+}
+
+func (s *AuthInternalServer) GetUserIdentity(ctx context.Context, req *authv1.GetUserIdentityRequest) (*authv1.GetUserIdentityResponse, error) {
+	if req.GetUserId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "missing user_id")
+	}
+
+	userID, err := uuid.Parse(req.GetUserId())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "build response: %v", err)
+		return nil, status.Error(codes.InvalidArgument, "invalid user_id")
 	}
-	return resp, nil
+
+	identity, err := s.service.GetUserIdentity(ctx, userID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, status.Errorf(codes.Internal, "get user identity: %v", err)
+	}
+
+	return &authv1.GetUserIdentityResponse{
+		UserId: identity.UserID.String(),
+		Email:  identity.Email,
+		Role:   identity.Role,
+		Status: identity.Status,
+	}, nil
 }
 
-func validateTokenHandler(svc AuthInternalService) func(any, context.Context, func(any) error, grpc.UnaryServerInterceptor) (any, error) {
-	return func(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
-		req := &structpb.Struct{}
-		if err := dec(req); err != nil {
-			return nil, err
-		}
-		if interceptor == nil {
-			return svc.ValidateToken(ctx, req)
-		}
-		info := &grpc.UnaryServerInfo{
-			Server:     srv,
-			FullMethod: "/viralforge.auth.v1.AuthInternalService/ValidateToken",
-		}
-		handler := func(ctx context.Context, req any) (any, error) {
-			typed, ok := req.(*structpb.Struct)
-			if !ok {
-				return nil, status.Error(codes.InvalidArgument, "invalid request type")
-			}
-			return svc.ValidateToken(ctx, typed)
-		}
-		return interceptor(ctx, req, info, handler)
-	}
-}
-
-func getPublicKeysHandler(svc AuthInternalService) func(any, context.Context, func(any) error, grpc.UnaryServerInterceptor) (any, error) {
-	return func(srv any, ctx context.Context, dec func(any) error, interceptor grpc.UnaryServerInterceptor) (any, error) {
-		req := &emptypb.Empty{}
-		if err := dec(req); err != nil {
-			return nil, err
-		}
-		if interceptor == nil {
-			return svc.GetPublicKeys(ctx, req)
-		}
-		info := &grpc.UnaryServerInfo{
-			Server:     srv,
-			FullMethod: "/viralforge.auth.v1.AuthInternalService/GetPublicKeys",
-		}
-		handler := func(ctx context.Context, req any) (any, error) {
-			typed, ok := req.(*emptypb.Empty)
-			if !ok {
-				return nil, status.Error(codes.InvalidArgument, "invalid request type")
-			}
-			return svc.GetPublicKeys(ctx, typed)
-		}
-		return interceptor(ctx, req, info, handler)
+func valueAsString(v any) string {
+	switch typed := v.(type) {
+	case string:
+		return typed
+	case fmt.Stringer:
+		return typed.String()
+	default:
+		return ""
 	}
 }

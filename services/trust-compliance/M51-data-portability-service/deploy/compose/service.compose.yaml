@@ -1,10 +1,11 @@
 services:
   m51-data-portability-service:
     build:
-      context: ../../services/trust-compliance/M51-data-portability-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

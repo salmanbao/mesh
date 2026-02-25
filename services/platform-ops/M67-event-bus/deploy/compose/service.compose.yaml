@@ -1,10 +1,11 @@
 services:
   m67-event-bus:
     build:
-      context: ../../services/platform-ops/M67-event-bus
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

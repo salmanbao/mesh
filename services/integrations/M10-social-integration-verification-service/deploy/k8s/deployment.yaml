@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M10-social-integration-verification-service
+  name: m10-social-integration-verification-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M10-social-integration-verification-service
+      app: m10-social-integration-verification-service
   template:
     metadata:
       labels:
-        app: M10-social-integration-verification-service
+        app: m10-social-integration-verification-service
     spec:
       containers:
         - name: api
-          image: M10-social-integration-verification-service:latest
+          image: m10-social-integration-verification-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

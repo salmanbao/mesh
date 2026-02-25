@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M30-social-integration-service-config
+  name: m30-social-integration-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

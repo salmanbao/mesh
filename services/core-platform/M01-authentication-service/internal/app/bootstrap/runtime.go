@@ -25,24 +25,38 @@ import (
 	"github.com/viralforge/mesh/services/core-platform/M01-authentication-service/internal/application"
 )
 
+// Runtime holds assembled infrastructure for API and worker processes.
+// Keeping these resources together ensures consistent lifecycle and cleanup behavior.
 type Runtime struct {
-	cfg        Config
-	logger     *slog.Logger
-	httpServer *http.Server
-	grpcServer *grpc.Server
-	grpcLis    net.Listener
-	outbox     *eventadapter.OutboxWorker
-	cleanupFn  func(context.Context)
+	cfg         Config
+	logger      *slog.Logger
+	httpServer  *http.Server
+	grpcServer  *grpc.Server
+	grpcLis     net.Listener
+	outbox      *eventadapter.OutboxWorker
+	oidcRefresh *eventadapter.OIDCTokenRefreshWorker
+	cleanupFn   func(context.Context)
 }
 
+// NewRuntime wires adapters, repositories, and application service for M01.
+// Centralizing composition here enforces clear boundaries between runtime and business logic.
 func NewRuntime(ctx context.Context, configPath string) (*Runtime, error) {
 	cfg, err := LoadConfig(configPath)
 	if err != nil {
 		return nil, err
 	}
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	logger.Info("bootstrapping m01 authentication service", "http_port", cfg.HTTPPort, "grpc_port", cfg.GRPCPort)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})).
+		With("service", "M01-Authentication-Service")
+	slog.SetDefault(logger)
+	logger.InfoContext(ctx, "runtime bootstrap started",
+		"module", "bootstrap",
+		"layer", "runtime",
+		"operation", "new_runtime",
+		"outcome", "start",
+		"http_port", cfg.HTTPPort,
+		"grpc_port", cfg.GRPCPort,
+	)
 
 	pool, err := postgres.Connect(ctx, cfg.DatabaseURL, cfg.MaxDBConns)
 	if err != nil {
@@ -59,6 +73,10 @@ func NewRuntime(ctx context.Context, configPath string) (*Runtime, error) {
 	}
 
 	redisClient, err := cacheadapter.Connect(ctx, cfg.RedisURL)
+	if err != nil {
+		_ = sqlDB.Close()
+		return nil, fmt.Errorf("init redis client: %w", err)
+	}
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("connect redis: %w", err)
@@ -72,7 +90,12 @@ func NewRuntime(ctx context.Context, configPath string) (*Runtime, error) {
 			_ = redisClient.Close()
 			return nil, fmt.Errorf("init jwt signer: %w", err)
 		}
-		logger.Warn("using ephemeral JWT keys for local/dev runtime")
+		logger.WarnContext(ctx, "using ephemeral JWT keys for local/dev runtime",
+			"module", "bootstrap",
+			"layer", "runtime",
+			"operation", "jwt_signer_init",
+			"outcome", "fallback",
+		)
 		tokenSigner, err = security.NewEphemeralJWTSigner(cfg.JWTKeyID)
 		if err != nil {
 			_ = sqlDB.Close()
@@ -85,6 +108,7 @@ func NewRuntime(ctx context.Context, configPath string) (*Runtime, error) {
 	revocations := cacheadapter.NewRedisSessionRevocationStore(redisClient)
 	challenges := cacheadapter.NewRedisMFAChallengeStore(redisClient)
 	oidcState := cacheadapter.NewRedisOIDCStateStore(redisClient)
+	regCompletion := cacheadapter.NewRedisRegistrationCompletionStore(redisClient)
 	oidcVerifier := security.NewOIDCVerifier(security.OIDCVerifierConfig{
 		HTTPClient: &http.Client{
 			Timeout: cfg.OIDCHTTPTimeout,
@@ -101,29 +125,40 @@ func NewRuntime(ctx context.Context, configPath string) (*Runtime, error) {
 
 	svc := application.NewService(application.Dependencies{
 		Config: application.Config{
-			DefaultRole:          "INFLUENCER",
-			TokenTTL:             cfg.TokenTTL,
-			SessionTTL:           cfg.SessionTTL,
-			SessionAbsoluteTTL:   cfg.SessionAbsoluteTTL,
-			FailedLoginThreshold: cfg.FailedThreshold,
-			LockoutDuration:      cfg.LockoutDuration,
+			DefaultRole:                               "INFLUENCER",
+			TokenTTL:                                  cfg.TokenTTL,
+			SessionTTL:                                cfg.SessionTTL,
+			SessionAbsoluteTTL:                        cfg.SessionAbsoluteTTL,
+			FailedLoginThreshold:                      cfg.FailedThreshold,
+			LockoutDuration:                           cfg.LockoutDuration,
+			RegisterOIDCFieldMode:                     cfg.RegisterOIDCFieldMode,
+			OIDCAllowEmailLinking:                     cfg.OIDCAllowEmailLinking,
+			OIDCAllowedRedirectURIs:                   cfg.OIDCGoogleAllowedRedirectURIs,
+			OIDCCompletionTokenTTL:                    cfg.OIDCCompletionTokenTTL,
+			RegisterRateLimitIPThreshold:              cfg.RegisterRateLimitIPThreshold,
+			RegisterRateLimitIdentifierThreshold:      cfg.RegisterRateLimitIdentifierThreshold,
+			RegisterRateLimitWindow:                   cfg.RegisterRateLimitWindow,
+			OIDCAuthorizeRateLimitIPThreshold:         cfg.OIDCAuthorizeRateLimitIPThreshold,
+			OIDCAuthorizeRateLimitIdentifierThreshold: cfg.OIDCAuthorizeRateLimitIdentifierThreshold,
+			OIDCAuthorizeRateLimitWindow:              cfg.OIDCAuthorizeRateLimitWindow,
 		},
-		Users:         repos.Users,
-		Sessions:      repos.Sessions,
-		LoginAttempts: repos.LoginAttempts,
-		Outbox:        repos.Outbox,
-		Idempotency:   repos.Idempotency,
-		Recovery:      repos.Recovery,
-		Credentials:   repos.Credentials,
-		MFA:           repos.MFA,
-		OIDC:          repos.OIDC,
-		Lockouts:      lockouts,
-		Revocations:   revocations,
-		Challenges:    challenges,
-		OIDCState:     oidcState,
-		OIDCVerifier:  oidcVerifier,
-		Hasher:        security.NewBcryptHasher(cfg.BcryptCost),
-		TokenSigner:   tokenSigner,
+		Users:                  repos.Users,
+		Sessions:               repos.Sessions,
+		LoginAttempts:          repos.LoginAttempts,
+		Outbox:                 repos.Outbox,
+		Idempotency:            repos.Idempotency,
+		Recovery:               repos.Recovery,
+		Credentials:            repos.Credentials,
+		MFA:                    repos.MFA,
+		OIDC:                   repos.OIDC,
+		Lockouts:               lockouts,
+		Revocations:            revocations,
+		Challenges:             challenges,
+		OIDCState:              oidcState,
+		RegistrationCompletion: regCompletion,
+		OIDCVerifier:           oidcVerifier,
+		Hasher:                 security.NewBcryptHasher(cfg.BcryptCost),
+		TokenSigner:            tokenSigner,
 	})
 
 	handler := httpadapter.NewHandler(svc)
@@ -153,15 +188,32 @@ func NewRuntime(ctx context.Context, configPath string) (*Runtime, error) {
 		eventadapter.NewLoggingPublisher(logger),
 		cfg.OutboxPollInterval,
 		cfg.OutboxBatchSize,
+		cfg.OutboxClaimTTL,
+		cfg.OutboxMaxRetries,
+	)
+	oidcRefresh := eventadapter.NewOIDCTokenRefreshWorker(
+		logger,
+		svc,
+		cfg.OIDCRefreshInterval,
+		cfg.OIDCRefreshWindow,
+		cfg.OIDCRefreshBatchSize,
+	)
+
+	logger.InfoContext(ctx, "runtime bootstrap completed",
+		"module", "bootstrap",
+		"layer", "runtime",
+		"operation", "new_runtime",
+		"outcome", "success",
 	)
 
 	return &Runtime{
-		cfg:        cfg,
-		logger:     logger,
-		httpServer: httpServer,
-		grpcServer: grpcServer,
-		grpcLis:    lis,
-		outbox:     outbox,
+		cfg:         cfg,
+		logger:      logger,
+		httpServer:  httpServer,
+		grpcServer:  grpcServer,
+		grpcLis:     lis,
+		outbox:      outbox,
+		oidcRefresh: oidcRefresh,
 		cleanupFn: func(ctx context.Context) {
 			_ = redisClient.Close()
 			_ = sqlDB.Close()
@@ -169,19 +221,33 @@ func NewRuntime(ctx context.Context, configPath string) (*Runtime, error) {
 	}, nil
 }
 
+// RunAPI starts HTTP and gRPC servers and coordinates graceful shutdown.
+// Shared shutdown logic avoids leaking DB/Redis resources during deploy restarts.
 func (r *Runtime) RunAPI(ctx context.Context) error {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	errCh := make(chan error, 2)
 	go func() {
-		r.logger.Info("http server started", "addr", r.httpServer.Addr)
+		r.logger.InfoContext(ctx, "http server started",
+			"module", "bootstrap",
+			"layer", "runtime",
+			"operation", "http_server_start",
+			"outcome", "success",
+			"addr", r.httpServer.Addr,
+		)
 		if err := r.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- fmt.Errorf("http server: %w", err)
 		}
 	}()
 	go func() {
-		r.logger.Info("grpc server started", "addr", r.grpcLis.Addr().String())
+		r.logger.InfoContext(ctx, "grpc server started",
+			"module", "bootstrap",
+			"layer", "runtime",
+			"operation", "grpc_server_start",
+			"outcome", "success",
+			"addr", r.grpcLis.Addr().String(),
+		)
 		if err := r.grpcServer.Serve(r.grpcLis); err != nil {
 			errCh <- fmt.Errorf("grpc server: %w", err)
 		}
@@ -189,9 +255,20 @@ func (r *Runtime) RunAPI(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		r.logger.Info("shutdown signal received")
+		r.logger.InfoContext(ctx, "shutdown signal received",
+			"module", "bootstrap",
+			"layer", "runtime",
+			"operation", "service_shutdown",
+			"outcome", "success",
+		)
 	case err := <-errCh:
-		r.logger.Error("server failure", "error", err)
+		r.logger.ErrorContext(ctx, "server failure",
+			"module", "bootstrap",
+			"layer", "runtime",
+			"operation", "service_runtime",
+			"outcome", "failure",
+			"error", err,
+		)
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -202,17 +279,53 @@ func (r *Runtime) RunAPI(ctx context.Context) error {
 	return nil
 }
 
+// RunWorker starts the outbox publisher loop with signal-aware shutdown.
+// Running worker separately keeps event publishing resilient and independently scalable.
 func (r *Runtime) RunWorker(ctx context.Context) error {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	r.logger.Info("outbox worker started")
-	err := r.outbox.Run(ctx)
-	if err != nil && !errors.Is(err, context.Canceled) {
-		return err
+	r.logger.InfoContext(ctx, "outbox worker started",
+		"module", "bootstrap",
+		"layer", "runtime",
+		"operation", "outbox_worker_start",
+		"outcome", "success",
+	)
+	r.logger.InfoContext(ctx, "oidc refresh worker started",
+		"module", "bootstrap",
+		"layer", "runtime",
+		"operation", "oidc_refresh_worker_start",
+		"outcome", "success",
+	)
+
+	errCh := make(chan error, 2)
+	go func() {
+		if err := r.outbox.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			errCh <- fmt.Errorf("outbox worker: %w", err)
+		}
+	}()
+	go func() {
+		if err := r.oidcRefresh.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			errCh <- fmt.Errorf("oidc refresh worker: %w", err)
+		}
+	}()
+
+	var runErr error
+	select {
+	case <-ctx.Done():
+	case err := <-errCh:
+		runErr = err
+		r.logger.ErrorContext(ctx, "worker failure",
+			"module", "bootstrap",
+			"layer", "runtime",
+			"operation", "worker_runtime",
+			"outcome", "failure",
+			"error", err,
+		)
 	}
+
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	r.cleanupFn(shutdownCtx)
-	return nil
+	return runErr
 }

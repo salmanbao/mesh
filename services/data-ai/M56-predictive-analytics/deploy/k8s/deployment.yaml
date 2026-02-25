@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M56-predictive-analytics
+  name: m56-predictive-analytics
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M56-predictive-analytics
+      app: m56-predictive-analytics
   template:
     metadata:
       labels:
-        app: M56-predictive-analytics
+        app: m56-predictive-analytics
     spec:
       containers:
         - name: api
-          image: M56-predictive-analytics:latest
+          image: m56-predictive-analytics:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

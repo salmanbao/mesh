@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M52-delivery-service-config
+  name: m52-delivery-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

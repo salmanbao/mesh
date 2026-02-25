@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M67-event-bus
+  name: m67-event-bus
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M67-event-bus
+      app: m67-event-bus
   template:
     metadata:
       labels:
-        app: M67-event-bus
+        app: m67-event-bus
     spec:
       containers:
         - name: api
-          image: M67-event-bus:latest
+          image: m67-event-bus:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

@@ -13,3 +13,11 @@
 ## Shared Code
 - Shared code is technical only and versioned in `mesh/platform`.
 - Domain/business logic must remain service-local.
+
+## Bootstrap Entrypoint Policy
+- Service bootstrap contract is package-level, not filename-level.
+- Valid bootstrap implementations may use `internal/app/bootstrap/bootstrap.go`, `runtime.go`, or both.
+- A service is bootstrap-compliant when:
+  - `internal/app/bootstrap` exists,
+  - package name is `bootstrap`,
+  - at least one exported entrypoint is present (`Build` or `NewRuntime`).

@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M30-social-integration-service
+  name: m30-social-integration-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M30-social-integration-service
+      app: m30-social-integration-service
+

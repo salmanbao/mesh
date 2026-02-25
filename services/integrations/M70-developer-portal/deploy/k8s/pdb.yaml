@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M70-developer-portal
+  name: m70-developer-portal
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M70-developer-portal
+      app: m70-developer-portal
+

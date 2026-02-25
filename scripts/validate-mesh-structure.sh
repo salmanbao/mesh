@@ -28,8 +28,8 @@ ROOT_ABS="$(cd "$ROOT_PATH" && pwd)"
 load_microservices "$ARCHITECTURE_MAP_PATH"
 
 errors=()
-if [[ "${#SERVICES[@]}" -ne 49 ]]; then
-  errors+=("Expected 49 microservices from architecture map, got ${#SERVICES[@]}")
+if [[ "${#SERVICES[@]}" -eq 0 ]]; then
+  errors+=("No microservices were discovered from architecture map: $ARCHITECTURE_MAP_PATH")
 fi
 
 required_root_paths=(
@@ -41,6 +41,9 @@ required_root_paths=(
   "docs/dependency-load-order.md"
   "platform/version.yaml"
   "platform/go.mod"
+  "contracts/go.mod"
+  "contracts/buf.yaml"
+  "contracts/buf.gen.yaml"
   "contracts/proto/README.md"
   "contracts/openapi/README.md"
   "contracts/events/README.md"
@@ -48,6 +51,7 @@ required_root_paths=(
   "environments/compose/docker-compose.base.yaml"
   "environments/compose/docker-compose.services.yaml"
   "services/services-index.yaml"
+  "tooling/manifests/implemented-services.yaml"
 )
 
 rel=""
@@ -64,6 +68,51 @@ for cluster in "${cluster_dirs[@]}"; do
     errors+=("Missing service cluster directory: services/$cluster")
   fi
 done
+
+is_rfc1123_label() {
+  local value="$1"
+  [[ "$value" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]
+}
+
+metadata_name() {
+  local file="$1"
+  awk '
+    BEGIN { in_meta = 0 }
+    /^[[:space:]]*metadata:[[:space:]]*$/ { in_meta = 1; next }
+    in_meta == 1 {
+      if ($0 ~ /^[[:space:]]*name:[[:space:]]*/) {
+        gsub(/^[[:space:]]*name:[[:space:]]*/, "", $0)
+        gsub(/[[:space:]]+$/, "", $0)
+        print $0
+        exit
+      }
+      if ($0 ~ /^[^[:space:]]/) { in_meta = 0 }
+    }
+  ' "$file"
+}
+
+is_bootstrap_package_valid() {
+  local bootstrap_dir="$1"
+  mapfile -t bootstrap_files < <(find "$bootstrap_dir" -maxdepth 1 -type f -name "*.go" | LC_ALL=C sort)
+
+  if [[ "${#bootstrap_files[@]}" -eq 0 ]]; then
+    return 1
+  fi
+
+  local has_pkg="0"
+  local has_entrypoint="0"
+  local file=""
+  for file in "${bootstrap_files[@]}"; do
+    if grep -Eq '^[[:space:]]*package[[:space:]]+bootstrap([[:space:]]|$)' "$file"; then
+      has_pkg="1"
+    fi
+    if grep -Eq '^[[:space:]]*func[[:space:]]+(Build|NewRuntime)[[:space:]]*\(' "$file"; then
+      has_entrypoint="1"
+    fi
+  done
+
+  [[ "$has_pkg" == "1" && "$has_entrypoint" == "1" ]]
+}
 
 svc=""
 for svc in "${SERVICES[@]}"; do
@@ -88,7 +137,7 @@ for svc in "${SERVICES[@]}"; do
     "go.mod"
     "cmd/api/main.go"
     "cmd/worker/main.go"
-    "internal/app/bootstrap/bootstrap.go"
+    "internal/app/bootstrap"
     "configs/default.yaml"
     "deploy/k8s/deployment.yaml"
     "deploy/k8s/service.yaml"
@@ -110,6 +159,13 @@ for svc in "${SERVICES[@]}"; do
     fi
   done
 
+  bootstrap_dir="$service_root/internal/app/bootstrap"
+  if [[ -d "$bootstrap_dir" ]]; then
+    if ! is_bootstrap_package_valid "$bootstrap_dir"; then
+      errors+=("Invalid bootstrap package for $svc: expected package 'bootstrap' with exported Build() or NewRuntime(...) in internal/app/bootstrap/*.go")
+    fi
+  fi
+
   go_mod="$service_root/go.mod"
   if [[ -f "$go_mod" ]]; then
     first_line="$(head -n1 "$go_mod" | tr -d '\r')"
@@ -119,6 +175,32 @@ for svc in "${SERVICES[@]}"; do
       errors+=("Invalid go.mod module path for $svc: got '$first_line', expected '$expected'")
     fi
   fi
+
+  k8s_files=(
+    "$service_root/deploy/k8s/deployment.yaml"
+    "$service_root/deploy/k8s/service.yaml"
+    "$service_root/deploy/k8s/configmap.yaml"
+    "$service_root/deploy/k8s/hpa.yaml"
+    "$service_root/deploy/k8s/pdb.yaml"
+  )
+  kf=""
+  for kf in "${k8s_files[@]}"; do
+    [[ -f "$kf" ]] || continue
+
+    name_val="$(metadata_name "$kf")"
+    if [[ -z "$name_val" ]]; then
+      errors+=("Missing metadata.name in manifest: ${kf#$ROOT_PATH/}")
+    elif ! is_rfc1123_label "$name_val"; then
+      errors+=("Invalid Kubernetes metadata.name '${name_val}' in ${kf#$ROOT_PATH/}; expected lowercase RFC1123 label")
+    fi
+
+    while IFS= read -r app_value; do
+      [[ -z "$app_value" ]] && continue
+      if ! is_rfc1123_label "$app_value"; then
+        errors+=("Invalid Kubernetes app label/selector '${app_value}' in ${kf#$ROOT_PATH/}; expected lowercase RFC1123 label")
+      fi
+    done < <(grep -E '^[[:space:]]*app:[[:space:]]*' "$kf" | sed -E 's/^[[:space:]]*app:[[:space:]]*//')
+  done
 done
 
 if ((${#errors[@]} > 0)); then

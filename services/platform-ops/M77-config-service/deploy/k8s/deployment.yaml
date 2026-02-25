@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M77-config-service
+  name: m77-config-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M77-config-service
+      app: m77-config-service
   template:
     metadata:
       labels:
-        app: M77-config-service
+        app: m77-config-service
     spec:
       containers:
         - name: api
-          image: M77-config-service:latest
+          image: m77-config-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

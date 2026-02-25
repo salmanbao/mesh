@@ -7,11 +7,14 @@ import (
 )
 
 const (
+	// Minimum length raises attacker cost and aligns with stronger modern defaults.
 	minPasswordLength = 12
+	// Maximum length bounds storage and hashing cost to avoid abuse via oversized payloads.
 	maxPasswordLength = 128
 )
 
 // ValidatePassword enforces baseline M01 password policy.
+// The policy is intentionally centralized here so all entry points apply identical rules.
 func ValidatePassword(password string) error {
 	if len(password) < minPasswordLength {
 		return fmt.Errorf("%w: password must be at least %d characters", ErrInvalidInput, minPasswordLength)

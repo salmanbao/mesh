@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M10-social-integration-verification-service-config
+  name: m10-social-integration-verification-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

@@ -1,10 +1,11 @@
 services:
   m56-predictive-analytics:
     build:
-      context: ../../services/data-ai/M56-predictive-analytics
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

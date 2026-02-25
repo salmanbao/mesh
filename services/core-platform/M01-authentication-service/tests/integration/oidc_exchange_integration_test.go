@@ -155,6 +155,28 @@ func TestOIDCVerifier_RealDiscoveryJWKSAndExchange(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected nonce mismatch error")
 	}
+
+	badAudienceVerifier := security.NewOIDCVerifier(security.OIDCVerifierConfig{
+		HTTPClient: server.Client(),
+		Providers: map[string]security.OIDCProviderConfig{
+			"google": {
+				IssuerURL:    issuerURL,
+				ClientID:     "mesh-test-client-other",
+				ClientSecret: "mesh-test-secret",
+				Scopes:       []string{"openid", "email", "profile"},
+			},
+		},
+	})
+	if _, err := badAudienceVerifier.ExchangeCode(
+		context.Background(),
+		"google",
+		"auth-code-1",
+		"https://app.example.com/auth/callback",
+		"nonce-123",
+		"pkce-verifier",
+	); err == nil {
+		t.Fatalf("expected audience mismatch error")
+	}
 }
 
 func bigEndianInt(v int) []byte {

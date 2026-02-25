@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: m12-fraud-detection-engine
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: m12-fraud-detection-engine

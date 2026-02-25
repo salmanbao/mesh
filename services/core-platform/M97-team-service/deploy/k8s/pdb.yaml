@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M97-team-service
+  name: m97-team-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M97-team-service
+      app: m97-team-service
+

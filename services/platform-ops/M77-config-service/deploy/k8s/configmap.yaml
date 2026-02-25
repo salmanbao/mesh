@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M77-config-service-config
+  name: m77-config-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

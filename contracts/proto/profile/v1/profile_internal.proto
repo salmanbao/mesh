@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package viralforge.profile.v1;
+
+option go_package = "github.com/viralforge/mesh/contracts/proto/profile/v1;profilev1";
+
+service ProfileInternalService {
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
+  rpc BatchGetProfiles(BatchGetProfilesRequest) returns (BatchGetProfilesResponse);
+}
+
+message GetProfileRequest {
+  string user_id = 1;
+}
+
+message GetProfileResponse {
+  string user_id = 1;
+  string display_name = 2;
+  string avatar_url = 3;
+  string role = 4;
+  string status = 5;
+}
+
+message BatchGetProfilesRequest {
+  repeated string user_ids = 1;
+}
+
+message BatchGetProfilesResponse {
+  repeated GetProfileResponse profiles = 1;
+}

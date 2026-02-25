@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M55-dashboard-service
+  name: m55-dashboard-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M55-dashboard-service
+      app: m55-dashboard-service
+

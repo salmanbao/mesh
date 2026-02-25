@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M41-reward-engine-config
+  name: m41-reward-engine-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

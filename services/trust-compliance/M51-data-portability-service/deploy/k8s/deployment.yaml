@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M51-data-portability-service
+  name: m51-data-portability-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M51-data-portability-service
+      app: m51-data-portability-service
   template:
     metadata:
       labels:
-        app: M51-data-portability-service
+        app: m51-data-portability-service
     spec:
       containers:
         - name: api
-          image: M51-data-portability-service:latest
+          image: m51-data-portability-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

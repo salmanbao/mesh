@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: M05 Billing Service API
+  version: 1.0.0
+  description: |
+    Runtime-derived OpenAPI for M05 billing service.
+    Current runtime exposes no HTTP router registrations or handlers.
+    The API entrypoint in `cmd/api/main.go` only prints a placeholder message.
+servers:
+  - url: /
+paths: {}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    RuntimeEndpointInventory:
+      type: object
+      required: [service, http_routes, source_files]
+      properties:
+        service:
+          type: string
+          example: M05-Billing-Service
+        http_routes:
+          type: array
+          items:
+            type: string
+          example: []
+        source_files:
+          type: array
+          items:
+            type: string
+          example:
+            - services/financial-rails/M05-billing-service/cmd/api/main.go
+            - services/financial-rails/M05-billing-service/internal/adapters/http/.gitkeep
+  examples:
+    NoRoutesDiscovered:
+      summary: Runtime endpoint inventory
+      value:
+        service: M05-Billing-Service
+        http_routes: []
+        source_files:
+          - services/financial-rails/M05-billing-service/cmd/api/main.go
+          - services/financial-rails/M05-billing-service/internal/adapters/http/.gitkeep
+x-runtime-mismatch:
+  canonical_spec_endpoints_present: true
+  runtime_routes_present: false
+  note: Canonical M05 spec defines billing REST endpoints, but runtime M05 has no registered HTTP routes yet.

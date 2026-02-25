@@ -1,10 +1,11 @@
 services:
   m50-consent-service:
     build:
-      context: ../../services/trust-compliance/M50-consent-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

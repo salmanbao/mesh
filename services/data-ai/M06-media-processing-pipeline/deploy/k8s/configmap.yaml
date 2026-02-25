@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M06-media-processing-pipeline-config
+  name: m06-media-processing-pipeline-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

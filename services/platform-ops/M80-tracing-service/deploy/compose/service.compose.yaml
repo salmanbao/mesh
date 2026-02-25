@@ -1,10 +1,11 @@
 services:
   m80-tracing-service:
     build:
-      context: ../../services/platform-ops/M80-tracing-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

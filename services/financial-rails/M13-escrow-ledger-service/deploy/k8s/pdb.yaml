@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M13-escrow-ledger-service
+  name: m13-escrow-ledger-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M13-escrow-ledger-service
+      app: m13-escrow-ledger-service
+

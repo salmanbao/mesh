@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M13-escrow-ledger-service-config
+  name: m13-escrow-ledger-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

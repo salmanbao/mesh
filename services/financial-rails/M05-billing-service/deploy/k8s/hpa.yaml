@@ -1,12 +1,12 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: M05-billing-service
+  name: m05-billing-service
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: M05-billing-service
+    name: m05-billing-service
   minReplicas: 2
   maxReplicas: 5
   metrics:
@@ -16,3 +16,4 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
+

@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M77-config-service
+  name: m77-config-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M77-config-service
+      app: m77-config-service
+

@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M91-license-service
+  name: m91-license-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M91-license-service
+      app: m91-license-service
+

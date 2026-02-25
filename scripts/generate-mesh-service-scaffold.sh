@@ -59,13 +59,13 @@ cat > "$ROOT_PATH/README.md" <<'EOF'
 - Overriding canonical contracts or ownership boundaries defined in specs.
 EOF
 
-go_work_entries=("./platform")
+go_work_entries=("./contracts" "./platform")
 svc=""
 for svc in "${SERVICES[@]}"; do
   go_work_entries+=("./services/${SVC_CLUSTER[$svc]}/${SVC_DIR[$svc]}")
 done
 {
-  echo "go 1.22.0"
+  echo "go 1.23"
   echo
   echo "use ("
   printf '%s\n' "${go_work_entries[@]}" | LC_ALL=C sort -u | while IFS= read -r entry; do
@@ -87,7 +87,7 @@ mkdir -p "$ROOT_PATH/platform"
 cat > "$ROOT_PATH/platform/go.mod" <<'EOF'
 module github.com/viralforge/mesh/platform
 
-go 1.22.0
+go 1.23
 EOF
 cat > "$ROOT_PATH/platform/version.yaml" <<'EOF'
 version: 0.1.0
@@ -120,6 +120,38 @@ EOF
 done
 
 mkdir -p "$ROOT_PATH/contracts/proto" "$ROOT_PATH/contracts/openapi" "$ROOT_PATH/contracts/events" "$ROOT_PATH/contracts/schemas"
+cat > "$ROOT_PATH/contracts/go.mod" <<'EOF'
+module github.com/viralforge/mesh/contracts
+
+go 1.23
+EOF
+cat > "$ROOT_PATH/contracts/buf.yaml" <<'EOF'
+version: v2
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - STANDARD
+  except:
+    - PACKAGE_DIRECTORY_MATCH
+modules:
+  - path: proto
+EOF
+cat > "$ROOT_PATH/contracts/buf.gen.yaml" <<'EOF'
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.34.2
+    out: gen/go
+    opt:
+      - paths=source_relative
+  - remote: buf.build/grpc/go:v1.5.1
+    out: gen/go
+    opt:
+      - paths=source_relative
+inputs:
+  - directory: proto
+EOF
 cat > "$ROOT_PATH/contracts/README.md" <<'EOF'
 # Mesh Contracts
 
@@ -179,7 +211,7 @@ cat > "$ROOT_PATH/docs/local-dev.md" <<'EOF'
 # Mesh Local Development
 
 ## Prerequisites
-- Go 1.22+
+- Go 1.23+
 - Docker + Docker Compose
 
 ## Start Infra
@@ -326,7 +358,7 @@ EOF
   cat > "$service_root/go.mod" <<EOF
 module github.com/viralforge/mesh/services/${SVC_CLUSTER[$svc]}/${SVC_DIR[$svc]}
 
-go 1.22.0
+go 1.23
 EOF
 
   cat > "$service_root/cmd/api/main.go" <<EOF
@@ -385,31 +417,33 @@ observability:
 EOF
 
   cat > "$service_root/Dockerfile" <<'EOF'
-FROM golang:1.22-alpine
+FROM golang:1.23-alpine
 WORKDIR /app
 COPY . .
 RUN go build -o /out/api ./cmd/api
 CMD ["/out/api"]
 EOF
 
+  service_slug="${SVC_DIR[$svc],,}"
+
   cat > "$service_root/deploy/k8s/deployment.yaml" <<EOF
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ${SVC_DIR[$svc]}
+  name: ${service_slug}
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: ${SVC_DIR[$svc]}
+      app: ${service_slug}
   template:
     metadata:
       labels:
-        app: ${SVC_DIR[$svc]}
+        app: ${service_slug}
     spec:
       containers:
         - name: api
-          image: ${SVC_DIR[$svc]}:latest
+          image: ${service_slug}:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
@@ -419,10 +453,10 @@ EOF
 apiVersion: v1
 kind: Service
 metadata:
-  name: ${SVC_DIR[$svc]}
+  name: ${service_slug}
 spec:
   selector:
-    app: ${SVC_DIR[$svc]}
+    app: ${service_slug}
   ports:
     - name: http
       port: 80
@@ -436,7 +470,7 @@ EOF
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: ${SVC_DIR[$svc]}-config
+  name: ${service_slug}-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
 EOF
@@ -445,12 +479,12 @@ EOF
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: ${SVC_DIR[$svc]}
+  name: ${service_slug}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: ${SVC_DIR[$svc]}
+    name: ${service_slug}
   minReplicas: 2
   maxReplicas: 5
   metrics:
@@ -466,38 +500,56 @@ EOF
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: ${SVC_DIR[$svc]}
+  name: ${service_slug}
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: ${SVC_DIR[$svc]}
+      app: ${service_slug}
 EOF
 
   cat > "$service_root/deploy/compose/service.compose.yaml" <<EOF
 services:
-  ${SVC_DIR[$svc],,}:
+  ${service_slug}:
     build:
-      context: ../../services/${SVC_CLUSTER[$svc]}/${SVC_DIR[$svc]}
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
 EOF
 
-  cat > "$service_root/.golangci.yml" <<'EOF'
+  cat > "$service_root/.golangci.yml" <<EOF
 run:
   timeout: 5m
 linters:
   enable:
     - govet
     - staticcheck
+    - depguard
+linters-settings:
+  depguard:
+    rules:
+      service_boundary:
+        list-mode: lax
+        files:
+          - \$all
+        allow:
+          - \$gostd
+          - github.com/viralforge/mesh/services/${SVC_CLUSTER[$svc]}/${SVC_DIR[$svc]}
+          - github.com/viralforge/mesh/platform
+          - github.com/viralforge/mesh/contracts
+        deny:
+          - pkg: github.com/viralforge/mesh/services/
+            desc: cross-service imports are forbidden; use contracts and network boundaries
+          - pkg: github.com/viralforge/solomon/
+            desc: do not import Solomon runtime code into mesh services
 EOF
 
   cat > "$service_root/Makefile" <<'EOF'
-.PHONY: run-api run-worker test
+.PHONY: run-api run-worker test lint
 
 run-api:
 	go run ./cmd/api
@@ -507,6 +559,9 @@ run-worker:
 
 test:
 	go test ./...
+
+lint:
+	golangci-lint run --disable-all -E depguard ./...
 EOF
 done
 

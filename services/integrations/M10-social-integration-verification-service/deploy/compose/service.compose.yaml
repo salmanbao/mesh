@@ -1,10 +1,11 @@
 services:
   m10-social-integration-verification-service:
     build:
-      context: ../../services/integrations/M10-social-integration-verification-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

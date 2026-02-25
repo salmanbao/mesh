@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M44-resolution-center-config
+  name: m44-resolution-center-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

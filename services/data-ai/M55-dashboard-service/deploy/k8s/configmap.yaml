@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M55-dashboard-service-config
+  name: m55-dashboard-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M78-logging-service
+  name: m78-logging-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M78-logging-service
+      app: m78-logging-service
   template:
     metadata:
       labels:
-        app: M78-logging-service
+        app: m78-logging-service
     spec:
       containers:
         - name: api
-          image: M78-logging-service:latest
+          image: m78-logging-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

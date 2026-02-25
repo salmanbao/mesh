@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M19-storage-lifecycle-management
+  name: m19-storage-lifecycle-management
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M19-storage-lifecycle-management
+      app: m19-storage-lifecycle-management
+

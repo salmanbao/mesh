@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: m96-referral-fraud-detection-service
+spec:
+  selector:
+    app: m96-referral-fraud-detection-service
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+    - name: grpc
+      port: 9090
+      targetPort: 9090

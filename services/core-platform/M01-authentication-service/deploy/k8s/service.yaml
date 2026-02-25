@@ -1,10 +1,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: M01-authentication-service
+  name: m01-authentication-service
+  labels:
+    app.kubernetes.io/name: m01-authentication-service
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: mesh
 spec:
   selector:
-    app: M01-authentication-service
+    app.kubernetes.io/name: m01-authentication-service
+    app.kubernetes.io/component: api
   ports:
     - name: http
       port: 80
@@ -12,3 +17,4 @@ spec:
     - name: grpc
       port: 9090
       targetPort: 9090
+

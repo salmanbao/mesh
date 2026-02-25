@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M91-license-service-config
+  name: m91-license-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

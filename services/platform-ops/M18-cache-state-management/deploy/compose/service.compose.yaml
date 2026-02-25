@@ -1,10 +1,11 @@
 services:
   m18-cache-state-management:
     build:
-      context: ../../services/platform-ops/M18-cache-state-management
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

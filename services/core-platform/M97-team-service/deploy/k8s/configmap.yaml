@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M97-team-service-config
+  name: m97-team-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M71-integration-hub-config
+  name: m71-integration-hub-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

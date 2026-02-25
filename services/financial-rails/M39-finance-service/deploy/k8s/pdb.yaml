@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M39-finance-service
+  name: m39-finance-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M39-finance-service
+      app: m39-finance-service
+

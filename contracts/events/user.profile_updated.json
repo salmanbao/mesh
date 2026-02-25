@@ -1,0 +1,40 @@
+{
+  "event_type": "user.profile_updated",
+  "version": "v1",
+  "producer": "M02-Profile-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "user_id",
+      "updated_at"
+    ],
+    "properties": {
+      "user_id": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "username": {
+        "type": "string"
+      },
+      "display_name": {
+        "type": "string"
+      },
+      "bio": {
+        "type": "string"
+      },
+      "is_private": {
+        "type": "boolean"
+      },
+      "is_unlisted": {
+        "type": "boolean"
+      },
+      "analytics_opt_out": {
+        "type": "boolean"
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: m73-support-service
+spec:
+  selector:
+    app: m73-support-service
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+    - name: grpc
+      port: 9090
+      targetPort: 9090

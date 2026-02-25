@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: m30-social-integration-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: m30-social-integration-service
+  template:
+    metadata:
+      labels:
+        app: m30-social-integration-service
+    spec:
+      containers:
+        - name: api
+          image: m30-social-integration-service:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090

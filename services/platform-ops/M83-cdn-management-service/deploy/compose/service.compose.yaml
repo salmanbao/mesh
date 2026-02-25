@@ -1,10 +1,11 @@
 services:
   m83-cdn-management-service:
     build:
-      context: ../../services/platform-ops/M83-cdn-management-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

@@ -17,6 +17,8 @@ import (
 	"github.com/viralforge/mesh/services/core-platform/M01-authentication-service/internal/ports"
 )
 
+// OIDCProviderConfig defines provider/discovery credentials and endpoints.
+// This keeps provider-specific details out of application service code.
 type OIDCProviderConfig struct {
 	IssuerURL             string
 	DiscoveryURL          string
@@ -28,11 +30,14 @@ type OIDCProviderConfig struct {
 	Scopes                []string
 }
 
+// OIDCVerifierConfig wires HTTP behavior and provider configuration.
 type OIDCVerifierConfig struct {
 	HTTPClient *http.Client
 	Providers  map[string]OIDCProviderConfig
 }
 
+// OIDCVerifier implements authorization URL generation and code exchange.
+// It owns protocol validation so application layer can consume normalized identities only.
 type OIDCVerifier struct {
 	httpClient *http.Client
 	providers  map[string]OIDCProviderConfig
@@ -46,10 +51,11 @@ type oidcDiscoveryDocument struct {
 }
 
 type oidcTokenResponse struct {
-	AccessToken string `json:"access_token"`
-	IDToken     string `json:"id_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int64  `json:"expires_in"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	IDToken      string `json:"id_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int64  `json:"expires_in"`
 }
 
 type jwksDocument struct {
@@ -65,6 +71,7 @@ type jwk struct {
 	E   string `json:"e"`
 }
 
+// NewOIDCVerifier constructs an OIDC verifier with normalized provider names.
 func NewOIDCVerifier(cfg OIDCVerifierConfig) *OIDCVerifier {
 	httpClient := cfg.HTTPClient
 	if httpClient == nil {
@@ -193,7 +200,65 @@ func (v *OIDCVerifier) ExchangeCode(
 		return ports.OIDCIdentity{}, err
 	}
 	identity.Provider = strings.ToLower(strings.TrimSpace(provider))
+	identity.AccessToken = strings.TrimSpace(tokenResp.AccessToken)
+	identity.RefreshToken = strings.TrimSpace(tokenResp.RefreshToken)
+	identity.ExpiresAt = expiresAtFromNow(tokenResp.ExpiresIn)
 	return identity, nil
+}
+
+func (v *OIDCVerifier) RefreshToken(ctx context.Context, provider string, refreshToken string) (ports.OIDCTokenSet, error) {
+	providerCfg, err := v.providerConfig(provider)
+	if err != nil {
+		return ports.OIDCTokenSet{}, err
+	}
+	refreshToken = strings.TrimSpace(refreshToken)
+	if refreshToken == "" {
+		return ports.OIDCTokenSet{}, fmt.Errorf("refresh token is required")
+	}
+
+	discovery, err := v.discover(ctx, providerCfg)
+	if err != nil {
+		return ports.OIDCTokenSet{}, err
+	}
+
+	form := url.Values{}
+	form.Set("grant_type", "refresh_token")
+	form.Set("refresh_token", refreshToken)
+	form.Set("client_id", providerCfg.ClientID)
+	if strings.TrimSpace(providerCfg.ClientSecret) != "" {
+		form.Set("client_secret", providerCfg.ClientSecret)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, discovery.TokenEndpoint, strings.NewReader(form.Encode()))
+	if err != nil {
+		return ports.OIDCTokenSet{}, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := v.httpClient.Do(req)
+	if err != nil {
+		return ports.OIDCTokenSet{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return ports.OIDCTokenSet{}, fmt.Errorf("oidc refresh failed: status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var tokenResp oidcTokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+		return ports.OIDCTokenSet{}, fmt.Errorf("decode refresh response: %w", err)
+	}
+	if strings.TrimSpace(tokenResp.AccessToken) == "" {
+		return ports.OIDCTokenSet{}, fmt.Errorf("access_token missing in refresh response")
+	}
+
+	return ports.OIDCTokenSet{
+		AccessToken:  strings.TrimSpace(tokenResp.AccessToken),
+		RefreshToken: strings.TrimSpace(tokenResp.RefreshToken),
+		ExpiresAt:    expiresAtFromNow(tokenResp.ExpiresIn),
+	}, nil
 }
 
 func (v *OIDCVerifier) providerConfig(provider string) (OIDCProviderConfig, error) {
@@ -363,6 +428,8 @@ func validateIDToken(raw string, keySet map[string]*rsa.PublicKey, issuer, clien
 	}
 
 	return ports.OIDCIdentity{
+		Issuer:        strings.TrimSpace(issuer),
+		Subject:       subject,
 		ProviderSub:   subject,
 		Email:         strings.ToLower(strings.TrimSpace(stringClaim(claims, "email"))),
 		EmailVerified: boolClaim(claims["email_verified"]),
@@ -414,4 +481,12 @@ func scopesOrDefault(scopes []string) []string {
 		return []string{"openid", "email", "profile"}
 	}
 	return out
+}
+
+func expiresAtFromNow(expiresIn int64) *time.Time {
+	if expiresIn <= 0 {
+		return nil
+	}
+	expiresAt := time.Now().UTC().Add(time.Duration(expiresIn) * time.Second)
+	return &expiresAt
 }

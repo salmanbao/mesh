@@ -1,10 +1,11 @@
 services:
   m13-escrow-ledger-service:
     build:
-      context: ../../services/financial-rails/M13-escrow-ledger-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mesh Deployment Config Authoring"
+  short_description: "Create Docker, compose, and Kubernetes deployment files with docs."
+  default_prompt: "Use $mesh-deployment-config-authoring to implement deployment configs (Dockerfile, docker-compose, k8s) and write deploy/k8s/README.md explaining each manifest purpose."

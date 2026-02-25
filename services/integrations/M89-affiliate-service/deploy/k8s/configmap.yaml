@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M89-affiliate-service-config
+  name: m89-affiliate-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

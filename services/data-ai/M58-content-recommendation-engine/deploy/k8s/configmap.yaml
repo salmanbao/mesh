@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M58-content-recommendation-engine-config
+  name: m58-content-recommendation-engine-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

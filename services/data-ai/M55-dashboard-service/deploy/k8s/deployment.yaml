@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M55-dashboard-service
+  name: m55-dashboard-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M55-dashboard-service
+      app: m55-dashboard-service
   template:
     metadata:
       labels:
-        app: M55-dashboard-service
+        app: m55-dashboard-service
     spec:
       containers:
         - name: api
-          image: M55-dashboard-service:latest
+          image: m55-dashboard-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

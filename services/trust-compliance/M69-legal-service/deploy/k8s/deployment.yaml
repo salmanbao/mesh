@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M69-legal-service
+  name: m69-legal-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M69-legal-service
+      app: m69-legal-service
   template:
     metadata:
       labels:
-        app: M69-legal-service
+        app: m69-legal-service
     spec:
       containers:
         - name: api
-          image: M69-legal-service:latest
+          image: m69-legal-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

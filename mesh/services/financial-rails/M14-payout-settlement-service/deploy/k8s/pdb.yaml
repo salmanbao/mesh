@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: m14-payout-settlement-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: m14-payout-settlement-service

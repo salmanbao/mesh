@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M05-billing-service
+  name: m05-billing-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M05-billing-service
+      app: m05-billing-service
+

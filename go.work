@@ -3,6 +3,7 @@ go 1.23
 toolchain go1.24.5
 
 use (
+	./contracts
 	./platform
 	./services/core-platform/M01-authentication-service
 	./services/core-platform/M02-profile-service

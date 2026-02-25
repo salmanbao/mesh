@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M06-media-processing-pipeline
+  name: m06-media-processing-pipeline
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M06-media-processing-pipeline
+      app: m06-media-processing-pipeline
   template:
     metadata:
       labels:
-        app: M06-media-processing-pipeline
+        app: m06-media-processing-pipeline
     spec:
       containers:
         - name: api
-          image: M06-media-processing-pipeline:latest
+          image: m06-media-processing-pipeline:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

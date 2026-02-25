@@ -1,10 +1,11 @@
 services:
   m91-license-service:
     build:
-      context: ../../services/trust-compliance/M91-license-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

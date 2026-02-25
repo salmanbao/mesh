@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M45-community-service
+  name: m45-community-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M45-community-service
+      app: m45-community-service
+

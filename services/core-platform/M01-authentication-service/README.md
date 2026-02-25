@@ -33,6 +33,8 @@ System must support user registration using Email/Password and OIDC (Google).
 ## Current Runtime Status
 - Foundation implemented: bootstrap, config, migrations, PostgreSQL repositories, Redis caches.
 - Implemented endpoint slices:
+  - `GET /swagger/`
+  - `GET /swagger/openapi.yaml`
   - `POST /auth/v1/register`
   - `POST /auth/v1/login`
   - `POST /auth/v1/2fa/verify`

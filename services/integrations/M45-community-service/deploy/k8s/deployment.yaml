@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M45-community-service
+  name: m45-community-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M45-community-service
+      app: m45-community-service
   template:
     metadata:
       labels:
-        app: M45-community-service
+        app: m45-community-service
     spec:
       containers:
         - name: api
-          image: M45-community-service:latest
+          image: m45-community-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

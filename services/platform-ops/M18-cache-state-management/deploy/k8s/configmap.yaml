@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M18-cache-state-management-config
+  name: m18-cache-state-management-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

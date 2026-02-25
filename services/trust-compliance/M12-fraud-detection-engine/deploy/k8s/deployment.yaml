@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M12-fraud-detection-engine
+  name: m12-fraud-detection-engine
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M12-fraud-detection-engine
+      app: m12-fraud-detection-engine
   template:
     metadata:
       labels:
-        app: M12-fraud-detection-engine
+        app: m12-fraud-detection-engine
     spec:
       containers:
         - name: api
-          image: M12-fraud-detection-engine:latest
+          image: m12-fraud-detection-engine:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

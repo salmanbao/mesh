@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: m71-integration-hub
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: m71-integration-hub
+  template:
+    metadata:
+      labels:
+        app: m71-integration-hub
+    spec:
+      containers:
+        - name: api
+          image: m71-integration-hub:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090

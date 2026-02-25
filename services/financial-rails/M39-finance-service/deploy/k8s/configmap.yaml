@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M39-finance-service-config
+  name: m39-finance-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

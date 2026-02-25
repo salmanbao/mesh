@@ -1,4 +1,4 @@
-.PHONY: run-api run-worker test
+.PHONY: run-api run-worker test lint
 
 run-api:
 	go run ./cmd/api
@@ -8,3 +8,6 @@ run-worker:
 
 test:
 	go test ./...
+
+lint:
+	golangci-lint run --disable-all -E depguard ./...

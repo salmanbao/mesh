@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M25-auto-clipping-ai-config
+  name: m25-auto-clipping-ai-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

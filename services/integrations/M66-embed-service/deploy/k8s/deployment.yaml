@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M66-embed-service
+  name: m66-embed-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M66-embed-service
+      app: m66-embed-service
   template:
     metadata:
       labels:
-        app: M66-embed-service
+        app: m66-embed-service
     spec:
       containers:
         - name: api
-          image: M66-embed-service:latest
+          image: m66-embed-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

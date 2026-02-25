@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M73-support-service-config
+  name: m73-support-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

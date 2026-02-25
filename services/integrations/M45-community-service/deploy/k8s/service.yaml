@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: M45-community-service
+  name: m45-community-service
 spec:
   selector:
-    app: M45-community-service
+    app: m45-community-service
   ports:
     - name: http
       port: 80
@@ -12,3 +12,4 @@ spec:
     - name: grpc
       port: 9090
       targetPort: 9090
+

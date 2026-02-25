@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M68-retention-service
+  name: m68-retention-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M68-retention-service
+      app: m68-retention-service
+

@@ -1,4 +1,4 @@
-.PHONY: run-api run-worker test fmt tidy
+.PHONY: run-api run-worker test fmt tidy lint
 
 run-api:
 	go run ./cmd/api
@@ -14,3 +14,6 @@ fmt:
 
 tidy:
 	go mod tidy
+
+lint:
+	golangci-lint run --disable-all -E depguard ./...

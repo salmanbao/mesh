@@ -14,5 +14,7 @@ oidc:
       - openid
       - email
       - profile
+    allowed_redirect_uris:
+      - https://app.example.com/auth/callback
 observability:
   otlp_endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}

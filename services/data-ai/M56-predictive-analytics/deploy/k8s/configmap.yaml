@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M56-predictive-analytics-config
+  name: m56-predictive-analytics-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

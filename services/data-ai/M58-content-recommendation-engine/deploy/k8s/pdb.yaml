@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M58-content-recommendation-engine
+  name: m58-content-recommendation-engine
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M58-content-recommendation-engine
+      app: m58-content-recommendation-engine
+

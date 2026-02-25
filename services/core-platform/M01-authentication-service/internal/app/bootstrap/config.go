@@ -10,6 +10,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Config is the resolved runtime configuration for M01.
+// It merges file defaults and environment overrides to support both local and deployed runs.
 type Config struct {
 	ServiceID string
 
@@ -32,17 +34,34 @@ type Config struct {
 	LockoutDuration    time.Duration
 	FailedThreshold    int
 
-	OIDCGoogleIssuerURL    string
-	OIDCGoogleClientID     string
-	OIDCGoogleClientSecret string
-	OIDCGoogleScopes       []string
-	OIDCHTTPTimeout        time.Duration
+	OIDCGoogleIssuerURL                       string
+	OIDCGoogleClientID                        string
+	OIDCGoogleClientSecret                    string
+	OIDCGoogleScopes                          []string
+	OIDCGoogleAllowedRedirectURIs             []string
+	OIDCHTTPTimeout                           time.Duration
+	RegisterOIDCFieldMode                     string
+	OIDCAllowEmailLinking                     bool
+	OIDCCompletionTokenTTL                    time.Duration
+	RegisterRateLimitIPThreshold              int
+	RegisterRateLimitIdentifierThreshold      int
+	RegisterRateLimitWindow                   time.Duration
+	OIDCAuthorizeRateLimitIPThreshold         int
+	OIDCAuthorizeRateLimitIdentifierThreshold int
+	OIDCAuthorizeRateLimitWindow              time.Duration
 
-	MaxDBConns         int32
-	OutboxPollInterval time.Duration
-	OutboxBatchSize    int
+	MaxDBConns           int32
+	OutboxPollInterval   time.Duration
+	OutboxBatchSize      int
+	OutboxClaimTTL       time.Duration
+	OutboxMaxRetries     int
+	OIDCRefreshInterval  time.Duration
+	OIDCRefreshWindow    time.Duration
+	OIDCRefreshBatchSize int
 }
 
+// configFile mirrors the YAML schema used by configs/default.yaml.
+// It is intentionally separate from Config so runtime-only fields stay internal.
 type configFile struct {
 	Service struct {
 		ID       string `yaml:"id"`
@@ -55,33 +74,50 @@ type configFile struct {
 	} `yaml:"dependencies"`
 	OIDC struct {
 		Google struct {
-			IssuerURL    string   `yaml:"issuer_url"`
-			ClientID     string   `yaml:"client_id"`
-			ClientSecret string   `yaml:"client_secret"`
-			Scopes       []string `yaml:"scopes"`
+			IssuerURL           string   `yaml:"issuer_url"`
+			ClientID            string   `yaml:"client_id"`
+			ClientSecret        string   `yaml:"client_secret"`
+			Scopes              []string `yaml:"scopes"`
+			AllowedRedirectURIs []string `yaml:"allowed_redirect_uris"`
 		} `yaml:"google"`
 	} `yaml:"oidc"`
 }
 
+// LoadConfig resolves configuration in priority order: defaults -> file -> env.
+// This order keeps local bootstrap simple while allowing environment-specific overrides.
 func LoadConfig(path string) (Config, error) {
 	cfg := Config{
-		ServiceID:           "M01-Authentication-Service",
-		HTTPPort:            8080,
-		GRPCPort:            9090,
-		JWTKeyID:            "m01-auth-key-1",
-		AllowEphemeralJWT:   true,
-		BcryptCost:          12,
-		TokenTTL:            24 * time.Hour,
-		SessionTTL:          30 * 24 * time.Hour,
-		SessionAbsoluteTTL:  90 * 24 * time.Hour,
-		LockoutDuration:     30 * time.Minute,
-		FailedThreshold:     5,
-		OIDCGoogleIssuerURL: "https://accounts.google.com",
-		OIDCGoogleScopes:    []string{"openid", "email", "profile"},
-		OIDCHTTPTimeout:     8 * time.Second,
-		MaxDBConns:          20,
-		OutboxPollInterval:  2 * time.Second,
-		OutboxBatchSize:     100,
+		ServiceID:                            "M01-Authentication-Service",
+		HTTPPort:                             8080,
+		GRPCPort:                             9090,
+		JWTKeyID:                             "m01-auth-key-1",
+		AllowEphemeralJWT:                    true,
+		BcryptCost:                           12,
+		TokenTTL:                             24 * time.Hour,
+		SessionTTL:                           30 * 24 * time.Hour,
+		SessionAbsoluteTTL:                   90 * 24 * time.Hour,
+		LockoutDuration:                      30 * time.Minute,
+		FailedThreshold:                      5,
+		OIDCGoogleIssuerURL:                  "https://accounts.google.com",
+		OIDCGoogleScopes:                     []string{"openid", "email", "profile"},
+		OIDCHTTPTimeout:                      8 * time.Second,
+		RegisterOIDCFieldMode:                "reject",
+		OIDCAllowEmailLinking:                true,
+		OIDCCompletionTokenTTL:               10 * time.Minute,
+		RegisterRateLimitIPThreshold:         20,
+		RegisterRateLimitIdentifierThreshold: 6,
+		RegisterRateLimitWindow:              time.Minute,
+		OIDCAuthorizeRateLimitIPThreshold:    30,
+		OIDCAuthorizeRateLimitIdentifierThreshold: 10,
+		OIDCAuthorizeRateLimitWindow:              time.Minute,
+		MaxDBConns:                                20,
+		OutboxPollInterval:                        2 * time.Second,
+		OutboxBatchSize:                           100,
+		OutboxClaimTTL:                            30 * time.Second,
+		OutboxMaxRetries:                          5,
+		OIDCRefreshInterval:                       time.Hour,
+		OIDCRefreshWindow:                         24 * time.Hour,
+		OIDCRefreshBatchSize:                      100,
 	}
 
 	raw, err := os.ReadFile(path)
@@ -117,6 +153,9 @@ func LoadConfig(path string) (Config, error) {
 		if len(f.OIDC.Google.Scopes) > 0 {
 			cfg.OIDCGoogleScopes = f.OIDC.Google.Scopes
 		}
+		if len(f.OIDC.Google.AllowedRedirectURIs) > 0 {
+			cfg.OIDCGoogleAllowedRedirectURIs = f.OIDC.Google.AllowedRedirectURIs
+		}
 	}
 
 	cfg.DatabaseURL = envOrDefault("DB_URL", envOrDefault("POSTGRES_URL", cfg.DatabaseURL))
@@ -129,6 +168,13 @@ func LoadConfig(path string) (Config, error) {
 	cfg.OIDCGoogleClientID = envOrDefault("OIDC_GOOGLE_CLIENT_ID", cfg.OIDCGoogleClientID)
 	cfg.OIDCGoogleClientSecret = envOrDefault("OIDC_GOOGLE_CLIENT_SECRET", cfg.OIDCGoogleClientSecret)
 	cfg.OIDCGoogleScopes = envCSV("OIDC_GOOGLE_SCOPES", cfg.OIDCGoogleScopes)
+	cfg.OIDCGoogleAllowedRedirectURIs = envCSV("OIDC_GOOGLE_ALLOWED_REDIRECT_URIS", cfg.OIDCGoogleAllowedRedirectURIs)
+	cfg.RegisterOIDCFieldMode = strings.ToLower(strings.TrimSpace(envOrDefault("REGISTER_OIDC_FIELD_MODE", cfg.RegisterOIDCFieldMode)))
+	cfg.OIDCAllowEmailLinking = envBool("OIDC_ALLOW_EMAIL_LINKING", cfg.OIDCAllowEmailLinking)
+	cfg.RegisterRateLimitIPThreshold = envInt("REGISTER_RATE_LIMIT_IP_THRESHOLD", cfg.RegisterRateLimitIPThreshold)
+	cfg.RegisterRateLimitIdentifierThreshold = envInt("REGISTER_RATE_LIMIT_IDENTIFIER_THRESHOLD", cfg.RegisterRateLimitIdentifierThreshold)
+	cfg.OIDCAuthorizeRateLimitIPThreshold = envInt("OIDC_AUTHORIZE_RATE_LIMIT_IP_THRESHOLD", cfg.OIDCAuthorizeRateLimitIPThreshold)
+	cfg.OIDCAuthorizeRateLimitIdentifierThreshold = envInt("OIDC_AUTHORIZE_RATE_LIMIT_IDENTIFIER_THRESHOLD", cfg.OIDCAuthorizeRateLimitIdentifierThreshold)
 
 	cfg.HTTPPort = envInt("HTTP_PORT", cfg.HTTPPort)
 	cfg.GRPCPort = envInt("GRPC_PORT", cfg.GRPCPort)
@@ -143,6 +189,14 @@ func LoadConfig(path string) (Config, error) {
 	cfg.OIDCHTTPTimeout = time.Duration(envInt("OIDC_HTTP_TIMEOUT_SECONDS", int(cfg.OIDCHTTPTimeout.Seconds()))) * time.Second
 	cfg.OutboxPollInterval = time.Duration(envInt("OUTBOX_POLL_SECONDS", int(cfg.OutboxPollInterval.Seconds()))) * time.Second
 	cfg.OutboxBatchSize = envInt("OUTBOX_BATCH_SIZE", cfg.OutboxBatchSize)
+	cfg.OutboxClaimTTL = time.Duration(envInt("OUTBOX_CLAIM_TTL_SECONDS", int(cfg.OutboxClaimTTL.Seconds()))) * time.Second
+	cfg.OutboxMaxRetries = envInt("OUTBOX_MAX_RETRIES", cfg.OutboxMaxRetries)
+	cfg.OIDCRefreshInterval = time.Duration(envInt("OIDC_REFRESH_INTERVAL_SECONDS", int(cfg.OIDCRefreshInterval.Seconds()))) * time.Second
+	cfg.OIDCRefreshWindow = time.Duration(envInt("OIDC_REFRESH_WINDOW_HOURS", int(cfg.OIDCRefreshWindow.Hours()))) * time.Hour
+	cfg.OIDCRefreshBatchSize = envInt("OIDC_REFRESH_BATCH_SIZE", cfg.OIDCRefreshBatchSize)
+	cfg.OIDCCompletionTokenTTL = time.Duration(envInt("OIDC_COMPLETION_TOKEN_TTL_SECONDS", int(cfg.OIDCCompletionTokenTTL.Seconds()))) * time.Second
+	cfg.RegisterRateLimitWindow = time.Duration(envInt("REGISTER_RATE_LIMIT_WINDOW_SECONDS", int(cfg.RegisterRateLimitWindow.Seconds()))) * time.Second
+	cfg.OIDCAuthorizeRateLimitWindow = time.Duration(envInt("OIDC_AUTHORIZE_RATE_LIMIT_WINDOW_SECONDS", int(cfg.OIDCAuthorizeRateLimitWindow.Seconds()))) * time.Second
 
 	if cfg.DatabaseURL == "" {
 		return Config{}, fmt.Errorf("missing DB_URL/POSTGRES_URL")
@@ -157,6 +211,7 @@ func LoadConfig(path string) (Config, error) {
 	return cfg, nil
 }
 
+// envOrDefault returns an env var when present, otherwise the provided fallback.
 func envOrDefault(name, fallback string) string {
 	if value := os.Getenv(name); value != "" {
 		return value
@@ -164,6 +219,7 @@ func envOrDefault(name, fallback string) string {
 	return fallback
 }
 
+// envInt parses integer env vars with safe fallback on empty/invalid values.
 func envInt(name string, fallback int) int {
 	raw := os.Getenv(name)
 	if raw == "" {
@@ -176,6 +232,7 @@ func envInt(name string, fallback int) int {
 	return v
 }
 
+// envBool parses common boolean env forms while keeping a deterministic fallback.
 func envBool(name string, fallback bool) bool {
 	raw := os.Getenv(name)
 	if raw == "" {
@@ -191,6 +248,7 @@ func envBool(name string, fallback bool) bool {
 	}
 }
 
+// envCSV parses comma-separated env vars and removes empty segments.
 func envCSV(name string, fallback []string) []string {
 	raw := os.Getenv(name)
 	if raw == "" {

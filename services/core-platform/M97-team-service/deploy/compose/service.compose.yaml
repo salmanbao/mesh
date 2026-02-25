@@ -1,10 +1,11 @@
 services:
   m97-team-service:
     build:
-      context: ../../services/core-platform/M97-team-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

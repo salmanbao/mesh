@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M11-distribution-tracking-service
+  name: m11-distribution-tracking-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M11-distribution-tracking-service
+      app: m11-distribution-tracking-service
+

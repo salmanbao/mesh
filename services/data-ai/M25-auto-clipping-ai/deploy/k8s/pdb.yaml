@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M25-auto-clipping-ai
+  name: m25-auto-clipping-ai
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M25-auto-clipping-ai
+      app: m25-auto-clipping-ai
+

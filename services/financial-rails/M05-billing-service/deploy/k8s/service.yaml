@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: M05-billing-service
+  name: m05-billing-service
 spec:
   selector:
-    app: M05-billing-service
+    app: m05-billing-service
   ports:
     - name: http
       port: 80
@@ -12,3 +12,4 @@ spec:
     - name: grpc
       port: 9090
       targetPort: 9090
+

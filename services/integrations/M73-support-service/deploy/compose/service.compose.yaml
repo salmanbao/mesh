@@ -1,10 +1,11 @@
 services:
   m73-support-service:
     build:
-      context: ../../services/integrations/M73-support-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

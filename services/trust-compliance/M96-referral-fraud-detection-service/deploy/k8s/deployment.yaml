@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M96-referral-fraud-detection-service
+  name: m96-referral-fraud-detection-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M96-referral-fraud-detection-service
+      app: m96-referral-fraud-detection-service
   template:
     metadata:
       labels:
-        app: M96-referral-fraud-detection-service
+        app: m96-referral-fraud-detection-service
     spec:
       containers:
         - name: api
-          image: M96-referral-fraud-detection-service:latest
+          image: m96-referral-fraud-detection-service:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

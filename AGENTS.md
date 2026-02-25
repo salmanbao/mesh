@@ -2,10 +2,34 @@
 name: "Mesh Microservices Implementation Guide"
 description: "Repository-specific coding instructions for implementing ViralForge microservices in mesh with boundaries aligned to Solomon."
 category: "Backend Service"
-lastUpdated: "2026-02-17"
+lastUpdated: "2026-02-23"
 ---
 
 # Mesh Microservices Implementation Guide
+
+## Skills
+### Available skills
+- `mesh-microservice-implementation`: Implement or modify services in `mesh` using canonical specs, layering rules, contracts, and ownership boundaries. (file: `mesh/.codex/skills/mesh-microservice-implementation/SKILL.md`)
+- `mesh-scaffold-and-gates`: Scaffold microservices, regenerate mesh indices, validate structure, and run mesh gates. (file: `mesh/.codex/skills/mesh-scaffold-and-gates/SKILL.md`)
+- `mesh-rollout-orchestration`: Plan and execute multi-service rollout in dependency-safe batches across all mesh microservices. (file: `mesh/.codex/skills/mesh-rollout-orchestration/SKILL.md`)
+- `mesh-contract-compliance`: Enforce canonical event contracts, data ownership rules, and interface compatibility for mesh services. (file: `mesh/.codex/skills/mesh-contract-compliance/SKILL.md`)
+- `mesh-testing-and-quality`: Define and execute service-level and cross-service test validation for mesh changes. (file: `mesh/.codex/skills/mesh-testing-and-quality/SKILL.md`)
+- `mesh-release-and-operations`: Prepare release readiness and execute operational rollout for mesh services. (file: `mesh/.codex/skills/mesh-release-and-operations/SKILL.md`)
+
+### Trigger rules
+- Use `mesh-rollout-orchestration` when requests involve building many services, dependency-tier sequencing, or tracking mesh-wide rollout progress.
+- Use `mesh-scaffold-and-gates` when requests involve creating service skeletons, index generation, structure validation, or running mesh automation scripts.
+- Use `mesh-microservice-implementation` when requests involve building/changing mesh service code, adapters, runtime behavior, or service-local contracts.
+- Use `mesh-contract-compliance` when requests involve canonical events, API/contract updates, DB ownership constraints, or compatibility checks.
+- Use `mesh-testing-and-quality` when requests involve adding/running tests, quality validation, regression prevention, or sign-off evidence.
+- Use `mesh-release-and-operations` when requests involve rollout readiness, deployment sequencing, operational checks, or post-deploy stabilization.
+- If multiple apply for execution work, use order:
+  1. `mesh-rollout-orchestration` (program-level batching)
+  2. `mesh-scaffold-and-gates` (deterministic structure/index refresh)
+  3. `mesh-microservice-implementation` (service code and adapters)
+  4. `mesh-contract-compliance` (contract and ownership verification)
+  5. `mesh-testing-and-quality` (verification, regression, quality sign-off)
+  6. `mesh-release-and-operations` (rollout readiness and operations)
 
 ## Mission
 Implement only the services classified as `architecture: microservice` in `viralForge/specs/service-architecture-map.yaml` inside `mesh`.

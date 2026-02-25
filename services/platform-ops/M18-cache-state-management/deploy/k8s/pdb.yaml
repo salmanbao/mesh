@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M18-cache-state-management
+  name: m18-cache-state-management
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M18-cache-state-management
+      app: m18-cache-state-management
+

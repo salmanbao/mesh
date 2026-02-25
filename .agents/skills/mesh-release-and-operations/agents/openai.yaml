@@ -1,0 +1,5 @@
+interface:
+  display_name: "Mesh Release and Operations"
+  short_description: "Drive release readiness and operational rollout."
+  default_prompt: "Use $mesh-release-and-operations to plan and verify deployment readiness and operational rollout for mesh services."
+

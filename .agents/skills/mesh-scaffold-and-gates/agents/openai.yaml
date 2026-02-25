@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mesh Scaffold and Gates"
+  short_description: "Scaffold mesh services and run structure/gate scripts."
+  default_prompt: "Use $mesh-scaffold-and-gates to scaffold or validate mesh services using the repo automation scripts."

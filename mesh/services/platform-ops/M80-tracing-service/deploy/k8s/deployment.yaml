@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: m80-tracing-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: m80-tracing-service
+  template:
+    metadata:
+      labels:
+        app: m80-tracing-service
+    spec:
+      containers:
+        - name: api
+          image: m80-tracing-service:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090

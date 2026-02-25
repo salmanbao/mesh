@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mesh Dev Documentation"
+  short_description: "Write mesh code docs and decision rationale for developers."
+  default_prompt: "Document mesh code behavior, architecture, and decision rationale for developer understanding and future changes."

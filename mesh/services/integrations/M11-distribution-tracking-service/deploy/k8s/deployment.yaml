@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: m11-distribution-tracking-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: m11-distribution-tracking-service
+  template:
+    metadata:
+      labels:
+        app: m11-distribution-tracking-service
+    spec:
+      containers:
+        - name: api
+          image: m11-distribution-tracking-service:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090

@@ -1,0 +1,10 @@
+services:
+  m25-auto-clipping-ai:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    env_file:
+      - ../../../.env.example
+    networks: [mesh]
+networks:
+  mesh: {}

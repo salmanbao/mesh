@@ -1,6 +1,15 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M02-profile-service-config
+  name: m02-profile-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+  AUTH_GRPC_URL: m01-authentication-service:9090
+  KAFKA_BROKERS: m67-event-bus:9092
+  KAFKA_CONSUMER_GROUP: m02-profile-service
+  S3_BUCKET: ""
+  S3_REGION: ""
+  CLOUDFRONT_DOMAIN: ""
+  KMS_KEY_ID: ""
+  CLAMAV_ADDRESS: ""
+

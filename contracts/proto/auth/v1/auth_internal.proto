@@ -7,6 +7,7 @@ option go_package = "github.com/viralforge/mesh/contracts/proto/auth/v1;authv1";
 service AuthInternalService {
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
   rpc GetPublicKeys(GetPublicKeysRequest) returns (GetPublicKeysResponse);
+  rpc GetUserIdentity(GetUserIdentityRequest) returns (GetUserIdentityResponse);
 }
 
 message ValidateTokenRequest {
@@ -33,4 +34,15 @@ message JWK {
   string alg = 3;
   string n = 4;
   string e = 5;
+}
+
+message GetUserIdentityRequest {
+  string user_id = 1;
+}
+
+message GetUserIdentityResponse {
+  string user_id = 1;
+  string email = 2;
+  string role = 3;
+  string status = 4;
 }

@@ -1,0 +1,66 @@
+name: Module CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  detect-modules:
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.detect.outputs.modules }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          if [[ -z "$base_sha" ]]; then
+            base_sha="${{ github.event.before }}"
+          fi
+          modules="$(bash ./scripts/ci-changed-modules.sh "$base_sha" "${{ github.sha }}")"
+          echo "modules=${modules}" >> "$GITHUB_OUTPUT"
+          echo "Detected modules: ${modules}"
+
+  test-build:
+    needs: detect-modules
+    if: needs.detect-modules.outputs.modules != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.detect-modules.outputs.modules) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+      - name: Install golangci-lint
+        if: startsWith(matrix.module, 'services/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Enforce service depguard
+        if: startsWith(matrix.module, 'services/')
+        working-directory: ${{ matrix.module }}
+        shell: bash
+        run: golangci-lint run --disable-all -E depguard ./...
+      - name: Test module
+        working-directory: ${{ matrix.module }}
+        shell: bash
+        run: go test ./...
+      - name: Build service binaries
+        if: startsWith(matrix.module, 'services/')
+        working-directory: ${{ matrix.module }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -d cmd/api ]]; then go build ./cmd/api; fi
+          if [[ -d cmd/worker ]]; then go build ./cmd/worker; fi

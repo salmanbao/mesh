@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: M41-reward-engine
+  name: m41-reward-engine
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: M41-reward-engine
+      app: m41-reward-engine
   template:
     metadata:
       labels:
-        app: M41-reward-engine
+        app: m41-reward-engine
     spec:
       containers:
         - name: api
-          image: M41-reward-engine:latest
+          image: m41-reward-engine:latest
           ports:
             - containerPort: 8080
             - containerPort: 9090
+

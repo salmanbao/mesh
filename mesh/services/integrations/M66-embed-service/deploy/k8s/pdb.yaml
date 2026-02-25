@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: m66-embed-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: m66-embed-service

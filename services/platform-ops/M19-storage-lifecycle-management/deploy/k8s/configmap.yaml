@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M19-storage-lifecycle-management-config
+  name: m19-storage-lifecycle-management-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

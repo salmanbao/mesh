@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: m44-resolution-center
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: m44-resolution-center
+  template:
+    metadata:
+      labels:
+        app: m44-resolution-center
+    spec:
+      containers:
+        - name: api
+          image: m44-resolution-center:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090

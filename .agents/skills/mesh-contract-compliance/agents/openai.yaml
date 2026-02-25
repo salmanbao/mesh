@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mesh Contract Compliance"
+  short_description: "Validate event, API, and data ownership contracts."
+  default_prompt: "Use $mesh-contract-compliance to enforce canonical contracts and ownership constraints for mesh changes."

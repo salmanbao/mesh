@@ -1,9 +1,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: M10-social-integration-verification-service
+  name: m10-social-integration-verification-service
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: M10-social-integration-verification-service
+      app: m10-social-integration-verification-service
+

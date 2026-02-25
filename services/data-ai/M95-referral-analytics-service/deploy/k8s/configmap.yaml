@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M95-referral-analytics-service-config
+  name: m95-referral-analytics-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

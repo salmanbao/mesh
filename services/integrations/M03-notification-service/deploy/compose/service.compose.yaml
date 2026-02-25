@@ -1,10 +1,11 @@
 services:
   m03-notification-service:
     build:
-      context: ../../services/integrations/M03-notification-service
+      context: ../..
       dockerfile: Dockerfile
     env_file:
-      - ../../.env.example
+      - ../../../.env.example
     networks: [mesh]
 networks:
   mesh: {}
+

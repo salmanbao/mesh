@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: M69-legal-service-config
+  name: m69-legal-service-config
 data:
   CONFIG_PATH: /app/configs/default.yaml
+

@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: m54-analytics-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: m54-analytics-service
+  template:
+    metadata:
+      labels:
+        app: m54-analytics-service
+    spec:
+      containers:
+        - name: api
+          image: m54-analytics-service:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090
