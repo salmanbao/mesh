@@ -1,9 +1,0 @@
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: m06-media-processing-pipeline
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app: m06-media-processing-pipeline

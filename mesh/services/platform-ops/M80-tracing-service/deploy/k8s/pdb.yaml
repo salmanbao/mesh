@@ -1,9 +1,0 @@
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: m80-tracing-service
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app: m80-tracing-service

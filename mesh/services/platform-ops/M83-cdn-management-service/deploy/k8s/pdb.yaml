@@ -1,9 +1,0 @@
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: m83-cdn-management-service
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app: m83-cdn-management-service

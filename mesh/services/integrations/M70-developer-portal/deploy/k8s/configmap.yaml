@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: m70-developer-portal-config
-data:
-  CONFIG_PATH: /app/configs/default.yaml

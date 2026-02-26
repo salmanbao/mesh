@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: m84-data-migration-service-config
-data:
-  CONFIG_PATH: /app/configs/default.yaml

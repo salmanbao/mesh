@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: m96-referral-fraud-detection-service-config
-data:
-  CONFIG_PATH: /app/configs/default.yaml

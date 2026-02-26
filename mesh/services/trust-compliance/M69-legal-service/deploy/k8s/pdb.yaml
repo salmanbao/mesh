@@ -1,9 +1,0 @@
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: m69-legal-service
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app: m69-legal-service

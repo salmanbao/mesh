@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: m57-ai-service-config
-data:
-  CONFIG_PATH: /app/configs/default.yaml

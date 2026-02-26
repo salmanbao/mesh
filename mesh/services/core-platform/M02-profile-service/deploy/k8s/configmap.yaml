@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: m02-profile-service-config
-data:
-  CONFIG_PATH: /app/configs/default.yaml
