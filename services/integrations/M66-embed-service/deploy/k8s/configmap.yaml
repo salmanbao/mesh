@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: m66-embed-service-config
+data:
+  CONFIG_PATH: /app/configs/default.yaml
+

@@ -1,0 +1,10 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: m89-affiliate-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: m89-affiliate-service
+

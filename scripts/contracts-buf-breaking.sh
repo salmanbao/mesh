@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT_PATH="mesh"
-AGAINST=".git#branch=main,subdir=proto"
+# Script executes from "$ROOT_PATH/contracts", so point to repo-level git directory.
+AGAINST="../.git#branch=main,subdir=contracts/proto"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --root-path) ROOT_PATH="$2"; shift 2 ;;

@@ -1,0 +1,25 @@
+{
+  "event_type": "campaign.launched",
+  "version": "v1",
+  "producer": "M04-Campaign-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "campaign_id",
+      "creator_id",
+      "launched_at"
+    ],
+    "properties": {
+      "campaign_id": {
+        "type": "string"
+      },
+      "creator_id": {
+        "type": "string"
+      },
+      "launched_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

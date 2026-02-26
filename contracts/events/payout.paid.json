@@ -1,0 +1,41 @@
+{
+  "event_type": "payout.paid",
+  "version": "v1",
+  "producer": "M14-Payout-Settlement-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "payout_id",
+      "creator_id",
+      "gross_amount",
+      "fee_amount",
+      "net_amount",
+      "currency",
+      "paid_at"
+    ],
+    "properties": {
+      "payout_id": {
+        "type": "string"
+      },
+      "creator_id": {
+        "type": "string"
+      },
+      "gross_amount": {
+        "type": "number"
+      },
+      "fee_amount": {
+        "type": "number"
+      },
+      "net_amount": {
+        "type": "number"
+      },
+      "currency": {
+        "type": "string"
+      },
+      "paid_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

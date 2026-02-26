@@ -3,48 +3,522 @@ info:
   title: M05 Billing Service API
   version: 1.0.0
   description: |
-    Runtime-derived OpenAPI for M05 billing service.
-    Current runtime exposes no HTTP router registrations or handlers.
-    The API entrypoint in `cmd/api/main.go` only prints a placeholder message.
+    OpenAPI contract for M05 Billing Service runtime routes.
+    Source alignment:
+    - REST runtime: services/financial-rails/M05-billing-service/internal/adapters/http
+    - Canonical spec: viralForge/specs/M05-Billing-Service.md
 servers:
   - url: /
-paths: {}
+security:
+  - bearerAuth: []
+tags:
+  - name: Invoices
+  - name: Billing
+  - name: Refunds
+paths:
+  /v1/invoices:
+    post:
+      tags: [Invoices]
+      summary: Create invoice
+      operationId: createInvoice
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInvoiceRequest'
+      responses:
+        '201':
+          description: Invoice created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/invoices/{invoice_id}:
+    get:
+      tags: [Invoices]
+      summary: Get invoice by ID
+      operationId: getInvoice
+      parameters:
+        - $ref: '#/components/parameters/InvoiceID'
+      responses:
+        '200':
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/user/invoices:
+    get:
+      tags: [Invoices]
+      summary: List current user invoices
+      operationId: listUserInvoices
+      parameters:
+        - $ref: '#/components/parameters/StatusQuery'
+        - $ref: '#/components/parameters/DateFromQuery'
+        - $ref: '#/components/parameters/DateToQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+        - $ref: '#/components/parameters/OffsetQuery'
+      responses:
+        '200':
+          description: Invoice list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceListResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/invoices/{invoice_id}/send:
+    post:
+      tags: [Invoices]
+      summary: Send invoice email
+      operationId: sendInvoice
+      parameters:
+        - $ref: '#/components/parameters/InvoiceID'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendInvoiceRequest'
+      responses:
+        '200':
+          description: Send accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/invoices/{invoice_id}/download:
+    get:
+      tags: [Invoices]
+      summary: Download invoice PDF
+      operationId: downloadInvoice
+      parameters:
+        - $ref: '#/components/parameters/InvoiceID'
+      responses:
+        '200':
+          description: PDF response
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/invoices/{invoice_id}/pdf:
+    get:
+      tags: [Invoices]
+      summary: Download invoice PDF (alias)
+      operationId: downloadInvoiceAlias
+      parameters:
+        - $ref: '#/components/parameters/InvoiceID'
+      responses:
+        '200':
+          description: PDF response
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/invoices/{invoice_id}/void:
+    post:
+      tags: [Invoices]
+      summary: Void invoice
+      operationId: voidInvoice
+      parameters:
+        - $ref: '#/components/parameters/InvoiceID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidInvoiceRequest'
+      responses:
+        '200':
+          description: Invoice voided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/admin/invoices:
+    get:
+      tags: [Billing]
+      summary: Search invoices (admin)
+      operationId: searchInvoices
+      parameters:
+        - $ref: '#/components/parameters/StatusQuery'
+        - $ref: '#/components/parameters/DateFromQuery'
+        - $ref: '#/components/parameters/DateToQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+        - $ref: '#/components/parameters/OffsetQuery'
+        - $ref: '#/components/parameters/InvoiceNumberQuery'
+        - $ref: '#/components/parameters/CustomerEmailQuery'
+        - $ref: '#/components/parameters/MinAmountQuery'
+        - $ref: '#/components/parameters/MaxAmountQuery'
+      responses:
+        '200':
+          description: Search result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceListResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/user/billing/export:
+    get:
+      tags: [Billing]
+      summary: Request billing export
+      operationId: requestBillingExport
+      responses:
+        '200':
+          description: Export request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/user/billing/delete-request:
+    post:
+      tags: [Billing]
+      summary: Request billing deletion
+      operationId: requestBillingDelete
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteRequest'
+      responses:
+        '202':
+          description: Deletion request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/refunds:
+    post:
+      tags: [Refunds]
+      summary: Create refund
+      operationId: createRefund
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundRequest'
+      responses:
+        '201':
+          description: Refund created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  parameters:
+    InvoiceID:
+      name: invoice_id
+      in: path
+      required: true
+      schema: { type: string }
+    XRequestID:
+      name: X-Request-Id
+      in: header
+      required: true
+      schema: { type: string }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string }
+    StatusQuery:
+      name: status
+      in: query
+      schema: { type: string }
+    DateFromQuery:
+      name: date_from
+      in: query
+      schema:
+        type: string
+        format: date
+    DateToQuery:
+      name: date_to
+      in: query
+      schema:
+        type: string
+        format: date
+    LimitQuery:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+    OffsetQuery:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+    InvoiceNumberQuery:
+      name: invoice_number
+      in: query
+      schema: { type: string }
+    CustomerEmailQuery:
+      name: customer_email
+      in: query
+      schema: { type: string }
+    MinAmountQuery:
+      name: min_amount
+      in: query
+      schema: { type: number, format: double }
+    MaxAmountQuery:
+      name: max_amount
+      in: query
+      schema: { type: number, format: double }
   schemas:
-    RuntimeEndpointInventory:
+    CreateInvoiceRequest:
       type: object
-      required: [service, http_routes, source_files]
+      required: [customer_id, customer_name, customer_email, billing_address, invoice_type, line_items, due_date]
       properties:
-        service:
+        customer_id: { type: string }
+        customer_name: { type: string }
+        customer_email: { type: string }
+        billing_address:
+          $ref: '#/components/schemas/Address'
+        invoice_type: { type: string }
+        line_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceLineItemInput'
+        due_date:
           type: string
-          example: M05-Billing-Service
-        http_routes:
+          format: date-time
+        notes: { type: string }
+    Address:
+      type: object
+      properties:
+        line1: { type: string }
+        city: { type: string }
+        state: { type: string }
+        postal_code: { type: string }
+        country: { type: string }
+    InvoiceLineItemInput:
+      type: object
+      required: [description, quantity, unit_price]
+      properties:
+        description: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unit_price: { type: number, format: double }
+        source_type: { type: string }
+        source_id: { type: string }
+    Invoice:
+      type: object
+      properties:
+        invoice_id: { type: string }
+        invoice_number: { type: string }
+        customer_id: { type: string }
+        customer_name: { type: string }
+        customer_email: { type: string }
+        billing_address: { $ref: '#/components/schemas/Address' }
+        invoice_type: { type: string }
+        currency: { type: string }
+        line_items:
           type: array
           items:
-            type: string
-          example: []
-        source_files:
-          type: array
-          items:
-            type: string
-          example:
-            - services/financial-rails/M05-billing-service/cmd/api/main.go
-            - services/financial-rails/M05-billing-service/internal/adapters/http/.gitkeep
-  examples:
-    NoRoutesDiscovered:
-      summary: Runtime endpoint inventory
-      value:
-        service: M05-Billing-Service
-        http_routes: []
-        source_files:
-          - services/financial-rails/M05-billing-service/cmd/api/main.go
-          - services/financial-rails/M05-billing-service/internal/adapters/http/.gitkeep
-x-runtime-mismatch:
-  canonical_spec_endpoints_present: true
-  runtime_routes_present: false
-  note: Canonical M05 spec defines billing REST endpoints, but runtime M05 has no registered HTTP routes yet.
+            $ref: '#/components/schemas/InvoiceLineItem'
+        subtotal: { type: number, format: double }
+        tax:
+          $ref: '#/components/schemas/TaxBreakdown'
+        total: { type: number, format: double }
+        status: { type: string }
+        payment_status: { type: string }
+        due_date:
+          type: string
+          format: date-time
+        invoice_date:
+          type: string
+          format: date-time
+        paid_date:
+          type: string
+          format: date-time
+          nullable: true
+        payment_method: { type: string }
+        pdf_url: { type: string }
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    InvoiceLineItem:
+      type: object
+      properties:
+        line_item_id: { type: string }
+        description: { type: string }
+        quantity: { type: integer }
+        unit_price: { type: number, format: double }
+        amount: { type: number, format: double }
+        source_type: { type: string }
+        source_id: { type: string }
+        currency_code: { type: string }
+    TaxBreakdown:
+      type: object
+      properties:
+        amount: { type: number, format: double }
+        rate: { type: number, format: double }
+        jurisdiction: { type: string }
+    SendInvoiceRequest:
+      type: object
+      required: [recipient_email]
+      properties:
+        recipient_email: { type: string }
+    VoidInvoiceRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string }
+    DeleteRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string }
+    RefundRequest:
+      type: object
+      required: [invoice_id, line_item_id, amount, reason]
+      properties:
+        invoice_id: { type: string }
+        line_item_id: { type: string }
+        amount: { type: number, format: double }
+        reason: { type: string }
+    InvoiceResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          $ref: '#/components/schemas/Invoice'
+    InvoiceListResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: object
+          properties:
+            invoices:
+              type: array
+              items:
+                $ref: '#/components/schemas/Invoice'
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+    Pagination:
+      type: object
+      properties:
+        limit: { type: integer }
+        offset: { type: integer }
+        total: { type: integer }
+    SuccessResponse:
+      type: object
+      properties:
+        status: { type: string }
+        message: { type: string }
+        data: {}
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+            details: {}
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Insufficient access
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: State conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

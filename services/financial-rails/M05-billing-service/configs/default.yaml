@@ -4,8 +4,15 @@ service:
   http_port: 8080
   grpc_port: 9090
 dependencies:
-  postgres_url: ${POSTGRES_URL}
-  redis_url: ${REDIS_URL}
+  auth_grpc_url: ${AUTH_GRPC_URL}
+  catalog_grpc_url: ${CATALOG_GRPC_URL}
+  fee_engine_grpc_url: ${FEE_ENGINE_GRPC_URL}
+  finance_grpc_url: ${FINANCE_GRPC_URL}
+  subscription_grpc_url: ${SUBSCRIPTION_GRPC_URL}
   kafka_brokers: ${KAFKA_BROKERS}
+  kafka_consumer_group: m05-billing-service
+  topic_payout_paid: payout.paid
+  topic_payout_failed: payout.failed
+  topic_dlq: billing-service.dlq
 observability:
   otlp_endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}

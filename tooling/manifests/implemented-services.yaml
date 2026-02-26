@@ -2,3 +2,5 @@ version: 1
 implemented_services:
   - M01-Authentication-Service
   - M02-Profile-Service
+  - M03-Notification-Service
+  - M05-Billing-Service

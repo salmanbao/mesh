@@ -8,3 +8,6 @@
 
 ## M05 Billing
 - `m05-billing-service.yaml`
+
+## M03 Notification
+- `m03-notification-service.yaml`

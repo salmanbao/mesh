@@ -1,0 +1,33 @@
+{
+  "event_type": "transaction.failed",
+  "version": "v1",
+  "producer": "M39-Finance-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "transaction_id",
+      "user_id",
+      "amount",
+      "occurred_at",
+      "reason"
+    ],
+    "properties": {
+      "transaction_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "amount": {
+        "type": "number"
+      },
+      "occurred_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "reason": {
+        "type": "string"
+      }
+    }
+  }
+}

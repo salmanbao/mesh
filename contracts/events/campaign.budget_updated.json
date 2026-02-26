@@ -1,0 +1,33 @@
+{
+  "event_type": "campaign.budget_updated",
+  "version": "v1",
+  "producer": "M04-Campaign-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "campaign_id",
+      "budget_total",
+      "budget_spent",
+      "budget_remaining",
+      "updated_at"
+    ],
+    "properties": {
+      "campaign_id": {
+        "type": "string"
+      },
+      "budget_total": {
+        "type": "number"
+      },
+      "budget_spent": {
+        "type": "number"
+      },
+      "budget_remaining": {
+        "type": "number"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "event_type": "dispute.created",
+  "version": "v1",
+  "producer": "M44-Resolution-Center",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "dispute_id",
+      "user_id",
+      "entity_type",
+      "entity_id",
+      "created_at"
+    ],
+    "properties": {
+      "dispute_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "entity_type": {
+        "type": "string"
+      },
+      "entity_id": {
+        "type": "string"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+service:
+  id: M89-Affiliate-Service
+  cluster: integrations
+  http_port: 8080
+  grpc_port: 9090
+dependencies:
+  postgres_url: \\
+  redis_url: \\
+  kafka_brokers: \\
+observability:
+  otlp_endpoint: \\

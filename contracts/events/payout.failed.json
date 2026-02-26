@@ -1,0 +1,29 @@
+{
+  "event_type": "payout.failed",
+  "version": "v1",
+  "producer": "M14-Payout-Settlement-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "payout_id",
+      "creator_id",
+      "reason_code",
+      "failed_at"
+    ],
+    "properties": {
+      "payout_id": {
+        "type": "string"
+      },
+      "creator_id": {
+        "type": "string"
+      },
+      "reason_code": {
+        "type": "string"
+      },
+      "failed_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

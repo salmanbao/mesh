@@ -1,0 +1,29 @@
+{
+  "event_type": "campaign.created",
+  "version": "v1",
+  "producer": "M04-Campaign-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "campaign_id",
+      "creator_id",
+      "status",
+      "created_at"
+    ],
+    "properties": {
+      "campaign_id": {
+        "type": "string"
+      },
+      "creator_id": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}
