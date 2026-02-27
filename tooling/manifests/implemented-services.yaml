@@ -14,6 +14,7 @@ implemented_services:
   - M19-Storage-Lifecycle-Management
   - M30-Social-Integration-Service
   - M36-Risk-Service
+  - M38-Content-License-Verification
   - M39-Finance-Service
   - M41-Reward-Engine
   - M44-Resolution-Center
