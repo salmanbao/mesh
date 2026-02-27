@@ -11,17 +11,20 @@ func NewRouter(handler *Handler) http.Handler {
 	r.Use(requestIDMiddleware)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { writeSuccess(w, http.StatusOK, "ok", nil) })
 	r.Get("/readyz", func(w http.ResponseWriter, _ *http.Request) { writeSuccess(w, http.StatusOK, "ready", nil) })
-	r.Route("/v1", func(r chi.Router) {
-		r.Group(func(r chi.Router) {
-			r.Use(authMiddleware)
-			r.Post("/social/connect/{provider}", handler.connect)
-			r.Post("/social/callback/{provider}", handler.callback)
-			r.Get("/social/accounts", handler.listAccounts)
-			r.Delete("/social/accounts/{social_account_id}", handler.disconnect)
-			r.Post("/social/accounts/{social_account_id}/followers-sync", handler.followersSync)
-			r.Post("/social/posts/validate", handler.validatePost)
-			r.Post("/social/posts/compliance-violation", handler.complianceViolation)
-		})
-	})
+	r.Route("/v1", func(v1 chi.Router) { registerSocialRoutes(v1, handler) })
+	registerSocialRoutes(r, handler)
 	return r
+}
+
+func registerSocialRoutes(r chi.Router, handler *Handler) {
+	r.Group(func(r chi.Router) {
+		r.Use(authMiddleware)
+		r.Post("/social/connect/{provider}", handler.connect)
+		r.Post("/social/callback/{provider}", handler.callback)
+		r.Get("/social/accounts", handler.listAccounts)
+		r.Delete("/social/accounts/{social_account_id}", handler.disconnect)
+		r.Post("/social/accounts/{social_account_id}/followers-sync", handler.followersSync)
+		r.Post("/social/posts/validate", handler.validatePost)
+		r.Post("/social/posts/compliance-violation", handler.complianceViolation)
+	})
 }

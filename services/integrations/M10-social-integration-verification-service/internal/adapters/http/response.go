@@ -17,7 +17,13 @@ func writeSuccess(w http.ResponseWriter, status int, message string, data any) {
 	writeJSON(w, status, contracts.SuccessResponse{Status: "success", Message: message, Data: data})
 }
 func writeError(w http.ResponseWriter, status int, code, message, requestID string) {
-	writeJSON(w, status, contracts.ErrorResponse{Status: "error", Error: contracts.ErrorPayload{Code: code, Message: message, RequestID: requestID}})
+	writeJSON(w, status, contracts.ErrorResponse{
+		Status:    "error",
+		Code:      code,
+		Message:   message,
+		RequestID: requestID,
+		Error:     contracts.ErrorPayload{Code: code, Message: message, RequestID: requestID},
+	})
 }
 func mapDomainError(err error) (int, string) {
 	switch err {

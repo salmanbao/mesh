@@ -13,8 +13,11 @@ type ErrorPayload struct {
 }
 
 type ErrorResponse struct {
-	Status string       `json:"status"`
-	Error  ErrorPayload `json:"error"`
+	Status    string       `json:"status"`
+	Code      string       `json:"code,omitempty"`
+	Message   string       `json:"message,omitempty"`
+	RequestID string       `json:"request_id,omitempty"`
+	Error     ErrorPayload `json:"error"`
 }
 
 type ConnectRequest struct {
@@ -35,6 +38,7 @@ type CallbackRequest struct {
 
 type CallbackResponse struct {
 	SocialAccountID string `json:"social_account_id"`
+	Provider        string `json:"provider,omitempty"`
 	Status          string `json:"status"`
 }
 
@@ -48,6 +52,7 @@ type SocialAccountResponse struct {
 
 type ListAccountsResponse struct {
 	Accounts []SocialAccountResponse `json:"accounts"`
+	Items    []SocialAccountResponse `json:"items,omitempty"`
 }
 
 type DisconnectResponse struct {
