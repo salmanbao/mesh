@@ -5,6 +5,7 @@ import (
 	"slices"
 	"sync"
 	"time"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/viralforge/mesh/services/financial-rails/M39-finance-service/internal/domain"
@@ -169,6 +170,10 @@ func (r *BalanceRepository) GetOrCreate(_ context.Context, userID string) (domai
 	defer r.mu.Unlock()
 	record, ok := r.records[userID]
 	if ok {
+		if strings.TrimSpace(record.Currency) == "" {
+			record.Currency = "USD"
+			r.records[userID] = record
+		}
 		return record, nil
 	}
 	record = domain.UserBalance{
@@ -178,6 +183,7 @@ func (r *BalanceRepository) GetOrCreate(_ context.Context, userID string) (domai
 		PendingBalance:   0,
 		ReservedBalance:  0,
 		NegativeBalance:  0,
+		Currency:         "USD",
 		UpdatedAt:        time.Now().UTC(),
 	}
 	r.records[userID] = record
@@ -187,6 +193,9 @@ func (r *BalanceRepository) GetOrCreate(_ context.Context, userID string) (domai
 func (r *BalanceRepository) Upsert(_ context.Context, balance domain.UserBalance) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if strings.TrimSpace(balance.Currency) == "" {
+		balance.Currency = "USD"
+	}
 	r.records[balance.UserID] = balance
 	return nil
 }

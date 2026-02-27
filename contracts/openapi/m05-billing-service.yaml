@@ -202,6 +202,8 @@ paths:
       tags: [Billing]
       summary: Request billing export
       operationId: requestBillingExport
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
       responses:
         '200':
           description: Export request accepted

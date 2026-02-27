@@ -2,6 +2,7 @@
   "event_type": "tracking.metrics.updated",
   "version": "v1",
   "producer": "M11-Distribution-Tracking-Service",
+  "partition_key_path": "data.tracked_post_id",
   "payload_schema": {
     "type": "object",
     "required": [

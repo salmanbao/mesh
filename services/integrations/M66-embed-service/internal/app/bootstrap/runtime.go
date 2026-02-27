@@ -37,7 +37,8 @@ func NewRuntime(_ context.Context, configPath string) (*Runtime, error) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})).With("service", cfg.ServiceID)
 	slog.SetDefault(logger)
 	repos := postgres.NewRepositories()
-	svc := application.NewService(application.Dependencies{Config: application.Config{ServiceName: cfg.ServiceID, EmbedBaseURL: cfg.EmbedBaseURL, CacheTTL: cfg.CacheTTL, PerIPLimitPerHour: cfg.PerIPLimitPerHour, PerEmbedLimitPerHour: cfg.PerEmbedLimitPerHour, IdempotencyTTL: cfg.IdempotencyTTL, EventDedupTTL: cfg.EventDedupTTL, ConsumerPollInterval: cfg.ConsumerPollInterval}, Settings: repos.Settings, Cache: repos.Cache, Impressions: repos.Impressions, Interactions: repos.Interactions, Idempotency: repos.Idempotency, EventDedup: repos.EventDedup})
+	opsPub := eventadapter.NewMemoryOpsPublisher()
+	svc := application.NewService(application.Dependencies{Config: application.Config{ServiceName: cfg.ServiceID, EmbedBaseURL: cfg.EmbedBaseURL, CacheTTL: cfg.CacheTTL, PerIPLimitPerHour: cfg.PerIPLimitPerHour, PerEmbedLimitPerHour: cfg.PerEmbedLimitPerHour, IdempotencyTTL: cfg.IdempotencyTTL, EventDedupTTL: cfg.EventDedupTTL, ConsumerPollInterval: cfg.ConsumerPollInterval}, Settings: repos.Settings, Cache: repos.Cache, Impressions: repos.Impressions, Interactions: repos.Interactions, Idempotency: repos.Idempotency, EventDedup: repos.EventDedup, Ops: opsPub})
 	handler := httpadapter.NewHandler(svc)
 	httpServer := &http.Server{Addr: fmt.Sprintf(":%d", cfg.HTTPPort), Handler: httpadapter.NewRouter(handler), ReadHeaderTimeout: 5 * time.Second}
 	grpcServer := grpc.NewServer()

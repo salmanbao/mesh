@@ -28,6 +28,11 @@ type TrackingMetricsUpdatedPayload struct {
 	PolledAt      string `json:"polled_at"`
 }
 
+type TrackingPostArchivedPayload struct {
+	TrackedPostID string `json:"tracked_post_id"`
+	ArchivedAt    string `json:"archived_at"`
+}
+
 type DLQRecord struct {
 	OriginalEvent EventEnvelope `json:"original_event"`
 	ErrorSummary  string        `json:"error_summary"`

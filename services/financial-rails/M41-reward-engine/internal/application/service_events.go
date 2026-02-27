@@ -174,11 +174,19 @@ func (s *Service) FlushOutbox(ctx context.Context) error {
 
 func (s *Service) enqueueDomainRewardCalculated(ctx context.Context, reward domain.Reward) error {
 	payload := contracts.RewardCalculatedPayload{
-		SubmissionID: reward.SubmissionID,
-		UserID:       reward.UserID,
-		GrossAmount:  reward.GrossAmount,
-		NetAmount:    reward.NetAmount,
-		CalculatedAt: reward.CalculatedAt.Format(time.RFC3339),
+		SubmissionID:            reward.SubmissionID,
+		UserID:                  reward.UserID,
+		CampaignID:              reward.CampaignID,
+		LockedViews:             reward.LockedViews,
+		RatePer1K:               reward.RatePer1K,
+		GrossAmount:             reward.GrossAmount,
+		NetAmount:               reward.NetAmount,
+		RolloverApplied:         reward.RolloverApplied,
+		RolloverBalance:         reward.RolloverBalance,
+		VerificationCompletedAt: reward.VerificationCompletedAt.Format(time.RFC3339),
+		CalculatedAt:            reward.CalculatedAt.Format(time.RFC3339),
+		Status:                  string(reward.Status),
+		FraudScore:              reward.FraudScore,
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -209,13 +217,17 @@ func (s *Service) enqueueDomainRewardPayoutEligible(ctx context.Context, reward 
 		eligibleAt = *reward.EligibleAt
 	}
 	payload := contracts.RewardPayoutEligiblePayload{
-		SubmissionID: reward.SubmissionID,
-		UserID:       reward.UserID,
-		CampaignID:   reward.CampaignID,
-		LockedViews:  reward.LockedViews,
-		RatePer1K:    reward.RatePer1K,
-		GrossAmount:  reward.GrossAmount,
-		EligibleAt:   eligibleAt.Format(time.RFC3339),
+		SubmissionID:            reward.SubmissionID,
+		UserID:                  reward.UserID,
+		CampaignID:              reward.CampaignID,
+		LockedViews:             reward.LockedViews,
+		RatePer1K:               reward.RatePer1K,
+		GrossAmount:             reward.GrossAmount,
+		NetAmount:               reward.NetAmount,
+		RolloverApplied:         reward.RolloverApplied,
+		RolloverBalance:         reward.RolloverBalance,
+		EligibleAt:              eligibleAt.Format(time.RFC3339),
+		VerificationCompletedAt: reward.VerificationCompletedAt.Format(time.RFC3339),
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {

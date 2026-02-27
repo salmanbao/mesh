@@ -1,0 +1,19 @@
+{
+  "event_type": "referral.analytics.fraud.flagged",
+  "version": "v1",
+  "producer": "M95-Referral-Analytics-Service",
+  "event_class": "domain",
+  "partition_key_path": "data.referral_token",
+  "payload_schema": {
+    "type": "object",
+    "required": ["referral_token", "affiliate_id", "reason", "score", "flagged_at"],
+    "properties": {
+      "referral_token": { "type": "string" },
+      "affiliate_id": { "type": "string" },
+      "reason": { "type": "string" },
+      "score": { "type": "number" },
+      "details": { "type": "object" },
+      "flagged_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

@@ -1,0 +1,488 @@
+openapi: 3.0.3
+info:
+  title: M78 Logging Service API
+  version: 1.0.0
+  description: Ingest, search, export, and manage alert rules for platform logs.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Logs
+  - name: Exports
+  - name: AlertRules
+  - name: Audit
+paths:
+  /api/v1/logs/ingest:
+    post:
+      tags: [Logs]
+      summary: Ingest a batch of structured logs
+      operationId: ingestLogs
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestLogsRequest'
+      responses:
+        '202':
+          description: Accepted for ingestion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestLogsResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/logs/search:
+    get:
+      tags: [Logs]
+      summary: Query logs by service, level, time range, and keyword
+      operationId: searchLogs
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - in: query
+          name: service
+          schema: { type: string }
+        - in: query
+          name: level
+          schema:
+            type: string
+            enum: [debug, info, warn, error, fatal]
+        - in: query
+          name: from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: to
+          schema: { type: string, format: date-time }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+      responses:
+        '200':
+          description: Logs matching filters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchLogsResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/logs/exports:
+    post:
+      tags: [Exports]
+      summary: Request a CSV/JSON export for a log query
+      operationId: createExport
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExportRequest'
+      responses:
+        '201':
+          description: Export created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateExportResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/logs/exports/{export_id}:
+    get:
+      tags: [Exports]
+      summary: Get export status and download URL
+      operationId: getExport
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - in: path
+          name: export_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Export status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportDetailResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/logs/alert-rules:
+    post:
+      tags: [AlertRules]
+      summary: Create an alert rule for a service
+      operationId: createAlertRule
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAlertRuleRequest'
+      responses:
+        '201':
+          description: Alert rule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertRuleResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    get:
+      tags: [AlertRules]
+      summary: List alert rules (optionally only enabled)
+      operationId: listAlertRules
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - in: query
+          name: enabled
+          schema: { type: boolean, default: true }
+      responses:
+        '200':
+          description: Alert rules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListAlertRulesResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/logs/audit:
+    get:
+      tags: [Audit]
+      summary: Query audit logs (admin, sre, or auditor roles)
+      operationId: queryAudit
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - in: query
+          name: actor_id
+          schema: { type: string }
+        - in: query
+          name: action_type
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+      responses:
+        '200':
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditQueryResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /health:
+    get:
+      tags: [Logs]
+      summary: Service health (returns 503 when degraded)
+      operationId: health
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /metrics:
+    get:
+      tags: [Logs]
+      summary: Prometheus metrics
+      operationId: metrics
+      responses:
+        '200':
+          description: Metrics payload
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string }
+      description: Required for mutating routes; 7-day TTL with body hash replay detection.
+    XRequestID:
+      in: header
+      name: X-Request-Id
+      schema: { type: string }
+      description: Correlation identifier; generated if absent.
+  responses:
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Caller not permitted
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Idempotency conflict or conflicting state
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    PayloadTooLarge:
+      description: Payload exceeds 1MB or 10,000 log records
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ServiceUnavailable:
+      description: Dependencies degraded
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InternalError:
+      description: Unexpected failure
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        message: { type: string }
+        data: {}
+    ErrorResponse:
+      type: object
+      required: [status, message]
+      properties:
+        status: { type: string, example: error }
+        code: { type: string }
+        message: { type: string }
+    IngestLogsRequest:
+      type: object
+      required: [logs]
+      properties:
+        logs:
+          type: array
+          minItems: 1
+          maxItems: 10000
+          items:
+            $ref: '#/components/schemas/IngestLogRecord'
+    IngestLogRecord:
+      type: object
+      required: [timestamp, level, service, message]
+      properties:
+        timestamp: { type: string, format: date-time }
+        level:
+          type: string
+          enum: [debug, info, warn, error, fatal]
+        service: { type: string }
+        instance_id: { type: string }
+        trace_id: { type: string }
+        message: { type: string }
+        user_id: { type: string }
+        error_code: { type: string }
+        tags:
+          type: object
+          additionalProperties: true
+    IngestLogsResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                ingested: { type: integer, example: 1 }
+    SearchLogItem:
+      type: object
+      properties:
+        event_id: { type: string }
+        timestamp: { type: string, format: date-time }
+        level: { type: string }
+        service: { type: string }
+        instance_id: { type: string }
+        trace_id: { type: string }
+        message: { type: string }
+        user_id: { type: string }
+        error_code: { type: string }
+        tags:
+          type: object
+          additionalProperties: true
+        redacted: { type: boolean }
+        ingested_at: { type: string, format: date-time }
+    SearchLogsResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items: { $ref: '#/components/schemas/SearchLogItem' }
+    CreateExportRequest:
+      type: object
+      required: [query, format]
+      properties:
+        query:
+          type: object
+          additionalProperties: true
+        format:
+          type: string
+          enum: [csv, json]
+    CreateExportResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                export_id: { type: string }
+                status: { type: string, enum: [pending, ready, failed] }
+    ExportDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                export_id: { type: string }
+                requested_by: { type: string }
+                query:
+                  type: object
+                  additionalProperties: true
+                format: { type: string, enum: [csv, json] }
+                status: { type: string, enum: [pending, ready, failed] }
+                file_url: { type: string }
+                created_at: { type: string, format: date-time }
+                completed_at: { type: string, format: date-time }
+    CreateAlertRuleRequest:
+      type: object
+      required: [service, condition, severity]
+      properties:
+        service: { type: string }
+        condition:
+          type: object
+          additionalProperties: true
+          description: Threshold or query condition (e.g., {"error_rate_gt":0.02})
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        enabled:
+          type: boolean
+          default: true
+    AlertRuleResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                rule_id: { type: string }
+                service: { type: string }
+                condition:
+                  type: object
+                  additionalProperties: true
+                severity: { type: string }
+                enabled: { type: boolean }
+                created_at: { type: string, format: date-time }
+                updated_at: { type: string, format: date-time }
+    ListAlertRulesResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      rule_id: { type: string }
+                      service: { type: string }
+                      condition:
+                        type: object
+                        additionalProperties: true
+                      severity: { type: string }
+                      enabled: { type: boolean }
+                      created_at: { type: string, format: date-time }
+                      updated_at: { type: string, format: date-time }
+    AuditLogItem:
+      type: object
+      properties:
+        audit_id: { type: string }
+        actor_id: { type: string }
+        action_type: { type: string }
+        action_at: { type: string, format: date-time }
+        ip_address: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+    AuditQueryResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                logs:
+                  type: array
+                  items: { $ref: '#/components/schemas/AuditLogItem' }

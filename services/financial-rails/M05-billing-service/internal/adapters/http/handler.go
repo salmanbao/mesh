@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -157,6 +158,10 @@ func (h *Handler) searchInvoices(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) requestBillingExport(w http.ResponseWriter, r *http.Request) {
 	actor := actorFromContext(r.Context())
+	if reqID := requestIDFromContext(r.Context()); strings.TrimSpace(reqID) == "" {
+		writeError(w, http.StatusBadRequest, "missing_request_id", "X-Request-Id is required", reqID)
+		return
+	}
 	exportID, err := h.service.RequestBillingExport(r.Context(), actor)
 	if err != nil {
 		status, code := mapDomainError(err)

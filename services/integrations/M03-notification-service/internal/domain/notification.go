@@ -50,6 +50,9 @@ type Preferences struct {
 	QuietHoursEnabled bool      `json:"quiet_hours_enabled"`
 	QuietHoursStart   string    `json:"quiet_hours_start,omitempty"`
 	QuietHoursEnd     string    `json:"quiet_hours_end,omitempty"`
+	QuietHoursTZ      string    `json:"quiet_hours_timezone,omitempty"`
+	Language          string    `json:"language,omitempty"`
+	BatchingEnabled   bool      `json:"batching_enabled"`
 	MutedTypes        []string  `json:"muted_types,omitempty"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }
@@ -63,6 +66,9 @@ func DefaultPreferences(userID string, now time.Time) Preferences {
 		InAppEnabled:      true,
 		QuietHoursEnabled: false,
 		MutedTypes:        []string{},
+		Language:          "en-US",
+		QuietHoursTZ:      "UTC",
+		BatchingEnabled:   false,
 		UpdatedAt:         now.UTC(),
 	}
 }

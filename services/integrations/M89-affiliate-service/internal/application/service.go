@@ -44,6 +44,7 @@ func (s *Service) CreateReferralLink(ctx context.Context, actor Actor, in Create
 		return domain.ReferralLink{}, err
 	}
 	_ = s.appendAudit(ctx, aff.AffiliateID, "affiliate.link.created", actor.SubjectID, "", map[string]string{"link_id": link.LinkID, "channel": link.Channel})
+	_ = s.enqueueAffiliateLinkCreated(ctx, link, uuid.NewString(), now)
 	_ = s.completeIdempotencyJSON(ctx, actor.IdempotencyKey, 201, link)
 	return link, nil
 }
@@ -243,7 +244,7 @@ func (s *Service) RecordAttribution(ctx context.Context, actor Actor, in RecordA
 		return domain.ReferralAttribution{}, err
 	}
 	earningAmount := round2(in.Amount * aff.DefaultRate)
-	earning := domain.AffiliateEarning{EarningID: "earn_" + uuid.NewString(), AffiliateID: aff.AffiliateID, AttributionID: attr.AttributionID, OrderID: attr.OrderID, Amount: earningAmount, Status: "pending", CreatedAt: now, UpdatedAt: now}
+	earning := domain.AffiliateEarning{EarningID: "earn_" + uuid.NewString(), AffiliateID: aff.AffiliateID, AttributionID: attr.AttributionID, OrderID: attr.OrderID, Amount: earningAmount, Currency: attr.Currency, Status: "pending", CreatedAt: now, UpdatedAt: now}
 	if err := s.earnings.Create(ctx, earning); err != nil {
 		return domain.ReferralAttribution{}, err
 	}
@@ -253,10 +254,13 @@ func (s *Service) RecordAttribution(ctx context.Context, actor Actor, in RecordA
 		return domain.ReferralAttribution{}, err
 	}
 	if aff.BalancePending >= s.cfg.PayoutThreshold && s.payouts != nil {
-		_ = s.payouts.Create(ctx, domain.AffiliatePayout{PayoutID: "pay_" + uuid.NewString(), AffiliateID: aff.AffiliateID, Amount: aff.BalancePending, Status: "queued", QueuedAt: now, UpdatedAt: now})
+		payout := domain.AffiliatePayout{PayoutID: "pay_" + uuid.NewString(), AffiliateID: aff.AffiliateID, Amount: aff.BalancePending, Currency: attr.Currency, Status: "queued", QueuedAt: now, UpdatedAt: now}
+		_ = s.payouts.Create(ctx, payout)
+		_ = s.enqueueAffiliatePayoutQueued(ctx, payout, uuid.NewString(), now)
 	}
 	_ = s.appendAudit(ctx, aff.AffiliateID, "affiliate.attribution.recorded", actor.SubjectID, "", map[string]string{"order_id": attr.OrderID, "conversion_id": attr.ConversionID})
 	_ = s.enqueueAffiliateAttributionCreated(ctx, attr, uuid.NewString(), now)
+	_ = s.enqueueAffiliateEarningCalculated(ctx, earning, uuid.NewString(), now)
 	_ = s.completeIdempotencyJSON(ctx, actor.IdempotencyKey, 201, attr)
 	return attr, nil
 }

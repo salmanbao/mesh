@@ -132,19 +132,6 @@ func (s *Service) enqueueDisputeCreated(ctx context.Context, actor Actor, disput
 	return s.enqueueDomainEvent(ctx, domain.EventDisputeCreated, domain.CanonicalPartitionKeyPath(domain.EventDisputeCreated), dispute.DisputeID, actor.RequestID, payload)
 }
 
-func (s *Service) enqueueTransactionRefunded(ctx context.Context, actor Actor, dispute domain.Dispute, approval domain.DisputeApproval) error {
-	payload := contracts.TransactionRefundedPayload{
-		TransactionID: dispute.TransactionID,
-		RefundID:      approval.ApprovalID,
-		UserID:        dispute.UserID,
-		Amount:        approval.RefundAmount,
-		Currency:      s.cfg.DefaultCurrency,
-		OccurredAt:    approval.ApprovedAt.Format(timeLayoutRFC3339),
-		Reason:        nonEmpty(dispute.ReasonCategory, approval.ApprovalReason),
-	}
-	return s.enqueueDomainEvent(ctx, domain.EventTransactionRefunded, domain.CanonicalPartitionKeyPath(domain.EventTransactionRefunded), dispute.TransactionID, actor.RequestID, payload)
-}
-
 func (s *Service) publishDisputeResolvedAnalytics(ctx context.Context, actor Actor, dispute domain.Dispute) error {
 	payload := contracts.DisputeResolvedPayload{DisputeID: dispute.DisputeID, ResolvedAt: s.nowFn().Format(timeLayoutRFC3339), Resolution: dispute.ResolutionType}
 	data, err := json.Marshal(payload)

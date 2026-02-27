@@ -18,6 +18,8 @@ const (
 	EventSubmissionRejected    = "submission.rejected"
 	EventTransactionFailed     = "transaction.failed"
 	EventUserRegistered        = "user.registered"
+	EventExportCompleted       = "export.completed"
+	EventExportFailed          = "export.failed"
 )
 
 type canonicalEventMeta struct {
@@ -37,6 +39,8 @@ var canonicalInputEvents = map[string]canonicalEventMeta{
 	EventSubmissionRejected:    {class: CanonicalEventClassDomain, partitionKeyPath: "data.submission_id"},
 	EventTransactionFailed:     {class: CanonicalEventClassDomain, partitionKeyPath: "data.transaction_id"},
 	EventUserRegistered:        {class: CanonicalEventClassDomain, partitionKeyPath: "data.user_id"},
+	EventExportCompleted:       {class: CanonicalEventClassDomain, partitionKeyPath: "data.request_id"},
+	EventExportFailed:          {class: CanonicalEventClassDomain, partitionKeyPath: "data.request_id"},
 }
 
 func IsCanonicalInputEvent(eventType string) bool {

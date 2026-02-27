@@ -2,6 +2,7 @@
   "event_type": "escrow.hold_created",
   "version": "v1",
   "producer": "M13-Escrow-Ledger-Service",
+  "partition_key_path": "data.escrow_id",
   "payload_schema": {
     "type": "object",
     "required": ["escrow_id", "campaign_id", "creator_id", "amount", "held_at"],

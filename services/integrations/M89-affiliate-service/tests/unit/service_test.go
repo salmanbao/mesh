@@ -53,13 +53,22 @@ func TestTrackClickFlushesCanonicalEvent(t *testing.T) {
 	if err := svc.FlushOutbox(ctx); err != nil {
 		t.Fatalf("flush outbox: %v", err)
 	}
-	if len(pub.Events) != 1 {
-		t.Fatalf("expected 1 published event, got %d", len(pub.Events))
+	if len(pub.Events) < 2 {
+		t.Fatalf("expected at least 2 published events (link created + click), got %d", len(pub.Events))
 	}
-	if pub.Events[0].EventType != "affiliate.click.tracked" {
-		t.Fatalf("unexpected event type: %s", pub.Events[0].EventType)
+	found := false
+	for _, e := range pub.Events {
+		if e.EventType == "affiliate.click.tracked" {
+			found = true
+			if e.PartitionKeyPath != "data.affiliate_id" || e.PartitionKey == "" {
+				t.Fatalf("partition key invariant not set")
+			}
+		}
 	}
-	if pub.Events[0].PartitionKeyPath != "data.affiliate_id" || pub.Events[0].PartitionKey == "" {
+	if !found {
+		t.Fatalf("click tracked event not found")
+	}
+	if pub.Events[0].PartitionKeyPath != "data.affiliate_id" && pub.Events[1].PartitionKeyPath != "data.affiliate_id" {
 		t.Fatalf("partition key invariant not set")
 	}
 }
@@ -91,8 +100,8 @@ func TestRecordAttributionCreatesPendingEarning(t *testing.T) {
 	if err := svc.FlushOutbox(ctx); err != nil {
 		t.Fatalf("flush outbox: %v", err)
 	}
-	if len(pub.Events) < 2 {
-		t.Fatalf("expected at least 2 published events (click + attribution), got %d", len(pub.Events))
+	if len(pub.Events) < 3 {
+		t.Fatalf("expected events (link + click + attribution + earning), got %d", len(pub.Events))
 	}
 	dashboard, err := svc.GetDashboard(ctx, application.Actor{SubjectID: "user-3", Role: "affiliate"})
 	if err != nil {

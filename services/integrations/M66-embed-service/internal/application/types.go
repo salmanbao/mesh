@@ -38,6 +38,7 @@ type RenderEmbedInput struct {
 	UserAgent      string
 	DNT            bool
 	ClientIP       string
+	RequestID      string
 }
 
 type UpdateEmbedSettingsInput struct {
@@ -101,6 +102,7 @@ type Service struct {
 	interactions ports.InteractionRepository
 	idempotency  ports.IdempotencyRepository
 	eventDedup   ports.EventDedupRepository
+	ops          ports.OpsPublisher
 	nowFn        func() time.Time
 }
 
@@ -112,6 +114,7 @@ type Dependencies struct {
 	Interactions ports.InteractionRepository
 	Idempotency  ports.IdempotencyRepository
 	EventDedup   ports.EventDedupRepository
+	Ops          ports.OpsPublisher
 }
 
 func NewService(deps Dependencies) *Service {
@@ -140,5 +143,5 @@ func NewService(deps Dependencies) *Service {
 	if cfg.ConsumerPollInterval <= 0 {
 		cfg.ConsumerPollInterval = 2 * time.Second
 	}
-	return &Service{cfg: cfg, settings: deps.Settings, cache: deps.Cache, impressions: deps.Impressions, interactions: deps.Interactions, idempotency: deps.Idempotency, eventDedup: deps.EventDedup, nowFn: func() time.Time { return time.Now().UTC() }}
+	return &Service{cfg: cfg, settings: deps.Settings, cache: deps.Cache, impressions: deps.Impressions, interactions: deps.Interactions, idempotency: deps.Idempotency, eventDedup: deps.EventDedup, ops: deps.Ops, nowFn: func() time.Time { return time.Now().UTC() }}
 }

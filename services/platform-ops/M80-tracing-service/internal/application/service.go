@@ -17,6 +17,9 @@ func (s *Service) IngestSpans(ctx context.Context, actor Actor, in IngestInput) 
 	if strings.TrimSpace(actor.SubjectID) == "" {
 		return IngestResult{}, domain.ErrUnauthorized
 	}
+	if strings.TrimSpace(actor.IdempotencyKey) == "" {
+		return IngestResult{}, domain.ErrIdempotencyRequired
+	}
 	format := strings.ToLower(strings.TrimSpace(in.Format))
 	if format == "" {
 		format = "zipkin"
@@ -26,6 +29,19 @@ func (s *Service) IngestSpans(ctx context.Context, actor Actor, in IngestInput) 
 	}
 	if len(in.Spans) == 0 {
 		return IngestResult{}, domain.ErrInvalidInput
+	}
+
+	requestHash := hashJSON(in)
+	if raw, ok, err := s.getIdempotent(ctx, actor.IdempotencyKey, requestHash); err != nil {
+		return IngestResult{}, err
+	} else if ok {
+		var out IngestResult
+		if json.Unmarshal(raw, &out) == nil {
+			return out, nil
+		}
+	}
+	if err := s.reserveIdempotency(ctx, actor.IdempotencyKey, requestHash); err != nil {
+		return IngestResult{}, err
 	}
 
 	now := s.nowFn()
@@ -99,7 +115,9 @@ func (s *Service) IngestSpans(ctx context.Context, actor Actor, in IngestInput) 
 			_ = s.metrics.IncCounter(ctx, "tracing_ingest_rejected_total", map[string]string{"format": format}, float64(rejected))
 		}
 	}
-	return IngestResult{Accepted: inserted, Duplicates: duplicates, Rejected: rejected}, nil
+	out := IngestResult{Accepted: inserted, Duplicates: duplicates, Rejected: rejected}
+	_ = s.completeIdempotencyJSON(ctx, actor.IdempotencyKey, 202, out)
+	return out, nil
 }
 
 func (s *Service) SearchTraces(ctx context.Context, actor Actor, in SearchInput) ([]domain.TraceSearchHit, error) {

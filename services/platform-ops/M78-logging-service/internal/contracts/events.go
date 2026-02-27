@@ -28,3 +28,14 @@ type DLQRecord struct {
 	DLQTopic      string        `json:"dlq_topic,omitempty"`
 	TraceID       string        `json:"trace_id,omitempty"`
 }
+
+type LoggingAlertTriggered struct {
+	Service   string  `json:"service"`
+	Metric    string  `json:"metric"`
+	Value     float64 `json:"value"`
+	Threshold float64 `json:"threshold"`
+	Severity  string  `json:"severity"`
+	RuleID    string  `json:"rule_id"`
+	Message   string  `json:"message,omitempty"`
+	TraceID   string  `json:"trace_id,omitempty"`
+}

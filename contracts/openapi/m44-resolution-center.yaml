@@ -1,0 +1,308 @@
+openapi: 3.0.3
+info:
+  title: M44 Resolution Center API
+  version: 1.0.0
+  description: Internal-only APIs for dispute submission, messaging, and approvals. All mutating requests require Idempotency-Key with 7-day TTL.
+servers:
+  - url: https://resolution-center.internal
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/disputes:
+    post:
+      summary: Create dispute
+      tags: [disputes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+          description: Required; 7-day TTL. Same key + hash returns cached response; mismatched hash returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDisputeRequest'
+      responses:
+        '201':
+          description: Dispute created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dispute'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/disputes/{dispute_id}:
+    get:
+      summary: Get dispute with messages and history
+      tags: [disputes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: dispute_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dispute detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisputeDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/disputes/{dispute_id}/messages:
+    post:
+      summary: Send message in dispute
+      tags: [messages]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: dispute_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '201':
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisputeMessage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/admin/disputes/{dispute_id}/approve:
+    post:
+      summary: Approve dispute refund (staff)
+      tags: [approvals]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: dispute_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveDisputeRequest'
+      responses:
+        '200':
+          description: Dispute approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dispute'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    BadRequest:
+      description: Invalid input
+    Unauthorized:
+      description: Missing/invalid token
+    Forbidden:
+      description: Forbidden
+    Conflict:
+      description: Idempotency or state conflict
+    NotFound:
+      description: Resource not found
+  schemas:
+    EvidenceFile:
+      type: object
+      properties:
+        filename:
+          type: string
+        file_url:
+          type: string
+        file_size:
+          type: integer
+          format: int64
+        mime_type:
+          type: string
+    Dispute:
+      type: object
+      properties:
+        dispute_id:
+          type: string
+        dispute_type:
+          type: string
+          enum: [refund_request, chargeback, complaint]
+        status:
+          type: string
+        priority:
+          type: string
+          enum: [normal, high]
+        user_id:
+          type: string
+        transaction_id:
+          type: string
+        reason_category:
+          type: string
+        justification_text:
+          type: string
+        requested_amount:
+          type: number
+        approved_refund_amount:
+          type: number
+        resolution_type:
+          type: string
+        resolution_notes:
+          type: string
+        assigned_agent_id:
+          type: string
+        expected_resolution:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+        evidence_files:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceFile'
+    DisputeMessage:
+      type: object
+      properties:
+        message_id:
+          type: string
+        dispute_id:
+          type: string
+        sender_id:
+          type: string
+        message_body:
+          type: string
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceFile'
+        created_at:
+          type: string
+          format: date-time
+    DisputeStateHistory:
+      type: object
+      properties:
+        history_id:
+          type: string
+        dispute_id:
+          type: string
+        from_status:
+          type: string
+        to_status:
+          type: string
+        changed_by:
+          type: string
+        reason:
+          type: string
+        changed_at:
+          type: string
+          format: date-time
+    DisputeDetail:
+      type: object
+      properties:
+        dispute:
+          $ref: '#/components/schemas/Dispute'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/DisputeMessage'
+        state_history:
+          type: array
+          items:
+            $ref: '#/components/schemas/DisputeStateHistory'
+    CreateDisputeRequest:
+      type: object
+      required: [dispute_type, transaction_id, reason_category, justification_text, requested_amount]
+      properties:
+        dispute_type:
+          type: string
+          enum: [refund_request, chargeback, complaint]
+        transaction_id:
+          type: string
+        reason_category:
+          type: string
+        justification_text:
+          type: string
+          minLength: 50
+          maxLength: 1000
+        requested_amount:
+          type: number
+          minimum: 0.01
+        evidence_files:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceFile'
+    SendMessageRequest:
+      type: object
+      required: [message_body]
+      properties:
+        message_body:
+          type: string
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceFile'
+    ApproveDisputeRequest:
+      type: object
+      required: [refund_amount, approval_reason]
+      properties:
+        refund_amount:
+          type: number
+          minimum: 0.01
+        approval_reason:
+          type: string
+        resolution_notes:
+          type: string

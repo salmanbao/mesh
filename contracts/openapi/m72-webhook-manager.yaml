@@ -1,0 +1,314 @@
+openapi: 3.0.3
+info:
+  title: M72 Webhook Manager
+  version: 1.0.0
+  description: Webhook registration, testing, analytics, and enablement. Internal-only; all mutating endpoints require Idempotency-Key (7-day TTL, request-hash enforced).
+servers:
+  - url: https://webhook-manager.internal
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [health]
+      responses:
+        '200':
+          description: OK
+        '503':
+          description: Unhealthy
+  /api/v1/webhooks:
+    post:
+      summary: Create webhook
+      tags: [webhooks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/webhooks/{webhook_id}:
+    get:
+      summary: Get webhook
+      tags: [webhooks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WebhookID'
+      responses:
+        '200':
+          description: Webhook
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/webhooks/{webhook_id}/test:
+    post:
+      summary: Send test webhook
+      tags: [webhooks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WebhookID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/webhooks/{webhook_id}/deliveries:
+    get:
+      summary: List deliveries
+      tags: [deliveries]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WebhookID'
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        '200':
+          description: Deliveries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Delivery'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/webhooks/{webhook_id}/analytics:
+    get:
+      summary: Webhook analytics snapshot
+      tags: [analytics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WebhookID'
+      responses:
+        '200':
+          description: Analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analytics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/webhooks/{webhook_id}/enable:
+    post:
+      summary: Re-enable webhook after auto-disable
+      tags: [webhooks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WebhookID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Webhook enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    WebhookID:
+      name: webhook_id
+      in: path
+      required: true
+      schema:
+        type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Required for mutating endpoints. Stored for 7 days with request hash; mismatched payload returns 409.
+  responses:
+    BadRequest:
+      description: Invalid input
+    Unauthorized:
+      description: Missing/invalid bearer token
+    Conflict:
+      description: Idempotency or state conflict
+    NotFound:
+      description: Not found
+  schemas:
+    Webhook:
+      type: object
+      properties:
+        webhook_id:
+          type: string
+        endpoint_url:
+          type: string
+        event_types:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        signing_secret:
+          type: string
+        batch_mode_enabled:
+          type: boolean
+        batch_size:
+          type: integer
+        batch_window_seconds:
+          type: integer
+        rate_limit_per_minute:
+          type: integer
+        consecutive_failures:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    CreateWebhookRequest:
+      type: object
+      required: [endpoint_url, event_types]
+      properties:
+        endpoint_url:
+          type: string
+          format: uri
+        event_types:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        batch_mode_enabled:
+          type: boolean
+        batch_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        batch_window_seconds:
+          type: integer
+          minimum: 5
+          maximum: 300
+        rate_limit_per_minute:
+          type: integer
+          minimum: 1
+          maximum: 100
+    TestResult:
+      type: object
+      properties:
+        webhook_id:
+          type: string
+        status:
+          type: string
+        http_status:
+          type: integer
+        latency_ms:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+    Delivery:
+      type: object
+      properties:
+        delivery_id:
+          type: string
+        webhook_id:
+          type: string
+        original_event_id:
+          type: string
+        original_event_type:
+          type: string
+        http_status:
+          type: integer
+        latency_ms:
+          type: integer
+        retry_count:
+          type: integer
+        delivered_at:
+          type: string
+          format: date-time
+        is_test:
+          type: boolean
+        success:
+          type: boolean
+    Analytics:
+      type: object
+      properties:
+        total_deliveries:
+          type: integer
+        successful_deliveries:
+          type: integer
+        failed_deliveries:
+          type: integer
+        success_rate:
+          type: number
+        avg_latency_ms:
+          type: number
+        p95_latency_ms:
+          type: number
+        p99_latency_ms:
+          type: number
+        by_event_type:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/EventMetrics'
+    EventMetrics:
+      type: object
+      properties:
+        total:
+          type: integer
+        success:
+          type: integer
+        failed:
+          type: integer
+        avg_latency:
+          type: number

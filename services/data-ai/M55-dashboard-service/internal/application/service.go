@@ -306,7 +306,33 @@ func (s *Service) RecordCacheInvalidation(ctx context.Context, actor Actor, trig
 	if strings.TrimSpace(actor.SubjectID) == "" {
 		return domain.CacheInvalidation{}, domain.ErrUnauthorized
 	}
+	if strings.TrimSpace(actor.IdempotencyKey) == "" {
+		return domain.CacheInvalidation{}, domain.ErrIdempotencyRequired
+	}
 	now := s.nowFn()
+	payloadHash := hashPayload(struct {
+		TriggerEvent string
+		Widgets      []string
+	}{TriggerEvent: triggerEvent, Widgets: widgets})
+
+	record, err := s.idempotency.Get(ctx, actor.IdempotencyKey, now)
+	if err != nil {
+		return domain.CacheInvalidation{}, err
+	}
+	if record != nil {
+		if record.RequestHash != payloadHash {
+			_ = s.publishDLQIdempotencyConflict(ctx, actor.IdempotencyKey, actor.RequestID)
+			return domain.CacheInvalidation{}, domain.ErrIdempotencyConflict
+		}
+		var out domain.CacheInvalidation
+		if err := json.Unmarshal(record.ResponseBody, &out); err != nil {
+			return domain.CacheInvalidation{}, err
+		}
+		return out, nil
+	}
+	if err := s.idempotency.Reserve(ctx, actor.IdempotencyKey, payloadHash, now.Add(s.cfg.IdempotencyTTL)); err != nil {
+		return domain.CacheInvalidation{}, err
+	}
 	row := domain.CacheInvalidation{
 		InvalidationID:  uuid.NewString(),
 		UserID:          actor.SubjectID,
@@ -321,6 +347,13 @@ func (s *Service) RecordCacheInvalidation(ctx context.Context, actor Actor, trig
 		return domain.CacheInvalidation{}, err
 	}
 	if err := s.cache.InvalidateByUser(ctx, actor.SubjectID); err != nil {
+		return domain.CacheInvalidation{}, err
+	}
+	encoded, err := json.Marshal(row)
+	if err != nil {
+		return domain.CacheInvalidation{}, err
+	}
+	if err := s.idempotency.Complete(ctx, actor.IdempotencyKey, 200, encoded, s.nowFn()); err != nil {
 		return domain.CacheInvalidation{}, err
 	}
 	return row, nil

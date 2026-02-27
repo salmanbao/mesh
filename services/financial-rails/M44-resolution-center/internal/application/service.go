@@ -249,7 +249,6 @@ func (s *Service) ApproveDispute(ctx context.Context, actor Actor, disputeID str
 	}
 	_ = s.recordStateTransition(ctx, dispute.DisputeID, prevStatus, dispute.Status, actor.SubjectID, "refund approved", now)
 	_ = s.recordAudit(ctx, dispute.DisputeID, "approved", actor.SubjectID, map[string]string{"approval_id": approval.ApprovalID}, now)
-	_ = s.enqueueTransactionRefunded(ctx, actor, dispute, approval)
 	_ = s.publishDisputeResolvedAnalytics(ctx, actor, dispute)
 	if err := s.completeIdempotent(ctx, actor.IdempotencyKey, 200, dispute); err != nil {
 		return domain.Dispute{}, err

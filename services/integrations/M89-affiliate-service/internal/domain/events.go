@@ -9,13 +9,16 @@ const (
 const (
 	EventAffiliateClickTracked       = "affiliate.click.tracked"
 	EventAffiliateAttributionCreated = "affiliate.attribution.created"
+	EventAffiliateLinkCreated        = "affiliate.link.created"
+	EventAffiliateEarningCalculated  = "affiliate.earning.calculated"
+	EventAffiliatePayoutQueued       = "affiliate.payout.queued"
 )
 
 func IsCanonicalInputEvent(string) bool { return false }
 
 func IsCanonicalEmittedEvent(eventType string) bool {
 	switch eventType {
-	case EventAffiliateClickTracked, EventAffiliateAttributionCreated:
+	case EventAffiliateClickTracked, EventAffiliateAttributionCreated, EventAffiliateLinkCreated, EventAffiliateEarningCalculated, EventAffiliatePayoutQueued:
 		return true
 	default:
 		return false

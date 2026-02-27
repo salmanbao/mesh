@@ -2,6 +2,8 @@
   "event_type": "affiliate.attribution.created",
   "version": "v1",
   "producer": "M89-Affiliate-Service",
+  "event_class": "domain",
+  "partition_key_path": "data.affiliate_id",
   "payload_schema": {
     "type": "object",
     "required": [

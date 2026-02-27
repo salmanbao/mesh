@@ -20,14 +20,14 @@ Manage disputes and refund-resolution workflows, including dispute submission, m
 
 ### Event Provides
 - dispute.created
-- dispute.resolved
-- transaction.refunded (canonical dependency entry; note spec narrative conflicts and says M39 emits this)
+- dispute.resolved (analytics_only)
+- transaction.refunded (listed in dependencies.yaml but removed here per canonical registry/04-services: M39 Finance is producer; M44 no longer emits)
 
 ### HTTP Provides
 - yes (`POST /api/v1/disputes`, `GET /api/v1/disputes/{dispute_id}`, `POST /api/v1/disputes/{dispute_id}/messages`, `POST /api/v1/admin/disputes/{dispute_id}/approve`)
 
 ## Implementation Notes
 - Internal sync dependency access uses gRPC (`M35` moderation owner API).
-- Async canonical events: consumes `submission.approved` / `payout.failed`, emits `dispute.created` (domain), `dispute.resolved` (analytics_only), and `transaction.refunded` (domain) per `dependencies.yaml`.
+- Async canonical events: consumes `submission.approved` / `payout.failed`, emits `dispute.created` (domain) and `dispute.resolved` (analytics_only); `transaction.refunded` emission removed to align with 04-services canonical producer (M39 Finance).
 - Mutating APIs enforce `Idempotency-Key` (7-day TTL); event consume/publish paths use 7-day dedup.
 - In-memory repositories are used for mesh implementation scaffolding; transactional outbox semantics are modeled via in-memory outbox repository + worker flush.

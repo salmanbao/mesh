@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package viralforge.retention.v1;
+
+option go_package = "github.com/viralforge/mesh/contracts/gen/go/retention/v1;retentionv1";
+
+service RetentionInternalService {
+  rpc UpsertPolicy(UpsertPolicyRequest) returns (UpsertPolicyResponse);
+  rpc ListPolicies(ListPoliciesRequest) returns (ListPoliciesResponse);
+  rpc IssueLegalHold(IssueLegalHoldRequest) returns (IssueLegalHoldResponse);
+  rpc ReleaseLegalHold(ReleaseLegalHoldRequest) returns (ReleaseLegalHoldResponse);
+  rpc PreviewDeletion(PreviewDeletionRequest) returns (PreviewDeletionResponse);
+  rpc RunDeletion(RunDeletionRequest) returns (RunDeletionResponse);
+  rpc RequestRestoration(RequestRestorationRequest) returns (RequestRestorationResponse);
+}
+
+message Policy {
+  string policy_id = 1;
+  string data_type = 2;
+  int32 retention_years = 3;
+  int32 soft_delete_grace_days = 4;
+  bool archived_to_glacier = 5;
+  string applies_to = 6;
+  string status = 7;
+  string updated_at = 8;
+}
+
+message UpsertPolicyRequest {
+  string policy_id = 1;
+  string data_type = 2;
+  int32 retention_years = 3;
+  int32 soft_delete_grace_days = 4;
+  bool archived_to_glacier = 5;
+  string applies_to = 6;
+  string status = 7;
+}
+
+message UpsertPolicyResponse {
+  Policy policy = 1;
+}
+
+message ListPoliciesRequest {}
+
+message ListPoliciesResponse {
+  repeated Policy policies = 1;
+}
+
+message IssueLegalHoldRequest {
+  string hold_id = 1;
+  repeated string user_ids = 2;
+  repeated string data_types = 3;
+  string date_range_start = 4;
+  string date_range_end = 5;
+  string hold_reason = 6;
+  string issued_by = 7;
+  string expires_at = 8;
+}
+
+message ReleaseLegalHoldRequest {
+  string hold_id = 1;
+}
+
+message IssueLegalHoldResponse {
+  string hold_id = 1;
+  string status = 2;
+  string issued_at = 3;
+  string expires_at = 4;
+  repeated string user_ids = 5;
+  repeated string data_types = 6;
+}
+
+message ReleaseLegalHoldResponse {
+  string hold_id = 1;
+  string status = 2;
+  string issued_at = 3;
+  string expires_at = 4;
+  repeated string user_ids = 5;
+  repeated string data_types = 6;
+}
+
+message PreviewDeletionRequest {
+  string policy_id = 1;
+  string data_type = 2;
+  int32 limit = 3;
+}
+
+message PreviewDeletionResponse {
+  string preview_id = 1;
+  string policy_id = 2;
+  string data_type = 3;
+  int64 total_records_to_delete = 4;
+  double estimated_size_mb = 5;
+}
+
+message RunDeletionRequest {
+  string policy_id = 1;
+  string data_type = 2;
+  bool dry_run = 3;
+  bool force = 4;
+}
+
+message RunDeletionResponse {
+  string deletion_id = 1;
+  string status = 2;
+  string scheduled_at = 3;
+}
+
+message RequestRestorationRequest {
+  string restoration_id = 1;
+  string entity_id = 2;
+  string data_type = 3;
+  string reason = 4;
+}
+
+message RequestRestorationResponse {
+  string restoration_id = 1;
+  string status = 2;
+  string requested_at = 3;
+  string estimated_completion = 4;
+}

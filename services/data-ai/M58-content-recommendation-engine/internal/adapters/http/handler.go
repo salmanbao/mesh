@@ -32,6 +32,10 @@ func (h *Handler) getRecommendations(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) recordFeedback(w http.ResponseWriter, r *http.Request) {
 	actor := actorFromContext(r.Context())
+	if strings.TrimSpace(actor.IdempotencyKey) == "" {
+		writeError(w, http.StatusBadRequest, "idempotency_key_required", "Idempotency-Key header is required", requestIDFromContext(r.Context()))
+		return
+	}
 	recommendationID := chi.URLParam(r, "recommendation_id")
 	var req contracts.RecommendationFeedbackRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -62,6 +66,10 @@ func (h *Handler) recordFeedback(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) createOverride(w http.ResponseWriter, r *http.Request) {
 	actor := actorFromContext(r.Context())
+	if strings.TrimSpace(actor.IdempotencyKey) == "" {
+		writeError(w, http.StatusBadRequest, "idempotency_key_required", "Idempotency-Key header is required", requestIDFromContext(r.Context()))
+		return
+	}
 	var req contracts.RecommendationOverrideRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_json", err.Error(), requestIDFromContext(r.Context()))

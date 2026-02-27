@@ -41,6 +41,7 @@ func NewRuntime(_ context.Context, configPath string) (*Runtime, error) {
 	consumer := eventadapter.NewMemoryConsumer()
 	domainPub := eventadapter.NewMemoryDomainPublisher()
 	analyticsPub := eventadapter.NewMemoryAnalyticsPublisher()
+	opsPub := eventadapter.NewMemoryOpsPublisher()
 	dlqPub := eventadapter.NewLoggingDLQPublisher()
 	svc := application.NewService(application.Dependencies{
 		Config: application.Config{
@@ -60,6 +61,7 @@ func NewRuntime(_ context.Context, configPath string) (*Runtime, error) {
 		Outbox:       repos.Outbox,
 		DomainEvents: domainPub,
 		Analytics:    analyticsPub,
+		Ops:          opsPub,
 		DLQ:          dlqPub,
 	})
 

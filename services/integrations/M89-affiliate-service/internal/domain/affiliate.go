@@ -53,6 +53,7 @@ type AffiliateEarning struct {
 	AttributionID string    `json:"attribution_id"`
 	OrderID       string    `json:"order_id"`
 	Amount        float64   `json:"amount"`
+	Currency      string    `json:"currency"`
 	Status        string    `json:"status"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
@@ -62,6 +63,7 @@ type AffiliatePayout struct {
 	PayoutID    string    `json:"payout_id"`
 	AffiliateID string    `json:"affiliate_id"`
 	Amount      float64   `json:"amount"`
+	Currency    string    `json:"currency"`
 	Status      string    `json:"status"`
 	QueuedAt    time.Time `json:"queued_at"`
 	UpdatedAt   time.Time `json:"updated_at"`

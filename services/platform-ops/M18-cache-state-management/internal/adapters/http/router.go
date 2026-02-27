@@ -18,6 +18,7 @@ func NewRouter(handler *Handler, service *application.Service) http.Handler {
 	r.Get("/readyz", func(w http.ResponseWriter, _ *http.Request) {
 		writeSuccess(w, http.StatusOK, "", map[string]string{"status": "ready"})
 	})
+	r.Get("/health", handler.getHealth)
 
 	r.Route("/v1", func(r chi.Router) {
 		r.Get("/cache/health", handler.getHealth)

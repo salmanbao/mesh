@@ -1,0 +1,19 @@
+{
+  "event_type": "referral.analytics.aggregate.updated",
+  "version": "v1",
+  "producer": "M95-Referral-Analytics-Service",
+  "event_class": "analytics_only",
+  "partition_key_path": "data.date",
+  "payload_schema": {
+    "type": "object",
+    "required": ["date", "scope", "updated_at"],
+    "properties": {
+      "date": { "type": "string", "format": "date" },
+      "scope": { "type": "string", "enum": ["daily", "cohort", "geo", "funnel"] },
+      "referral_token": { "type": "string" },
+      "affiliate_id": { "type": "string" },
+      "metrics": { "type": "object" },
+      "updated_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

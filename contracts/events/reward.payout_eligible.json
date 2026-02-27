@@ -2,6 +2,8 @@
   "event_type": "reward.payout_eligible",
   "version": "v1",
   "producer": "M41-Reward-Engine",
+  "event_class": "domain",
+  "partition_key_path": "data.submission_id",
   "payload_schema": {
     "type": "object",
     "required": [
@@ -11,7 +13,8 @@
       "locked_views",
       "rate_per_1k",
       "gross_amount",
-      "eligible_at"
+      "eligible_at",
+      "verification_completed_at"
     ],
     "properties": {
       "submission_id": {
@@ -32,7 +35,20 @@
       "gross_amount": {
         "type": "number"
       },
+      "net_amount": {
+        "type": "number"
+      },
+      "rollover_applied": {
+        "type": "number"
+      },
+      "rollover_balance": {
+        "type": "number"
+      },
       "eligible_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "verification_completed_at": {
         "type": "string",
         "format": "date-time"
       }

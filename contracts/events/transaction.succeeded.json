@@ -2,12 +2,16 @@
   "event_type": "transaction.succeeded",
   "version": "v1",
   "producer": "M39-Finance-Service",
+  "event_class": "domain",
+  "partition_key_path": "data.transaction_id",
   "payload_schema": {
     "type": "object",
     "required": [
       "transaction_id",
       "user_id",
       "amount",
+      "currency",
+      "provider",
       "occurred_at"
     ],
     "properties": {

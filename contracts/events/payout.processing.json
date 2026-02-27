@@ -2,6 +2,8 @@
   "event_type": "payout.processing",
   "version": "v1",
   "producer": "M14-Payout-Settlement-Service",
+  "event_class": "analytics_only",
+  "partition_key_path": "data.payout_id",
   "payload_schema": {
     "type": "object",
     "required": [

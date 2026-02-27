@@ -2,14 +2,22 @@
   "event_type": "reward.calculated",
   "version": "v1",
   "producer": "M41-Reward-Engine",
+  "event_class": "domain",
+  "partition_key_path": "data.submission_id",
   "payload_schema": {
     "type": "object",
     "required": [
       "submission_id",
       "user_id",
+      "campaign_id",
+      "locked_views",
+      "rate_per_1k",
       "gross_amount",
       "net_amount",
-      "calculated_at"
+      "rollover_applied",
+      "verification_completed_at",
+      "calculated_at",
+      "status"
     ],
     "properties": {
       "submission_id": {
@@ -18,15 +26,40 @@
       "user_id": {
         "type": "string"
       },
+      "campaign_id": {
+        "type": "string"
+      },
+      "locked_views": {
+        "type": "integer"
+      },
+      "rate_per_1k": {
+        "type": "number"
+      },
       "gross_amount": {
         "type": "number"
       },
       "net_amount": {
         "type": "number"
       },
+      "rollover_applied": {
+        "type": "number"
+      },
+      "rollover_balance": {
+        "type": "number"
+      },
+      "verification_completed_at": {
+        "type": "string",
+        "format": "date-time"
+      },
       "calculated_at": {
         "type": "string",
         "format": "date-time"
+      },
+      "status": {
+        "type": "string"
+      },
+      "fraud_score": {
+        "type": "number"
       }
     }
   }

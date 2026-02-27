@@ -59,21 +59,33 @@ type TrackingMetricsUpdatedPayload struct {
 }
 
 type RewardCalculatedPayload struct {
-	SubmissionID string  `json:"submission_id"`
-	UserID       string  `json:"user_id"`
-	GrossAmount  float64 `json:"gross_amount"`
-	NetAmount    float64 `json:"net_amount"`
-	CalculatedAt string  `json:"calculated_at"`
+	SubmissionID            string  `json:"submission_id"`
+	UserID                  string  `json:"user_id"`
+	CampaignID              string  `json:"campaign_id"`
+	LockedViews             int64   `json:"locked_views"`
+	RatePer1K               float64 `json:"rate_per_1k"`
+	GrossAmount             float64 `json:"gross_amount"`
+	NetAmount               float64 `json:"net_amount"`
+	RolloverApplied         float64 `json:"rollover_applied"`
+	RolloverBalance         float64 `json:"rollover_balance"`
+	VerificationCompletedAt string  `json:"verification_completed_at"`
+	CalculatedAt            string  `json:"calculated_at"`
+	Status                  string  `json:"status"`
+	FraudScore              float64 `json:"fraud_score,omitempty"`
 }
 
 type RewardPayoutEligiblePayload struct {
-	SubmissionID string  `json:"submission_id"`
-	UserID       string  `json:"user_id"`
-	CampaignID   string  `json:"campaign_id"`
-	LockedViews  int64   `json:"locked_views"`
-	RatePer1K    float64 `json:"rate_per_1k"`
-	GrossAmount  float64 `json:"gross_amount"`
-	EligibleAt   string  `json:"eligible_at"`
+	SubmissionID            string  `json:"submission_id"`
+	UserID                  string  `json:"user_id"`
+	CampaignID              string  `json:"campaign_id"`
+	LockedViews             int64   `json:"locked_views"`
+	RatePer1K               float64 `json:"rate_per_1k"`
+	GrossAmount             float64 `json:"gross_amount"`
+	NetAmount               float64 `json:"net_amount"`
+	RolloverApplied         float64 `json:"rollover_applied"`
+	RolloverBalance         float64 `json:"rollover_balance"`
+	EligibleAt              string  `json:"eligible_at"`
+	VerificationCompletedAt string  `json:"verification_completed_at"`
 }
 
 type DLQRecord struct {

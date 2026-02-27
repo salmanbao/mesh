@@ -21,11 +21,11 @@ type Actor struct {
 }
 
 type ListNotificationsInput struct {
-	UserID   string
-	Type     string
-	Status   string
-	Page     int
-	PageSize int
+	UserID string
+	Type   string
+	Status string
+	Limit  int
+	Cursor string
 }
 
 type BulkActionInput struct {
@@ -43,6 +43,9 @@ type UpdatePreferencesInput struct {
 	QuietHoursEnabled *bool
 	QuietHoursStart   string
 	QuietHoursEnd     string
+	QuietHoursTZ      string
+	Language          string
+	BatchingEnabled   *bool
 	MutedTypes        []string
 }
 

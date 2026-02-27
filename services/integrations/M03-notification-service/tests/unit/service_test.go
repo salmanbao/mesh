@@ -27,12 +27,12 @@ func TestHandleCanonicalEventCreatesNotificationAndDedups(t *testing.T) {
 	if err := svc.HandleCanonicalEvent(context.Background(), e); err != nil {
 		t.Fatalf("dedup second handle: %v", err)
 	}
-	items, total, err := svc.ListNotifications(context.Background(), application.Actor{SubjectID: "u1", Role: "user"}, application.ListNotificationsInput{})
+	items, _, unread, err := svc.ListNotifications(context.Background(), application.Actor{SubjectID: "u1", Role: "user"}, application.ListNotificationsInput{})
 	if err != nil {
 		t.Fatalf("list notifications: %v", err)
 	}
-	if total != 1 || len(items) != 1 {
-		t.Fatalf("expected 1 notification, got total=%d len=%d", total, len(items))
+	if unread != 1 || len(items) != 1 {
+		t.Fatalf("expected 1 notification, got unread=%d len=%d", unread, len(items))
 	}
 }
 
@@ -45,18 +45,18 @@ func TestBulkActionIdempotency(t *testing.T) {
 			t.Fatalf("seed event: %v", err)
 		}
 	}
-	items, _, _ := svc.ListNotifications(context.Background(), application.Actor{SubjectID: "u2", Role: "user"}, application.ListNotificationsInput{})
+	items, _, _, _ := svc.ListNotifications(context.Background(), application.Actor{SubjectID: "u2", Role: "user"}, application.ListNotificationsInput{})
 	ids := []string{items[0].NotificationID, items[1].NotificationID}
 	actor := application.Actor{SubjectID: "u2", Role: "user", IdempotencyKey: "idem-1"}
-	updated1, err := svc.BulkAction(context.Background(), actor, application.BulkActionInput{Action: "mark_read", NotificationIDs: ids})
+	updated1, failed1, err := svc.BulkAction(context.Background(), actor, application.BulkActionInput{Action: "mark_read", NotificationIDs: ids})
 	if err != nil {
 		t.Fatalf("bulk1: %v", err)
 	}
-	updated2, err := svc.BulkAction(context.Background(), actor, application.BulkActionInput{Action: "mark_read", NotificationIDs: ids})
+	updated2, failed2, err := svc.BulkAction(context.Background(), actor, application.BulkActionInput{Action: "mark_read", NotificationIDs: ids})
 	if err != nil {
 		t.Fatalf("bulk2: %v", err)
 	}
-	if updated1 != 2 || updated2 != 2 {
-		t.Fatalf("unexpected updated counts: %d %d", updated1, updated2)
+	if updated1 != 2 || updated2 != 2 || failed1 != 0 || failed2 != 0 {
+		t.Fatalf("unexpected updated counts: %d/%d failed %d/%d", updated1, updated2, failed1, failed2)
 	}
 }

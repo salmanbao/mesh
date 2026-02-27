@@ -12,11 +12,10 @@ const (
 )
 
 const (
-	EventSubmissionApproved  = "submission.approved"
-	EventPayoutFailed        = "payout.failed"
-	EventDisputeCreated      = "dispute.created"
-	EventDisputeResolved     = "dispute.resolved"
-	EventTransactionRefunded = "transaction.refunded"
+	EventSubmissionApproved = "submission.approved"
+	EventPayoutFailed       = "payout.failed"
+	EventDisputeCreated     = "dispute.created"
+	EventDisputeResolved    = "dispute.resolved"
 )
 
 const (
@@ -188,7 +187,7 @@ func NormalizeDisputeType(raw string) string {
 
 func CanonicalEventClass(eventType string) string {
 	switch eventType {
-	case EventSubmissionApproved, EventPayoutFailed, EventDisputeCreated, EventTransactionRefunded:
+	case EventSubmissionApproved, EventPayoutFailed, EventDisputeCreated:
 		return CanonicalEventClassDomain
 	case EventDisputeResolved:
 		return CanonicalEventClassAnalyticsOnly
@@ -205,8 +204,6 @@ func CanonicalPartitionKeyPath(eventType string) string {
 		return "data.payout_id"
 	case EventDisputeCreated, EventDisputeResolved:
 		return "data.dispute_id"
-	case EventTransactionRefunded:
-		return "data.transaction_id"
 	default:
 		return ""
 	}

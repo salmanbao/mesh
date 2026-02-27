@@ -19,26 +19,19 @@ func NewHandler(service *application.Service) *Handler { return &Handler{service
 
 func (h *Handler) listNotifications(w http.ResponseWriter, r *http.Request) {
 	actor := actorFromContext(r.Context())
-	page, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("page")))
-	pageSize, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("page_size")))
-	items, total, err := h.service.ListNotifications(r.Context(), actor, application.ListNotificationsInput{
-		UserID: strings.TrimSpace(r.URL.Query().Get("user_id")),
+	limit, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("limit")))
+	items, nextCursor, unreadCount, err := h.service.ListNotifications(r.Context(), actor, application.ListNotificationsInput{
 		Type:   strings.TrimSpace(r.URL.Query().Get("type")),
 		Status: strings.TrimSpace(r.URL.Query().Get("status")),
-		Page:   page, PageSize: pageSize,
+		Limit:  limit,
+		Cursor: strings.TrimSpace(r.URL.Query().Get("cursor")),
 	})
 	if err != nil {
 		code, c := mapDomainError(err)
 		writeError(w, code, c, err.Error(), requestIDFromContext(r.Context()))
 		return
 	}
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 {
-		pageSize = 20
-	}
-	resp := contracts.ListNotificationsResponse{Items: make([]contracts.NotificationItem, 0, len(items)), Page: page, PageSize: pageSize, Total: total, HasMore: page*pageSize < total}
+	resp := contracts.ListNotificationsResponse{Items: make([]contracts.NotificationItem, 0, len(items)), NextCursor: nextCursor, UnreadCount: unreadCount}
 	for _, n := range items {
 		resp.Items = append(resp.Items, toNotificationItem(n))
 	}
@@ -47,13 +40,13 @@ func (h *Handler) listNotifications(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) unreadCount(w http.ResponseWriter, r *http.Request) {
 	actor := actorFromContext(r.Context())
-	count, userID, err := h.service.UnreadCount(r.Context(), actor, strings.TrimSpace(r.URL.Query().Get("user_id")))
+	count, err := h.service.UnreadCount(r.Context(), actor)
 	if err != nil {
 		code, c := mapDomainError(err)
 		writeError(w, code, c, err.Error(), requestIDFromContext(r.Context()))
 		return
 	}
-	writeSuccess(w, http.StatusOK, "unread count", contracts.UnreadCountResponse{UserID: userID, UnreadCount: count})
+	writeSuccess(w, http.StatusOK, "unread count", contracts.UnreadCountResponse{UnreadCount: count})
 }
 
 func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) {
@@ -85,18 +78,18 @@ func (h *Handler) bulkAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	actor := actorFromContext(r.Context())
-	updated, err := h.service.BulkAction(r.Context(), actor, application.BulkActionInput{UserID: strings.TrimSpace(r.URL.Query().Get("user_id")), Action: req.Action, NotificationIDs: req.NotificationIDs})
+	processed, failed, err := h.service.BulkAction(r.Context(), actor, application.BulkActionInput{Action: req.Action, NotificationIDs: req.NotificationIDs})
 	if err != nil {
 		code, c := mapDomainError(err)
 		writeError(w, code, c, err.Error(), requestIDFromContext(r.Context()))
 		return
 	}
-	writeSuccess(w, http.StatusOK, "bulk action applied", contracts.BulkActionResponse{Action: strings.ToLower(strings.TrimSpace(req.Action)), Updated: updated})
+	writeSuccess(w, http.StatusOK, "bulk action applied", contracts.BulkActionResponse{Action: strings.ToLower(strings.TrimSpace(req.Action)), Processed: processed, Failed: failed})
 }
 
 func (h *Handler) getPreferences(w http.ResponseWriter, r *http.Request) {
 	actor := actorFromContext(r.Context())
-	prefs, err := h.service.GetPreferences(r.Context(), actor, strings.TrimSpace(r.URL.Query().Get("user_id")))
+	prefs, err := h.service.GetPreferences(r.Context(), actor)
 	if err != nil {
 		code, c := mapDomainError(err)
 		writeError(w, code, c, err.Error(), requestIDFromContext(r.Context()))
@@ -113,9 +106,9 @@ func (h *Handler) updatePreferences(w http.ResponseWriter, r *http.Request) {
 	}
 	actor := actorFromContext(r.Context())
 	prefs, err := h.service.UpdatePreferences(r.Context(), actor, application.UpdatePreferencesInput{
-		UserID:       strings.TrimSpace(r.URL.Query().Get("user_id")),
 		EmailEnabled: req.EmailEnabled, PushEnabled: req.PushEnabled, SMSEnabled: req.SMSEnabled, InAppEnabled: req.InAppEnabled,
-		QuietHoursEnabled: req.QuietHoursEnabled, QuietHoursStart: req.QuietHoursStart, QuietHoursEnd: req.QuietHoursEnd, MutedTypes: req.MutedTypes,
+		QuietHoursEnabled: req.QuietHoursEnabled, QuietHoursStart: req.QuietHoursStart, QuietHoursEnd: req.QuietHoursEnd, QuietHoursTZ: req.QuietHoursTZ,
+		Language: req.Language, BatchingEnabled: req.BatchingEnabled, MutedTypes: req.MutedTypes,
 	})
 	if err != nil {
 		code, c := mapDomainError(err)
@@ -148,5 +141,19 @@ func toNotificationItem(n domain.Notification) contracts.NotificationItem {
 }
 
 func toPreferencesResponse(p domain.Preferences) contracts.PreferencesResponse {
-	return contracts.PreferencesResponse{UserID: p.UserID, EmailEnabled: p.EmailEnabled, PushEnabled: p.PushEnabled, SMSEnabled: p.SMSEnabled, InAppEnabled: p.InAppEnabled, QuietHoursEnabled: p.QuietHoursEnabled, QuietHoursStart: p.QuietHoursStart, QuietHoursEnd: p.QuietHoursEnd, MutedTypes: append([]string(nil), p.MutedTypes...), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339)}
+	return contracts.PreferencesResponse{
+		UserID:            p.UserID,
+		EmailEnabled:      p.EmailEnabled,
+		PushEnabled:       p.PushEnabled,
+		SMSEnabled:        p.SMSEnabled,
+		InAppEnabled:      p.InAppEnabled,
+		QuietHoursEnabled: p.QuietHoursEnabled,
+		QuietHoursStart:   p.QuietHoursStart,
+		QuietHoursEnd:     p.QuietHoursEnd,
+		QuietHoursTZ:      p.QuietHoursTZ,
+		Language:          p.Language,
+		BatchingEnabled:   p.BatchingEnabled,
+		MutedTypes:        append([]string(nil), p.MutedTypes...),
+		UpdatedAt:         p.UpdatedAt.UTC().Format(time.RFC3339),
+	}
 }

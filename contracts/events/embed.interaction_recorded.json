@@ -1,0 +1,18 @@
+{
+  "event_type": "embed.interaction_recorded",
+  "version": "v1",
+  "producer": "M66-Embed-Service",
+  "event_class": "ops",
+  "partition_key_path": "envelope.source_service",
+  "payload_schema": {
+    "type": "object",
+    "required": ["entity_type", "entity_id", "action"],
+    "properties": {
+      "entity_type": { "type": "string", "enum": ["whop", "campaign", "app", "clip"] },
+      "entity_id": { "type": "string" },
+      "action": { "type": "string" },
+      "referrer_domain": { "type": "string" },
+      "metadata": { "type": "object", "additionalProperties": true }
+    }
+  }
+}

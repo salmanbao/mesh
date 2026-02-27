@@ -94,6 +94,30 @@ func (s *Service) enqueueAffiliateClickTracked(ctx context.Context, click domain
 func (s *Service) enqueueAffiliateAttributionCreated(ctx context.Context, attr domain.ReferralAttribution, traceID string, now time.Time) error {
 	return s.enqueueEvent(ctx, domain.EventAffiliateAttributionCreated, traceID, contracts.AffiliateAttributionCreatedPayload{AffiliateID: attr.AffiliateID, ConversionID: attr.ConversionID, OrderID: attr.OrderID, Amount: attr.Amount, Currency: attr.Currency, AttributedAt: attr.AttributedAt.UTC().Format(time.RFC3339)}, attr.AffiliateID, now)
 }
+func (s *Service) enqueueAffiliateLinkCreated(ctx context.Context, link domain.ReferralLink, traceID string, now time.Time) error {
+	return s.enqueueEvent(ctx, domain.EventAffiliateLinkCreated, traceID, contracts.AffiliateLinkCreatedPayload{AffiliateID: link.AffiliateID, LinkID: link.LinkID, Token: link.Token, Channel: link.Channel, CreatedAt: link.CreatedAt.UTC().Format(time.RFC3339)}, link.AffiliateID, now)
+}
+func (s *Service) enqueueAffiliateEarningCalculated(ctx context.Context, earning domain.AffiliateEarning, traceID string, now time.Time) error {
+	return s.enqueueEvent(ctx, domain.EventAffiliateEarningCalculated, traceID, contracts.AffiliateEarningCalculatedPayload{
+		AffiliateID:   earning.AffiliateID,
+		EarningID:     earning.EarningID,
+		AttributionID: earning.AttributionID,
+		OrderID:       earning.OrderID,
+		Amount:        earning.Amount,
+		Currency:      earning.Currency,
+		Status:        earning.Status,
+		CalculatedAt:  earning.CreatedAt.UTC().Format(time.RFC3339),
+	}, earning.AffiliateID, now)
+}
+func (s *Service) enqueueAffiliatePayoutQueued(ctx context.Context, payout domain.AffiliatePayout, traceID string, now time.Time) error {
+	return s.enqueueEvent(ctx, domain.EventAffiliatePayoutQueued, traceID, contracts.AffiliatePayoutQueuedPayload{
+		AffiliateID: payout.AffiliateID,
+		PayoutID:    payout.PayoutID,
+		Amount:      payout.Amount,
+		Status:      payout.Status,
+		QueuedAt:    payout.QueuedAt.UTC().Format(time.RFC3339),
+	}, payout.AffiliateID, now)
+}
 
 func validateEnvelope(event contracts.EventEnvelope) error {
 	if strings.TrimSpace(event.EventID) == "" || strings.TrimSpace(event.EventType) == "" || event.OccurredAt.IsZero() {

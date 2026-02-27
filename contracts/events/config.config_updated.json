@@ -1,0 +1,21 @@
+{
+  "event_type": "config.config_updated",
+  "version": "v1",
+  "producer": "M77-Config-Service",
+  "event_class": "domain",
+  "partition_key_path": "data.key_id",
+  "payload_schema": {
+    "type": "object",
+    "required": ["event_id", "key_id", "key", "version", "environment", "service_scope", "updated_at"],
+    "properties": {
+      "event_id": { "type": "string" },
+      "key_id": { "type": "string" },
+      "key": { "type": "string" },
+      "version": { "type": "integer" },
+      "environment": { "type": "string" },
+      "service_scope": { "type": "string" },
+      "updated_at": { "type": "string", "format": "date-time" },
+      "change_summary": { "type": "string" }
+    }
+  }
+}

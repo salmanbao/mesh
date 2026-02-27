@@ -1,5 +1,5 @@
 package domain
 
-// Canonical and module event notes for M44:
-// - canonical provided: dispute.created (domain), dispute.resolved (analytics_only)
-// - canonical deps also list transaction.refunded (domain) despite spec narrative saying M39 emits it.
+// Canonical event notes for M44:
+// - Provided: dispute.created (domain), dispute.resolved (analytics_only)
+// - transaction.refunded is produced by M39 Finance per 04-services and is not emitted here.

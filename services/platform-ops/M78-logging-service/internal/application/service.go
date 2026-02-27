@@ -9,8 +9,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/viralforge/mesh/services/platform-ops/M78-logging-service/internal/contracts"
 	"github.com/viralforge/mesh/services/platform-ops/M78-logging-service/internal/domain"
 )
 
@@ -312,10 +314,62 @@ func (s *Service) evaluateAlertRules(ctx context.Context, rows []domain.LogEvent
 					"trace_id": row.TraceID,
 				}),
 			})
+			s.publishOpsAlert(ctx, row, rule, actor, now)
 			break
 		}
 	}
 	return nil
+}
+
+func (s *Service) publishOpsAlert(ctx context.Context, row domain.LogEvent, rule domain.AlertRule, actor Actor, now time.Time) {
+	if s.ops == nil {
+		return
+	}
+	traceID := strings.TrimSpace(row.TraceID)
+	if traceID == "" {
+		traceID = strings.TrimSpace(actor.RequestID)
+	}
+	if traceID == "" {
+		traceID = strings.ReplaceAll(uuid.NewString(), "-", "")
+	}
+	threshold := 0.0
+	metric := "error_rate"
+	var cond map[string]any
+	if len(rule.Condition) > 0 && json.Unmarshal(rule.Condition, &cond) == nil {
+		if v, ok := cond["metric"].(string); ok && strings.TrimSpace(v) != "" {
+			metric = strings.TrimSpace(v)
+		}
+		if v, ok := cond["error_rate_gt"].(float64); ok {
+			threshold = v
+		}
+		if v, ok := cond["threshold"].(float64); ok {
+			threshold = v
+		}
+	}
+	payload := contracts.LoggingAlertTriggered{
+		Service:   row.Service,
+		Metric:    metric,
+		Value:     1,
+		Threshold: threshold,
+		Severity:  rule.Severity,
+		RuleID:    rule.RuleID,
+		Message:   row.Message,
+		TraceID:   traceID,
+	}
+	data, _ := json.Marshal(payload)
+	env := contracts.EventEnvelope{
+		EventID:          uuid.NewString(),
+		EventType:        "logging.alert_triggered",
+		EventClass:       domain.CanonicalEventClassOps,
+		OccurredAt:       now,
+		PartitionKeyPath: "envelope.source_service",
+		PartitionKey:     s.cfg.ServiceName,
+		SourceService:    s.cfg.ServiceName,
+		TraceID:          traceID,
+		SchemaVersion:    "v1",
+		Data:             data,
+	}
+	_ = s.ops.PublishOps(ctx, env)
 }
 
 func redactMessage(msg string) (string, bool) {

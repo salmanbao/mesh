@@ -1,0 +1,382 @@
+openapi: 3.0.3
+info:
+  title: M80 Tracing Service API
+  version: 1.0.0
+  description: Trace ingestion, search, sampling policy management, and trace export.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Ingest
+  - name: Traces
+  - name: Sampling
+  - name: Exports
+paths:
+  /ingest/otlp:
+    post:
+      tags: [Ingest]
+      summary: Ingest spans via OTLP
+      operationId: ingestOTLP
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IngestRequest' }
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AcceptedResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /ingest/zipkin:
+    post:
+      tags: [Ingest]
+      summary: Ingest spans via Zipkin format
+      operationId: ingestZipkin
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IngestRequest' }
+      responses:
+        '202': { $ref: '#/components/responses/Accepted' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /traces:
+    get:
+      tags: [Traces]
+      summary: Search traces
+      operationId: searchTraces
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - in: query
+          name: service_name
+          schema: { type: string }
+        - in: query
+          name: trace_id
+          schema: { type: string }
+        - in: query
+          name: error
+          schema: { type: boolean }
+        - in: query
+          name: duration_gt_ms
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Trace search results
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TraceSearchResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /traces/{trace_id}:
+    get:
+      tags: [Traces]
+      summary: Get trace detail
+      operationId: getTrace
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - in: path
+          name: trace_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Trace detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TraceDetailResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /sampling-policies:
+    get:
+      tags: [Sampling]
+      summary: List sampling policies
+      operationId: listSamplingPolicies
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Policies
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SamplingPoliciesResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    post:
+      tags: [Sampling]
+      summary: Create a sampling policy (idempotent)
+      operationId: createSamplingPolicy
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSamplingPolicyRequest' }
+      responses:
+        '201':
+          description: Policy created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreateSamplingPolicyResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /exports:
+    post:
+      tags: [Exports]
+      summary: Create a trace export job
+      operationId: createExport
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateExportRequest' }
+      responses:
+        '201':
+          description: Export queued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreateExportResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    get:
+      tags: [Exports]
+      summary: Get export job by ID
+      operationId: getExport
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - in: query
+          name: export_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Export detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportDetailResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string }
+      description: Required for mutating routes; 7-day TTL with body hash replay detection.
+    XRequestID:
+      in: header
+      name: X-Request-Id
+      schema: { type: string }
+      description: Correlation id; generated if absent.
+  responses:
+    Accepted:
+      description: Accepted for processing
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/AcceptedResponse' }
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Caller not permitted
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Idempotency conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InternalError:
+      description: Unexpected failure
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    AcceptedResponse:
+      type: object
+      properties:
+        status: { type: string, example: accepted }
+        message: { type: string }
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        status: { type: string, example: error }
+        code: { type: string }
+        message: { type: string }
+    IngestRequest:
+      type: object
+      properties:
+        spans:
+          type: array
+          items:
+            type: object
+            properties:
+              trace_id: { type: string }
+              span_id: { type: string }
+              parent_span_id: { type: string }
+              service_name: { type: string }
+              operation_name: { type: string }
+              start_time: { type: string, format: date-time }
+              end_time: { type: string, format: date-time }
+              error: { type: boolean }
+              http_status_code: { type: integer }
+              tags:
+                type: object
+                additionalProperties: { type: string }
+              environment: { type: string }
+    TraceSearchResponse:
+      type: object
+      properties:
+        status: { type: string }
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              trace_id: { type: string }
+              duration_ms: { type: integer }
+              error: { type: boolean }
+    TraceDetailResponse:
+      type: object
+      properties:
+        status: { type: string }
+        data:
+          type: object
+          properties:
+            trace_id: { type: string }
+            spans:
+              type: array
+              items:
+                type: object
+                properties:
+                  span_id: { type: string }
+                  service_name: { type: string }
+                  operation: { type: string }
+                  parent_span_id: { type: string }
+                  duration_ms: { type: integer }
+                  error: { type: boolean }
+                  tags:
+                    type: object
+                    additionalProperties: { type: string }
+    CreateSamplingPolicyRequest:
+      type: object
+      required: [service_name, rule_type]
+      properties:
+        service_name: { type: string }
+        rule_type: { type: string, enum: [probabilistic, rate_limited] }
+        probability: { type: number, minimum: 0, maximum: 1 }
+        max_traces_per_min: { type: integer, minimum: 1 }
+    CreateSamplingPolicyResponse:
+      type: object
+      properties:
+        status: { type: string }
+        data:
+          type: object
+          properties:
+            policy_id: { type: string }
+    SamplingPoliciesResponse:
+      type: object
+      properties:
+        status: { type: string }
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              policy_id: { type: string }
+              service_name: { type: string }
+              rule_type: { type: string }
+              probability: { type: number }
+              max_traces_per_min: { type: integer }
+              enabled: { type: boolean }
+              created_at: { type: string, format: date-time }
+              updated_at: { type: string, format: date-time }
+    CreateExportRequest:
+      type: object
+      properties:
+        trace_id: { type: string }
+        format: { type: string, enum: [json, parquet], default: parquet }
+        filters:
+          type: object
+          additionalProperties: true
+    CreateExportResponse:
+      type: object
+      properties:
+        status: { type: string }
+        data:
+          type: object
+          properties:
+            export_id: { type: string }
+            status: { type: string }
+            output_uri: { type: string }
+    ExportDetailResponse:
+      type: object
+      properties:
+        status: { type: string }
+        data:
+          type: object
+          properties:
+            export_id: { type: string }
+            requested_by: { type: string }
+            status: { type: string }
+            format: { type: string }
+            output_uri: { type: string }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }

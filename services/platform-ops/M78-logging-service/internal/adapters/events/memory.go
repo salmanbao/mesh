@@ -52,6 +52,21 @@ func (p *MemoryAnalyticsPublisher) PublishAnalytics(_ context.Context, _ contrac
 	return nil
 }
 
+type MemoryOpsPublisher struct {
+	mu     sync.Mutex
+	Events []contracts.EventEnvelope
+}
+
+func NewMemoryOpsPublisher() *MemoryOpsPublisher {
+	return &MemoryOpsPublisher{Events: []contracts.EventEnvelope{}}
+}
+func (p *MemoryOpsPublisher) PublishOps(_ context.Context, e contracts.EventEnvelope) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.Events = append(p.Events, e)
+	return nil
+}
+
 type LoggingDLQPublisher struct{}
 
 func NewLoggingDLQPublisher() *LoggingDLQPublisher                                       { return &LoggingDLQPublisher{} }

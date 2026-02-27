@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package referral_analytics.v1;
+
+option go_package = "github.com/viralforge/mesh/contracts/gen/go/referral_analytics/v1;referralanalyticsv1";
+
+import "google/protobuf/timestamp.proto";
+
+// Owner API for M95 Referral Analytics Service.
+service ReferralAnalyticsOwnerService {
+  rpc GetFunnel(GetFunnelRequest) returns (GetFunnelResponse);
+  rpc GetLeaderboard(GetLeaderboardRequest) returns (GetLeaderboardResponse);
+  rpc GetCohortRetention(GetCohortRetentionRequest) returns (GetCohortRetentionResponse);
+  rpc GetGeo(GetGeoRequest) returns (GetGeoResponse);
+  rpc GetExport(GetExportRequest) returns (GetExportResponse);
+}
+
+message GetFunnelRequest {
+  string start_date = 1;
+  string end_date = 2;
+}
+message GetFunnelResponse { map<string, double> metrics = 1; }
+
+message GetLeaderboardRequest {
+  string period = 1; // 7d,30d,90d,all
+}
+message LeaderboardEntry {
+  string affiliate_id = 1;
+  double conversions = 2;
+  double revenue = 3;
+  double conversion_rate = 4;
+  double ltv = 5;
+}
+message GetLeaderboardResponse { repeated LeaderboardEntry entries = 1; }
+
+message GetCohortRetentionRequest {
+  string cohort_start = 1;
+  string cohort_end = 2;
+}
+message CohortPoint {
+  string cohort_date = 1;
+  double d7_retention = 2;
+  double d30_retention = 3;
+  double d90_retention = 4;
+  double repeat_purchase_rate = 5;
+}
+message GetCohortRetentionResponse { repeated CohortPoint cohorts = 1; }
+
+message GetGeoRequest {
+  string start_date = 1;
+  string end_date = 2;
+}
+message GeoPoint {
+  string country_code = 1;
+  int64 clicks = 2;
+  int64 conversions = 3;
+  double revenue = 4;
+}
+message GetGeoResponse { repeated GeoPoint points = 1; }
+
+message GetExportRequest { string export_id = 1; }
+message ExportStatus {
+  string export_id = 1;
+  string status = 2;
+  string output_uri = 3;
+  google.protobuf.Timestamp requested_at = 4;
+  google.protobuf.Timestamp completed_at = 5;
+}
+message GetExportResponse { ExportStatus export = 1; }

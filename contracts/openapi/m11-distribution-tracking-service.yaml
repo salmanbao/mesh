@@ -1,0 +1,259 @@
+openapi: 3.0.3
+info:
+  title: M11 Distribution Tracking Service API
+  version: 1.0.0
+  description: Internal API for tracking distribution posts and metrics.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Tracking
+paths:
+  /v1/tracking/posts/validate:
+    post:
+      tags: [Tracking]
+      summary: Validate a distribution post URL
+      operationId: validatePost
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidatePostRequest'
+      responses:
+        '200':
+          description: Post validated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidatePostResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /v1/tracking/posts:
+    post:
+      tags: [Tracking]
+      summary: Register a tracked post
+      operationId: registerPost
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterPostRequest'
+      responses:
+        '200':
+          description: Tracked post registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackedPostResponse'
+        '202':
+          description: Accepted with attribution pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackedPostResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /v1/tracking/posts/{id}:
+    get:
+      tags: [Tracking]
+      summary: Get a tracked post
+      operationId: getTrackedPost
+      parameters:
+        - $ref: '#/components/parameters/PostID'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Tracked post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackedPostResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /v1/tracking/posts/{id}/metrics:
+    get:
+      tags: [Tracking]
+      summary: Get metrics snapshots for a tracked post
+      operationId: getTrackedPostMetrics
+      parameters:
+        - $ref: '#/components/parameters/PostID'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Metrics snapshots
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsListResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: 7-day idempotency key for mutating requests.
+      schema:
+        type: string
+    XRequestID:
+      name: X-Request-Id
+      in: header
+      required: true
+      schema:
+        type: string
+    PostID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    SuccessEnvelope:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+        data: {}
+    ErrorEnvelope:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+    ValidatePostRequest:
+      type: object
+      required: [user_id, platform, post_url]
+      properties:
+        user_id: { type: string }
+        platform: { type: string, enum: [tiktok, instagram, youtube] }
+        post_url: { type: string, format: uri }
+    ValidatePostResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                valid: { type: boolean }
+                platform: { type: string }
+                normalized_url: { type: string }
+    RegisterPostRequest:
+      type: object
+      required: [user_id, platform, post_url]
+      properties:
+        user_id: { type: string }
+        platform: { type: string, enum: [tiktok, instagram, youtube] }
+        post_url: { type: string, format: uri }
+        distribution_item_id: { type: string }
+        campaign_id: { type: string }
+    TrackedPostResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/TrackedPost'
+    TrackedPost:
+      type: object
+      properties:
+        tracked_post_id: { type: string }
+        user_id: { type: string }
+        platform: { type: string }
+        post_url: { type: string, format: uri }
+        distribution_item_id: { type: string }
+        campaign_id: { type: string }
+        status: { type: string }
+        validation_status: { type: string }
+        last_polled_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    MetricsListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                tracked_post_id: { type: string }
+                last_polled_at: { type: string, format: date-time, nullable: true }
+                snapshots:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/MetricSnapshot'
+    MetricSnapshot:
+      type: object
+      properties:
+        snapshot_id: { type: string }
+        tracked_post_id: { type: string }
+        platform: { type: string }
+        views: { type: integer }
+        likes: { type: integer }
+        shares: { type: integer }
+        comments: { type: integer }
+        polled_at: { type: string, format: date-time }
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Conflict:
+      description: Idempotency conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }

@@ -1,0 +1,302 @@
+openapi: 3.0.3
+info:
+  title: M95 Referral Analytics Service API
+  version: 1.0.0
+  description: |
+    OpenAPI contract for M95 Referral Analytics Service runtime routes.
+    Source alignment:
+    - REST runtime: services/data-ai/M95-referral-analytics-service/internal/adapters/http
+    - Canonical spec: viralForge/specs/M95-Referral-Analytics-Service.md
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: ReferralAnalytics
+paths:
+  /api/v1/referral-analytics/funnel:
+    get:
+      tags: [ReferralAnalytics]
+      summary: Get funnel metrics
+      operationId: getFunnel
+      parameters:
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Funnel metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunnelResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/referral-analytics/leaderboard:
+    get:
+      tags: [ReferralAnalytics]
+      summary: Get leaderboard
+      operationId: getLeaderboard
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Leaderboard metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/referral-analytics/cohorts/retention:
+    get:
+      tags: [ReferralAnalytics]
+      summary: Get cohort retention
+      operationId: getCohortRetention
+      parameters:
+        - $ref: '#/components/parameters/CohortStart'
+        - $ref: '#/components/parameters/CohortEnd'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Cohort retention metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CohortResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/referral-analytics/geo:
+    get:
+      tags: [ReferralAnalytics]
+      summary: Get geo performance
+      operationId: getGeo
+      parameters:
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Geo metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/referral-analytics/forecast:
+    get:
+      tags: [ReferralAnalytics]
+      summary: Get payout forecast
+      operationId: getForecast
+      parameters:
+        - $ref: '#/components/parameters/Period'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Forecast metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/referral-analytics/exports:
+    post:
+      tags: [ReferralAnalytics]
+      summary: Create analytics export
+      operationId: createExport
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExportRequest'
+      responses:
+        '202':
+          description: Export accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/referral-analytics/exports/{id}:
+    get:
+      tags: [ReferralAnalytics]
+      summary: Get export status
+      operationId: getExport
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Export status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    XRequestID:
+      name: X-Request-Id
+      in: header
+      required: false
+      schema: { type: string }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: 7-day idempotency key for mutating export creation.
+      schema: { type: string }
+    StartDate:
+      name: start_date
+      in: query
+      schema: { type: string, format: date }
+    EndDate:
+      name: end_date
+      in: query
+      schema: { type: string, format: date }
+    CohortStart:
+      name: cohort_start
+      in: query
+      schema: { type: string, format: date }
+    CohortEnd:
+      name: cohort_end
+      in: query
+      schema: { type: string, format: date }
+    Period:
+      name: period
+      in: query
+      schema:
+        type: string
+        enum: [7d,30d,90d,all]
+  schemas:
+    FunnelResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: object
+          additionalProperties: {}
+    LeaderboardResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: array
+          items: { type: object, additionalProperties: {} }
+    CohortResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: array
+          items: { type: object, additionalProperties: {} }
+    GeoResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: array
+          items: { type: object, additionalProperties: {} }
+    ForecastResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: object
+          additionalProperties: {}
+    CreateExportRequest:
+      type: object
+      required: [export_type, period]
+      properties:
+        export_type: { type: string, enum: [leaderboard, funnel, cohorts, geo] }
+        period: { type: string }
+        format: { type: string, enum: [csv, json], default: csv }
+        filters:
+          type: object
+          additionalProperties: {}
+    ExportResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: object
+          properties:
+            export_id: { type: string }
+            status: { type: string }
+            output_uri: { type: string, nullable: true }
+            requested_at: { type: string, format: date-time }
+            completed_at: { type: string, format: date-time, nullable: true }
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+            details: {}
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Insufficient access
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: State conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

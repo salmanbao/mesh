@@ -1,0 +1,242 @@
+openapi: 3.0.3
+info:
+  title: M13 Escrow Ledger Service API
+  version: 1.0.0
+  description: Internal finance API for escrow holds, releases, refunds, and wallet balances.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Escrow
+paths:
+  /v1/escrow/holds:
+    post:
+      tags: [Escrow]
+      summary: Create an escrow hold
+      operationId: createHold
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHoldRequest'
+      responses:
+        '200':
+          description: Hold created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /v1/escrow/releases:
+    post:
+      tags: [Escrow]
+      summary: Release funds from an escrow hold
+      operationId: releaseHold
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseHoldRequest'
+      responses:
+        '200':
+          description: Release processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /v1/escrow/refunds:
+    post:
+      tags: [Escrow]
+      summary: Refund remaining escrow funds
+      operationId: refundHold
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundHoldRequest'
+      responses:
+        '200':
+          description: Refund processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /v1/wallet/balance:
+    get:
+      tags: [Escrow]
+      summary: Get wallet/escrow balances for a campaign
+      operationId: getWalletBalance
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - in: query
+          name: campaign_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Wallet balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletBalanceResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Idempotency key; TTL 7 days; conflicts return 409.
+      schema:
+        type: string
+    XRequestID:
+      name: X-Request-Id
+      in: header
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    SuccessEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        message: { type: string }
+        data: {}
+    ErrorEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+
+    CreateHoldRequest:
+      type: object
+      required: [campaign_id, creator_id, amount]
+      properties:
+        campaign_id: { type: string }
+        creator_id: { type: string }
+        amount: { type: number, format: double, minimum: 0.01 }
+
+    ReleaseHoldRequest:
+      type: object
+      required: [escrow_id, amount]
+      properties:
+        escrow_id: { type: string }
+        amount: { type: number, format: double, minimum: 0.01 }
+
+    RefundHoldRequest:
+      type: object
+      required: [escrow_id]
+      properties:
+        escrow_id: { type: string }
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Optional; defaults to remaining amount if omitted.
+
+    Hold:
+      type: object
+      properties:
+        escrow_id: { type: string }
+        campaign_id: { type: string }
+        creator_id: { type: string }
+        status: { type: string, enum: [active, partial_release, fully_released, refunded] }
+        original_amount: { type: number, format: double }
+        remaining_amount: { type: number, format: double }
+        released_amount: { type: number, format: double }
+        refunded_amount: { type: number, format: double }
+        event_delivery: { type: string }
+
+    HoldResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Hold'
+
+    WalletBalance:
+      type: object
+      properties:
+        campaign_id: { type: string }
+        held_balance: { type: number, format: double }
+        released_balance: { type: number, format: double }
+        refunded_balance: { type: number, format: double }
+        net_escrow_balance: { type: number, format: double }
+
+    WalletBalanceResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/WalletBalance'
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Conflict:
+      description: Idempotency conflict or closed hold
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }

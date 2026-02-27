@@ -2,6 +2,8 @@
   "event_type": "dispute.resolved",
   "version": "v1",
   "producer": "M44-Resolution-Center",
+  "event_class": "analytics_only",
+  "partition_key_path": "data.dispute_id",
   "payload_schema": {
     "type": "object",
     "required": [

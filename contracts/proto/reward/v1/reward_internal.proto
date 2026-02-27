@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package reward.v1;
+
+option go_package = "github.com/viralforge/mesh/contracts/gen/go/reward/v1;rewardv1";
+
+import "google/protobuf/timestamp.proto";
+
+// Owner API for M41 Reward Engine to serve declared DBR consumers.
+service RewardOwnerService {
+  rpc GetReward(GetRewardRequest) returns (GetRewardResponse);
+  rpc GetRollover(GetRolloverRequest) returns (GetRolloverResponse);
+  rpc ListRewardHistory(ListRewardHistoryRequest) returns (ListRewardHistoryResponse);
+}
+
+message GetRewardRequest {
+  string submission_id = 1;
+}
+
+message GetRewardResponse {
+  Reward reward = 1;
+}
+
+message GetRolloverRequest {
+  string user_id = 1;
+}
+
+message GetRolloverResponse {
+  RolloverBalance balance = 1;
+}
+
+message ListRewardHistoryRequest {
+  string user_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListRewardHistoryResponse {
+  repeated Reward rewards = 1;
+  Pagination pagination = 2;
+}
+
+message Reward {
+  string submission_id = 1;
+  string user_id = 2;
+  string campaign_id = 3;
+  int64 locked_views = 4;
+  double rate_per_1k = 5;
+  double gross_amount = 6;
+  double net_amount = 7;
+  double rollover_applied = 8;
+  double rollover_balance = 9;
+  double fraud_score = 10;
+  string status = 11;
+  google.protobuf.Timestamp verification_completed_at = 12;
+  google.protobuf.Timestamp calculated_at = 13;
+  google.protobuf.Timestamp eligible_at = 14;
+}
+
+message RolloverBalance {
+  string user_id = 1;
+  double balance = 2;
+  google.protobuf.Timestamp updated_at = 3;
+}
+
+message Pagination {
+  int32 limit = 1;
+  int32 offset = 2;
+  int32 total = 3;
+}

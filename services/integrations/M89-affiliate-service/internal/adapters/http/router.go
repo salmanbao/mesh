@@ -21,10 +21,10 @@ func NewRouter(handler *Handler) http.Handler {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware)
-			r.Post("/affiliate/links", handler.createReferralLink)
-			r.Get("/affiliate/dashboard", handler.getDashboard)
-			r.Get("/affiliate/earnings", handler.listEarnings)
-			r.Post("/affiliate/exports", handler.createExport)
+			r.Post("/affiliates/links", handler.createReferralLink)
+			r.Get("/affiliates/dashboard", handler.getDashboard)
+			r.Get("/affiliates/earnings", handler.listEarnings)
+			r.Post("/affiliates/exports", handler.createExport)
 			r.Post("/admin/affiliates/{affiliate_id}/suspend", handler.suspendAffiliate)
 			r.Post("/admin/affiliates/{affiliate_id}/attributions", handler.manualAttribution)
 		})

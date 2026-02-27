@@ -1,0 +1,23 @@
+{
+  "event_type": "retention.legal_hold_issued",
+  "version": "v1",
+  "producer": "M68-Retention-Service",
+  "event_class": "domain",
+  "partition_key_path": "data.entity_id",
+  "payload_schema": {
+    "type": "object",
+    "required": ["hold_id", "entity_id", "data_types", "issued_at", "status"],
+    "properties": {
+      "hold_id": { "type": "string" },
+      "entity_id": { "type": "string" },
+      "data_types": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "issued_by": { "type": "string" },
+      "issued_at": { "type": "string", "format": "date-time" },
+      "expires_at": { "type": "string", "format": "date-time" },
+      "status": { "type": "string" }
+    }
+  }
+}

@@ -15,6 +15,9 @@ type DomainPublisher interface {
 type AnalyticsPublisher interface {
 	PublishAnalytics(ctx context.Context, event contracts.EventEnvelope) error
 }
+type OpsPublisher interface {
+	PublishOps(ctx context.Context, event contracts.EventEnvelope) error
+}
 type DLQPublisher interface {
 	PublishDLQ(ctx context.Context, record contracts.DLQRecord) error
 }

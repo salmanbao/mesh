@@ -20,7 +20,18 @@ func (s *Service) HandleCanonicalEvent(ctx context.Context, envelope contracts.E
 	if !domain.IsCanonicalInputEvent(envelope.EventType) {
 		return domain.ErrUnsupportedEventType
 	}
-	return nil
+	expectedPath := domain.CanonicalPartitionKeyPath(envelope.EventType)
+	if err := validatePartitionKeyInvariant(envelope, expectedPath); err != nil {
+		return err
+	}
+	now := s.nowFn()
+	if dup, err := s.eventDedup.IsDuplicate(ctx, envelope.EventID, now); err != nil {
+		return err
+	} else if dup {
+		return nil
+	}
+	// No-op for now: consumed events drive attribution/polling in a fuller implementation.
+	return s.eventDedup.MarkProcessed(ctx, envelope.EventID, envelope.EventType, now.Add(s.cfg.EventDedupTTL))
 }
 
 func (s *Service) enqueueTrackingMetricsUpdated(ctx context.Context, snap domain.MetricSnapshot, post domain.TrackedPost, now time.Time) error {
@@ -29,6 +40,16 @@ func (s *Service) enqueueTrackingMetricsUpdated(ctx context.Context, snap domain
 	}
 	payload, _ := json.Marshal(contracts.TrackingMetricsUpdatedPayload{TrackedPostID: snap.TrackedPostID, Platform: snap.Platform, Views: snap.Views, Likes: snap.Likes, Shares: snap.Shares, Comments: snap.Comments, PolledAt: snap.PolledAt.UTC().Format(time.RFC3339)})
 	env := contracts.EventEnvelope{EventID: uuid.NewString(), EventType: domain.EventTrackingMetricsUpdated, EventClass: domain.CanonicalEventClass(domain.EventTrackingMetricsUpdated), OccurredAt: now, PartitionKeyPath: domain.CanonicalPartitionKeyPath(domain.EventTrackingMetricsUpdated), PartitionKey: post.TrackedPostID, SourceService: s.cfg.ServiceName, TraceID: nonEmptyTrace("poll-" + post.TrackedPostID), SchemaVersion: "v1", Data: payload}
+	rec := ports.OutboxRecord{RecordID: uuid.NewString(), EventClass: env.EventClass, Envelope: env, CreatedAt: now}
+	return s.outbox.Enqueue(ctx, rec)
+}
+
+func (s *Service) enqueueTrackingPostArchived(ctx context.Context, post domain.TrackedPost, now time.Time) error {
+	if s.outbox == nil {
+		return nil
+	}
+	payload, _ := json.Marshal(contracts.TrackingPostArchivedPayload{TrackedPostID: post.TrackedPostID, ArchivedAt: now.UTC().Format(time.RFC3339)})
+	env := contracts.EventEnvelope{EventID: uuid.NewString(), EventType: domain.EventTrackingPostArchived, EventClass: domain.CanonicalEventClass(domain.EventTrackingPostArchived), OccurredAt: now, PartitionKeyPath: domain.CanonicalPartitionKeyPath(domain.EventTrackingPostArchived), PartitionKey: post.TrackedPostID, SourceService: s.cfg.ServiceName, TraceID: nonEmptyTrace("archive-" + post.TrackedPostID), SchemaVersion: "v1", Data: payload}
 	rec := ports.OutboxRecord{RecordID: uuid.NewString(), EventClass: env.EventClass, Envelope: env, CreatedAt: now}
 	return s.outbox.Enqueue(ctx, rec)
 }

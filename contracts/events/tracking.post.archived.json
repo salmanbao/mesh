@@ -1,0 +1,22 @@
+{
+  "event_type": "tracking.post.archived",
+  "version": "v1",
+  "producer": "M11-Distribution-Tracking-Service",
+  "partition_key_path": "data.tracked_post_id",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "tracked_post_id",
+      "archived_at"
+    ],
+    "properties": {
+      "tracked_post_id": {
+        "type": "string"
+      },
+      "archived_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

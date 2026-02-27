@@ -1,0 +1,365 @@
+openapi: 3.0.3
+info:
+  title: M19 Storage Lifecycle Management
+  version: 1.0.0
+  description: >
+    Internal-only APIs for lifecycle policies, archive moves, deletion scheduling, and audit queries.
+    Mutating routes require Idempotency-Key (7-day TTL; mismatched hash returns 409).
+servers:
+  - url: https://storage-lifecycle.internal
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [health]
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthReport'
+        '503':
+          description: Degraded
+  /v1/storage/policies:
+    post:
+      summary: Create storage policy
+      tags: [policies]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStoragePolicyRequest'
+      responses:
+        '201':
+          description: Policy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateStoragePolicyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /v1/storage/analytics/summary:
+    get:
+      summary: Get storage analytics summary
+      tags: [analytics]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /storage/move-to-glacier:
+    post:
+      summary: Queue move to Glacier Deep Archive
+      tags: [lifecycle]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveToGlacierRequest'
+      responses:
+        '202':
+          description: Move job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoveToGlacierResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /storage/schedule-deletion:
+    post:
+      summary: Schedule raw file deletion
+      tags: [lifecycle]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleDeletionRequest'
+      responses:
+        '202':
+          description: Deletion batch scheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleDeletionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /storage/audit/deletions:
+    get:
+      summary: Query deletion audit log
+      tags: [audit]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: file_id
+          schema:
+            type: string
+        - in: query
+          name: campaign_id
+          schema:
+            type: string
+        - in: query
+          name: action
+          schema:
+            type: string
+            enum: [soft_delete, hard_delete, archive]
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+      responses:
+        '200':
+          description: Audit results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletionAuditQueryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Required for mutating endpoints. Stored for 7 days with request hash; mismatched payload returns 409.
+  responses:
+    BadRequest:
+      description: Invalid input
+    Unauthorized:
+      description: Missing/invalid bearer token
+    Forbidden:
+      description: Forbidden
+    Conflict:
+      description: Idempotency or state conflict
+  schemas:
+    HealthReport:
+      type: object
+      properties:
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        uptime_seconds:
+          type: integer
+        version:
+          type: string
+        checks:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              name:
+                type: string
+              status:
+                type: string
+              latency_ms:
+                type: integer
+              last_checked:
+                type: string
+                format: date-time
+    CreateStoragePolicyRequest:
+      type: object
+      required: [scope, tier_from, tier_to, after_days]
+      properties:
+        policy_id:
+          type: string
+        scope:
+          type: string
+        tier_from:
+          type: string
+          enum: [STANDARD, GLACIER, GLACIER_DEEP_ARCHIVE]
+        tier_to:
+          type: string
+          enum: [STANDARD, GLACIER, GLACIER_DEEP_ARCHIVE]
+        after_days:
+          type: integer
+          minimum: 1
+        legal_hold_exempt:
+          type: boolean
+    CreateStoragePolicyResponse:
+      type: object
+      properties:
+        policy_id:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    AnalyticsSummaryResponse:
+      type: object
+      properties:
+        total_objects:
+          type: integer
+        by_tier:
+          type: object
+          additionalProperties:
+            type: integer
+        monthly_cost:
+          type: number
+        last_run_at:
+          type: string
+          format: date-time
+    MoveToGlacierRequest:
+      type: object
+      required: [file_id, source_bucket, source_key, destination_bucket, destination_key]
+      properties:
+        file_id:
+          type: string
+        submission_id:
+          type: string
+        campaign_id:
+          type: string
+        source_bucket:
+          type: string
+        source_key:
+          type: string
+        destination_bucket:
+          type: string
+        destination_key:
+          type: string
+        checksum_md5:
+          type: string
+        file_size_bytes:
+          type: integer
+          format: int64
+    MoveToGlacierResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+        file_id:
+          type: string
+        status:
+          type: string
+        message:
+          type: string
+    ScheduleDeletionRequest:
+      type: object
+      required: [campaign_id, deletion_type, file_ids]
+      properties:
+        campaign_id:
+          type: string
+        deletion_type:
+          type: string
+          enum: [raw_files]
+        days_after_closure:
+          type: integer
+          minimum: 1
+        file_ids:
+          type: array
+          minItems: 1
+          items:
+            type: string
+    ScheduleDeletionResponse:
+      type: object
+      properties:
+        batch_id:
+          type: string
+        file_count:
+          type: integer
+        scheduled_for:
+          type: string
+          format: date-time
+        status:
+          type: string
+    DeletionAuditQueryResponse:
+      type: object
+      properties:
+        deletions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeletionAuditItem'
+        total_files_deleted:
+          type: integer
+        total_size_freed:
+          type: integer
+          format: int64
+    DeletionAuditItem:
+      type: object
+      properties:
+        audit_id:
+          type: string
+        file_id:
+          type: string
+        campaign_id:
+          type: string
+        action:
+          type: string
+        triggered_by:
+          type: string
+        file_size_bytes:
+          type: integer
+          format: int64
+        reason:
+          type: string
+        initiated_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+*** End Patch

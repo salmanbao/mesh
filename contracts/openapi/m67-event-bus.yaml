@@ -1,0 +1,491 @@
+openapi: 3.0.3
+info:
+  title: M67 Event Bus API
+  version: 1.0.0
+  description: Publish events and manage Kafka topics, ACLs, schemas, consumer offsets, and DLQ replay.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Publish
+  - name: Topics
+  - name: ACLs
+  - name: Schemas
+  - name: ConsumerGroups
+  - name: DLQ
+paths:
+  /api/v1/events/publish:
+    post:
+      tags: [Publish]
+      summary: Publish an event to the bus
+      operationId: publishEvent
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PublishEventRequest' }
+      responses:
+        '202':
+          description: Event accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublishEventResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/topics:
+    post:
+      tags: [Topics]
+      summary: Create a Kafka topic
+      operationId: createTopic
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTopicRequest' }
+      responses:
+        '201':
+          description: Topic created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TopicResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    get:
+      tags: [Topics]
+      summary: List topics
+      operationId: listTopics
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+      responses:
+        '200':
+          description: Topics
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TopicResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/acls:
+    post:
+      tags: [ACLs]
+      summary: Create ACL rule
+      operationId: createACL
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateACLRequest' }
+      responses:
+        '201':
+          description: ACL created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ACLResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    get:
+      tags: [ACLs]
+      summary: List ACL rules
+      operationId: listACLs
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+      responses:
+        '200':
+          description: ACLs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ACLResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/schemas/register:
+    post:
+      tags: [Schemas]
+      summary: Register schema
+      operationId: registerSchema
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterSchemaRequest' }
+      responses:
+        '201':
+          description: Schema registered
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchemaResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/consumer-groups/{group_id}/offsets:
+    post:
+      tags: [ConsumerGroups]
+      summary: Reset consumer group offset
+      operationId: resetConsumerOffset
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+        - in: path
+          name: group_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResetOffsetRequest' }
+      responses:
+        '200':
+          description: Offset reset recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OffsetAuditResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/admin/dlq:
+    get:
+      tags: [DLQ]
+      summary: List DLQ messages
+      operationId: listDLQ
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - in: query
+          name: source_topic
+          schema: { type: string }
+        - in: query
+          name: consumer_group
+          schema: { type: string }
+        - in: query
+          name: error_type
+          schema: { type: string }
+        - in: query
+          name: include_replayed
+          schema: { type: boolean }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+      responses:
+        '200':
+          description: DLQ messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DLQMessageResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/admin/dlq/replay:
+    post:
+      tags: [DLQ]
+      summary: Replay DLQ messages
+      operationId: replayDLQ
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReplayDLQRequest' }
+      responses:
+        '200':
+          description: Replay outcome
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReplayDLQResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string }
+      description: Required for mutating routes; 7-day TTL with body hash replay detection.
+    XRequestID:
+      in: header
+      name: X-Request-Id
+      schema: { type: string }
+      description: Correlation id; generated if absent.
+  responses:
+    BadRequest:
+      description: Invalid input or schema violation
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Caller not authorized for resource
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Idempotency conflict or offset mismatch
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    RateLimited:
+      description: Producer rate limit exceeded
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InternalError:
+      description: Unexpected failure
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        message: { type: string }
+        data: {}
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        code: { type: string }
+        message: { type: string }
+        retry_after_seconds: { type: integer }
+    PublishEventRequest:
+      type: object
+      required: [event_id, event_type, occurred_at, source_service, trace_id, schema_version, partition_key_path, partition_key, data]
+      properties:
+        event_id: { type: string, format: uuid }
+        event_type: { type: string }
+        canonical_event: { type: string }
+        occurred_at: { type: string, format: date-time }
+        source_service: { type: string }
+        trace_id: { type: string }
+        schema_version: { type: string }
+        partition_key_path: { type: string }
+        partition_key: { type: string }
+        format:
+          type: string
+          enum: [json, avro, protobuf]
+          default: json
+        data:
+          type: object
+          additionalProperties: true
+    PublishEventResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                event_id: { type: string }
+                event_type: { type: string }
+                topic: { type: string }
+                status: { type: string }
+                format: { type: string }
+                accepted_at: { type: string, format: date-time }
+    CreateTopicRequest:
+      type: object
+      required: [topic_name]
+      properties:
+        topic_name: { type: string }
+        partitions: { type: integer, minimum: 1, default: 6 }
+        replication_factor: { type: integer, minimum: 1, default: 3 }
+        retention_days: { type: integer, minimum: 1, default: 7 }
+        cleanup_policy:
+          type: string
+          enum: [delete, compact]
+          default: delete
+        compression_type:
+          type: string
+          enum: [snappy, gzip, lz4, zstd]
+          default: snappy
+    TopicResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Topic'
+    Topic:
+      type: object
+      properties:
+        id: { type: string }
+        topic_name: { type: string }
+        partitions: { type: integer }
+        replication_factor: { type: integer }
+        retention_days: { type: integer }
+        cleanup_policy: { type: string }
+        compression_type: { type: string }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+    CreateACLRequest:
+      type: object
+      required: [principal, resource_type, resource_name, operations]
+      properties:
+        principal: { type: string }
+        resource_type: { type: string }
+        resource_name: { type: string }
+        pattern_type: { type: string, enum: [literal, prefixed], default: literal }
+        operations:
+          type: array
+          items: { type: string }
+    ACLResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                id: { type: string }
+                principal: { type: string }
+                resource_type: { type: string }
+                resource_name: { type: string }
+                pattern_type: { type: string }
+                operations:
+                  type: array
+                  items: { type: string }
+                status: { type: string }
+                created_at: { type: string, format: date-time }
+    RegisterSchemaRequest:
+      type: object
+      required: [subject, schema]
+      properties:
+        subject: { type: string }
+        schema_type:
+          type: string
+          enum: [avro, json, protobuf]
+          default: avro
+        compatibility:
+          type: string
+          enum: [BACKWARD, FORWARD, FULL, NONE]
+          default: BACKWARD
+        schema: { type: string }
+    SchemaResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                id: { type: string }
+                subject: { type: string }
+                schema_type: { type: string }
+                compatibility: { type: string }
+                version: { type: integer }
+                created_at: { type: string, format: date-time }
+    ResetOffsetRequest:
+      type: object
+      required: [topic, partition, offset]
+      properties:
+        topic: { type: string }
+        partition: { type: integer }
+        offset: { type: integer, minimum: 0 }
+        reason: { type: string }
+    OffsetAuditResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                id: { type: string }
+                group_id: { type: string }
+                topic: { type: string }
+                partition: { type: integer }
+                offset: { type: integer }
+                reason: { type: string }
+                changed_at: { type: string, format: date-time }
+    ReplayDLQRequest:
+      type: object
+      properties:
+        source_topic: { type: string }
+        consumer_group: { type: string }
+        error_type: { type: string }
+        limit: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+    ReplayDLQResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                requested: { type: integer }
+                replayed: { type: integer }
+                failed: { type: integer }
+                started_at: { type: string, format: date-time }
+                ended_at: { type: string, format: date-time }
+    DLQMessageResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                id: { type: string }
+                source_topic: { type: string }
+                consumer_group: { type: string }
+                error_type: { type: string }
+                error_summary: { type: string }
+                retry_count: { type: integer }
+                event_id: { type: string }
+                created_at: { type: string, format: date-time }
+                replayed_at: { type: string, format: date-time }

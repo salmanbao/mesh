@@ -5,42 +5,55 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/viralforge/mesh/services/integrations/M03-notification-service/internal/domain"
 )
 
-func (s *Service) ListNotifications(ctx context.Context, actor Actor, input ListNotificationsInput) ([]domain.Notification, int, error) {
+func (s *Service) ListNotifications(ctx context.Context, actor Actor, input ListNotificationsInput) ([]domain.Notification, string, int, error) {
 	userID, err := s.resolveUser(actor, input.UserID)
 	if err != nil {
-		return nil, 0, err
+		return nil, "", 0, err
+	}
+	limit := input.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 50 {
+		limit = 50
+	}
+	page := 1
+	if strings.TrimSpace(input.Cursor) != "" {
+		if p, err := strconv.Atoi(strings.TrimSpace(input.Cursor)); err == nil && p > 0 {
+			page = p
+		}
 	}
 	filter := domain.NotificationFilter{
 		Type:     strings.TrimSpace(input.Type),
 		Status:   strings.ToLower(strings.TrimSpace(input.Status)),
-		Page:     input.Page,
-		PageSize: input.PageSize,
+		Page:     page,
+		PageSize: limit,
 	}
-	if filter.Page <= 0 {
-		filter.Page = 1
+	items, total, err := s.notifications.ListByUserID(ctx, userID, filter)
+	if err != nil {
+		return nil, "", 0, err
 	}
-	if filter.PageSize <= 0 {
-		filter.PageSize = 20
+	unread, _ := s.notifications.CountUnread(ctx, userID)
+	nextCursor := ""
+	if page*limit < total {
+		nextCursor = strconv.Itoa(page + 1)
 	}
-	if filter.PageSize > 100 {
-		filter.PageSize = 100
-	}
-	return s.notifications.ListByUserID(ctx, userID, filter)
+	return items, nextCursor, unread, nil
 }
 
-func (s *Service) UnreadCount(ctx context.Context, actor Actor, userID string) (int, string, error) {
-	resolved, err := s.resolveUser(actor, userID)
+func (s *Service) UnreadCount(ctx context.Context, actor Actor) (int, error) {
+	userID, err := s.resolveUser(actor, "")
 	if err != nil {
-		return 0, "", err
+		return 0, err
 	}
-	count, err := s.notifications.CountUnread(ctx, resolved)
-	return count, resolved, err
+	return s.notifications.CountUnread(ctx, userID)
 }
 
 func (s *Service) MarkRead(ctx context.Context, actor Actor, notificationID string) (domain.Notification, error) {
@@ -87,45 +100,46 @@ func (s *Service) Archive(ctx context.Context, actor Actor, notificationID strin
 	return row, nil
 }
 
-func (s *Service) BulkAction(ctx context.Context, actor Actor, input BulkActionInput) (int, error) {
+func (s *Service) BulkAction(ctx context.Context, actor Actor, input BulkActionInput) (int, int, error) {
 	userID, err := s.resolveUser(actor, input.UserID)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	if strings.TrimSpace(actor.IdempotencyKey) == "" {
-		return 0, domain.ErrIdempotencyRequired
+		return 0, 0, domain.ErrIdempotencyRequired
 	}
 	if len(input.NotificationIDs) == 0 {
-		return 0, domain.ErrInvalidInput
+		return 0, 0, domain.ErrInvalidInput
 	}
 	if len(input.NotificationIDs) > 100 {
-		return 0, domain.ErrPayloadTooLarge
+		return 0, 0, domain.ErrPayloadTooLarge
 	}
 	action := strings.ToLower(strings.TrimSpace(input.Action))
 	if action != "mark_read" && action != "archive" {
-		return 0, domain.ErrInvalidInput
+		return 0, 0, domain.ErrInvalidInput
 	}
 	cleanIDs := make([]string, 0, len(input.NotificationIDs))
 	for _, id := range input.NotificationIDs {
 		id = strings.TrimSpace(id)
 		if id == "" {
-			return 0, domain.ErrInvalidInput
+			return 0, 0, domain.ErrInvalidInput
 		}
 		cleanIDs = append(cleanIDs, id)
 	}
 	requestHash := hashJSON(map[string]any{"op": "bulk_action", "user_id": userID, "action": action, "ids": cleanIDs})
 	if rec, ok, err := s.getIdempotent(ctx, actor.IdempotencyKey, requestHash); err != nil {
-		return 0, err
+		return 0, 0, err
 	} else if ok {
 		var payload struct {
-			Updated int `json:"updated"`
+			Processed int `json:"processed"`
+			Failed    int `json:"failed"`
 		}
 		if json.Unmarshal(rec, &payload) == nil {
-			return payload.Updated, nil
+			return payload.Processed, payload.Failed, nil
 		}
 	}
 	if err := s.reserveIdempotency(ctx, actor.IdempotencyKey, requestHash); err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	updated := 0
 	for _, id := range cleanIDs {
@@ -146,12 +160,13 @@ func (s *Service) BulkAction(ctx context.Context, actor Actor, input BulkActionI
 			updated++
 		}
 	}
-	_ = s.completeIdempotencyJSON(ctx, actor.IdempotencyKey, 200, map[string]int{"updated": updated})
-	return updated, nil
+	failed := len(cleanIDs) - updated
+	_ = s.completeIdempotencyJSON(ctx, actor.IdempotencyKey, 200, map[string]int{"processed": updated, "failed": failed})
+	return updated, failed, nil
 }
 
-func (s *Service) GetPreferences(ctx context.Context, actor Actor, userID string) (domain.Preferences, error) {
-	resolved, err := s.resolveUser(actor, userID)
+func (s *Service) GetPreferences(ctx context.Context, actor Actor) (domain.Preferences, error) {
+	resolved, err := s.resolveUser(actor, "")
 	if err != nil {
 		return domain.Preferences{}, err
 	}
@@ -191,6 +206,15 @@ func (s *Service) UpdatePreferences(ctx context.Context, actor Actor, input Upda
 	}
 	if strings.TrimSpace(input.QuietHoursEnd) != "" {
 		row.QuietHoursEnd = strings.TrimSpace(input.QuietHoursEnd)
+	}
+	if strings.TrimSpace(input.QuietHoursTZ) != "" {
+		row.QuietHoursTZ = strings.TrimSpace(input.QuietHoursTZ)
+	}
+	if strings.TrimSpace(input.Language) != "" {
+		row.Language = strings.TrimSpace(input.Language)
+	}
+	if input.BatchingEnabled != nil {
+		row.BatchingEnabled = *input.BatchingEnabled
 	}
 	if input.MutedTypes != nil {
 		row.MutedTypes = sanitizeStringSlice(input.MutedTypes)

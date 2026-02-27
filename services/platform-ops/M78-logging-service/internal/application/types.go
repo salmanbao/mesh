@@ -97,6 +97,7 @@ type Service struct {
 
 	domainEvents ports.DomainPublisher
 	analytics    ports.AnalyticsPublisher
+	ops          ports.OpsPublisher
 	dlq          ports.DLQPublisher
 
 	startedAt time.Time
@@ -118,6 +119,7 @@ type Dependencies struct {
 
 	DomainEvents ports.DomainPublisher
 	Analytics    ports.AnalyticsPublisher
+	Ops          ports.OpsPublisher
 	DLQ          ports.DLQPublisher
 }
 
@@ -151,6 +153,7 @@ func NewService(deps Dependencies) *Service {
 		outbox:       deps.Outbox,
 		domainEvents: deps.DomainEvents,
 		analytics:    deps.Analytics,
+		ops:          deps.Ops,
 		dlq:          deps.DLQ,
 		startedAt:    now,
 		nowFn:        func() time.Time { return time.Now().UTC() },

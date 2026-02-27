@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package viralforge.escrow.v1;
+
+option go_package = "github.com/viralforge/mesh/contracts/gen/go/escrow/v1;escrowv1";
+
+service EscrowInternalService {
+  // Returns escrow hold details by ID.
+  rpc GetEscrowHold(GetEscrowHoldRequest) returns (GetEscrowHoldResponse);
+  // Returns aggregated wallet/escrow balances for a campaign.
+  rpc GetWalletBalance(GetWalletBalanceRequest) returns (GetWalletBalanceResponse);
+}
+
+message GetEscrowHoldRequest {
+  string escrow_id = 1;
+}
+
+message GetEscrowHoldResponse {
+  EscrowHold hold = 1;
+}
+
+message GetWalletBalanceRequest {
+  string campaign_id = 1;
+}
+
+message GetWalletBalanceResponse {
+  WalletBalance balance = 1;
+}
+
+message EscrowHold {
+  string escrow_id = 1;
+  string campaign_id = 2;
+  string creator_id = 3;
+  string status = 4;
+  double original_amount = 5;
+  double remaining_amount = 6;
+  double released_amount = 7;
+  double refunded_amount = 8;
+}
+
+message WalletBalance {
+  string campaign_id = 1;
+  double held_balance = 2;
+  double released_balance = 3;
+  double refunded_balance = 4;
+  double net_escrow_balance = 5;
+}

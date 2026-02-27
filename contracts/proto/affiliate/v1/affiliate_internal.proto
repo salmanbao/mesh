@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package viralforge.affiliate.v1;
+
+option go_package = "github.com/viralforge/mesh/contracts/gen/go/affiliate/v1;affiliatev1";
+
+service AffiliateInternalService {
+  rpc GetDashboard(GetDashboardRequest) returns (GetDashboardResponse);
+  rpc ListEarnings(ListEarningsRequest) returns (ListEarningsResponse);
+  rpc ListClicks(ListClicksRequest) returns (ListClicksResponse);
+}
+
+message GetDashboardRequest {
+  string affiliate_id = 1;
+}
+
+message Dashboard {
+  string affiliate_id = 1;
+  int32 total_referrals = 2;
+  int32 total_clicks = 3;
+  int32 total_attributions = 4;
+  double conversion_rate = 5;
+  double pending_earnings = 6;
+  double paid_earnings = 7;
+}
+
+message GetDashboardResponse {
+  Dashboard dashboard = 1;
+}
+
+message ListEarningsRequest {
+  string affiliate_id = 1;
+  int32 limit = 2;
+}
+
+message AffiliateEarning {
+  string earning_id = 1;
+  string order_id = 2;
+  double amount = 3;
+  string currency = 4;
+  string status = 5;
+  string created_at = 6;
+}
+
+message ListEarningsResponse {
+  repeated AffiliateEarning earnings = 1;
+}
+
+message ListClicksRequest {
+  string affiliate_id = 1;
+  int32 limit = 2;
+}
+
+message AffiliateClick {
+  string click_id = 1;
+  string link_id = 2;
+  string referrer_url = 3;
+  string tracked_at = 4;
+}
+
+message ListClicksResponse {
+  repeated AffiliateClick clicks = 1;
+}

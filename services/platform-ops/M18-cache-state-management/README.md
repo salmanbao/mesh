@@ -13,7 +13,8 @@ M18 Cache & State Management service implementation in mesh.
 - `DELETE /v1/cache/{key}` (requires `Idempotency-Key`)
 - `POST /v1/cache/invalidate` (requires `Idempotency-Key`)
 - `GET /v1/cache/metrics`
-- `GET /v1/cache/health`
+- `GET /health` (load balancer)
+- `GET /v1/cache/health` (alias)
 
 ## Runtime Notes
 - Mutating APIs enforce idempotency-key storage with 7-day TTL.

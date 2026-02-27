@@ -1,0 +1,19 @@
+{
+  "event_type": "referral.analytics.export.requested",
+  "version": "v1",
+  "producer": "M95-Referral-Analytics-Service",
+  "event_class": "domain",
+  "partition_key_path": "data.requested_by",
+  "payload_schema": {
+    "type": "object",
+    "required": ["export_id", "export_type", "period", "requested_by", "requested_at"],
+    "properties": {
+      "export_id": { "type": "string" },
+      "export_type": { "type": "string", "enum": ["leaderboard", "funnel", "cohorts", "geo"] },
+      "period": { "type": "string" },
+      "filters": { "type": "object" },
+      "requested_by": { "type": "string" },
+      "requested_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "event_type": "retention.archival_completed",
+  "version": "v1",
+  "producer": "M68-Retention-Service",
+  "event_class": "domain",
+  "partition_key_path": "data.entity_id",
+  "payload_schema": {
+    "type": "object",
+    "required": ["deletion_id", "policy_id", "entity_id", "data_type", "archive_uri", "checksum"],
+    "properties": {
+      "deletion_id": { "type": "string" },
+      "policy_id": { "type": "string" },
+      "entity_id": { "type": "string" },
+      "data_type": { "type": "string" },
+      "archive_uri": { "type": "string" },
+      "checksum": { "type": "string" },
+      "kms_key_arn": { "type": "string" },
+      "archived_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

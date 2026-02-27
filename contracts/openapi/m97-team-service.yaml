@@ -1,0 +1,296 @@
+openapi: 3.0.3
+info:
+  title: M97 Team Service
+  version: 1.0.0
+  description: >
+    Team creation, invitations, membership checks, and audit-friendly responses.
+    Mutating routes require Idempotency-Key (7-day TTL with request-hash replay; 409 on mismatched payload).
+servers:
+  - url: https://team.internal
+security:
+  - bearerAuth: []
+paths:
+  /healthz:
+    get:
+      summary: Liveness check
+      security: []
+      tags: [health]
+      responses:
+        '200':
+          description: Service alive
+  /readyz:
+    get:
+      summary: Readiness check
+      security: []
+      tags: [health]
+      responses:
+        '200':
+          description: Service ready
+  /v1/team:
+    post:
+      summary: Create team
+      tags: [team]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTeamRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CreateTeamResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/team/{team_id}:
+    get:
+      summary: Get team details
+      tags: [team]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: team_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Team details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TeamDetailsResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/team/{team_id}/invites:
+    post:
+      summary: Create invite
+      tags: [invites]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: team_id
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInviteRequest'
+      responses:
+        '201':
+          description: Invite created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CreateInviteResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/team/invites/{invite_id}/accept:
+    post:
+      summary: Accept invite
+      tags: [invites]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: invite_id
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Invite accepted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AcceptInviteResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/team/membership:
+    get:
+      summary: Membership check
+      tags: [membership]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: team_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: user_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: permission
+          schema: { type: string }
+      responses:
+        '200':
+          description: Membership decision
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MembershipResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string }
+      description: Required for mutating endpoints. Stored 7 days with request hash; mismatched payload returns 409.
+  responses:
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing/invalid bearer token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Caller not permitted
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Idempotency or state conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        message: { type: string }
+        data: { type: object }
+    ErrorResponse:
+      type: object
+      required: [status, error]
+      properties:
+        status: { type: string, example: error }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+    CreateTeamRequest:
+      type: object
+      required: [scope_type, scope_id]
+      properties:
+        scope_type: { type: string, example: storefront }
+        scope_id: { type: string, format: uuid }
+    CreateTeamResponse:
+      type: object
+      properties:
+        team_id: { type: string }
+        owner_id: { type: string }
+        status: { type: string }
+    TeamMember:
+      type: object
+      properties:
+        user_id: { type: string }
+        role: { type: string }
+        joined_at: { type: string, format: date-time }
+    Invite:
+      type: object
+      properties:
+        invite_id: { type: string }
+        status: { type: string }
+        email: { type: string, format: email }
+        role: { type: string }
+        expires_at: { type: string, format: date-time }
+    TeamDetailsResponse:
+      type: object
+      properties:
+        team_id: { type: string }
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/TeamMember' }
+        invites:
+          type: array
+          items: { $ref: '#/components/schemas/Invite' }
+    CreateInviteRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email: { type: string, format: email }
+        role: { type: string }
+    CreateInviteResponse:
+      type: object
+      properties:
+        invite_id: { type: string }
+        status: { type: string }
+        expires_at: { type: string, format: date-time }
+    AcceptInviteResponse:
+      type: object
+      properties:
+        team_id: { type: string }
+        member_role: { type: string }
+        status: { type: string }
+    MembershipResponse:
+      type: object
+      properties:
+        allowed: { type: boolean }
+        role: { type: string }

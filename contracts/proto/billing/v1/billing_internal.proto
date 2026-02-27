@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package billing.v1;
+
+option go_package = "github.com/viralforge/mesh/contracts/gen/go/billing/v1;billingv1";
+
+import "google/protobuf/timestamp.proto";
+
+// Owner API for M05 Billing Service (read-only access for dependent services).
+service BillingOwnerService {
+  rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);
+  rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
+}
+
+message GetInvoiceRequest {
+  string invoice_id = 1;
+}
+
+message GetInvoiceResponse {
+  Invoice invoice = 1;
+}
+
+message ListInvoicesRequest {
+  string customer_id = 1;
+  string status = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListInvoicesResponse {
+  repeated Invoice invoices = 1;
+  Pagination pagination = 2;
+}
+
+message Invoice {
+  string invoice_id = 1;
+  string invoice_number = 2;
+  string customer_id = 3;
+  string customer_name = 4;
+  string customer_email = 5;
+  Address billing_address = 6;
+  string invoice_type = 7;
+  string currency = 8;
+  repeated InvoiceLineItem line_items = 9;
+  double subtotal = 10;
+  TaxBreakdown tax = 11;
+  double total = 12;
+  string status = 13;
+  string payment_status = 14;
+  google.protobuf.Timestamp due_date = 15;
+  google.protobuf.Timestamp invoice_date = 16;
+  google.protobuf.Timestamp paid_date = 17;
+  string payment_method = 18;
+  string pdf_url = 19;
+  google.protobuf.Timestamp created_at = 20;
+  google.protobuf.Timestamp updated_at = 21;
+}
+
+message InvoiceLineItem {
+  string line_item_id = 1;
+  string description = 2;
+  int32 quantity = 3;
+  double unit_price = 4;
+  double amount = 5;
+  string source_type = 6;
+  string source_id = 7;
+  string currency_code = 8;
+}
+
+message TaxBreakdown {
+  double amount = 1;
+  double rate = 2;
+  string jurisdiction = 3;
+}
+
+message Address {
+  string line1 = 1;
+  string city = 2;
+  string state = 3;
+  string postal_code = 4;
+  string country = 5;
+}
+
+message Pagination {
+  int32 limit = 1;
+  int32 offset = 2;
+  int32 total = 3;
+}

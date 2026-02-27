@@ -1,0 +1,264 @@
+openapi: 3.0.3
+info:
+  title: M54 Analytics Service
+  version: 1.0.0
+  description: >
+    Creator dashboards, admin financial reporting, and export jobs. Mutating export requests
+    require Idempotency-Key with 7-day TTL and request-hash replay; mismatched payload returns 409.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /healthz:
+    get:
+      summary: Liveness check
+      security: []
+      tags: [health]
+      responses:
+        '200':
+          description: Service alive
+  /readyz:
+    get:
+      summary: Readiness check
+      security: []
+      tags: [health]
+      responses:
+        '200':
+          description: Service ready
+
+  /analytics/creator/dashboard:
+    get:
+      summary: Creator dashboard metrics
+      tags: [analytics]
+      parameters:
+        - in: query
+          name: user_id
+          schema: { type: string }
+          description: Optional target user; defaults to caller unless admin.
+        - in: query
+          name: date_from
+          schema: { type: string, format: date }
+        - in: query
+          name: date_to
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CreatorDashboard'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /analytics/admin/financial-report:
+    get:
+      summary: Admin financial report
+      tags: [analytics]
+      parameters:
+        - in: query
+          name: date_from
+          schema: { type: string, format: date }
+        - in: query
+          name: date_to
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Financial report
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FinancialReport'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /analytics/export:
+    post:
+      summary: Request export job
+      tags: [exports]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+      responses:
+        '202':
+          description: Export accepted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExportJob'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /analytics/export/{id}:
+    get:
+      summary: Get export job
+      tags: [exports]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Export job
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExportJob'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string }
+      description: Required for mutating exports. Stored for 7 days with request hash; mismatched payload returns 409.
+  responses:
+    Unauthorized:
+      description: Missing/invalid bearer token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Caller not permitted
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Idempotency conflict or state conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        message: { type: string }
+        data: { type: object }
+    ErrorResponse:
+      type: object
+      required: [status, code, message]
+      properties:
+        status: { type: string, example: error }
+        code: { type: string }
+        message: { type: string }
+    CreatorDashboard:
+      type: object
+      properties:
+        user_id: { type: string }
+        date_from: { type: string, format: date }
+        date_to: { type: string, format: date }
+        generated_at: { type: string, format: date-time }
+        submissions: { type: integer }
+        approved: { type: integer }
+        total_views: { type: integer }
+        total_earnings: { type: number }
+        total_payouts: { type: number }
+        total_refunds: { type: number }
+        top_platforms:
+          type: object
+          additionalProperties: { type: integer }
+        data_freshness_seconds: { type: integer }
+        source_breakdown:
+          type: object
+          additionalProperties: { type: number }
+    TopCreator:
+      type: object
+      properties:
+        user_id: { type: string }
+        earnings: { type: number }
+        submissions: { type: integer }
+        refund_rate: { type: number }
+    FinancialReport:
+      type: object
+      properties:
+        date_from: { type: string, format: date }
+        date_to: { type: string, format: date }
+        generated_at: { type: string, format: date-time }
+        gmv: { type: number }
+        net_revenue: { type: number }
+        total_payout_liability: { type: number }
+        refund_rate: { type: number }
+        top_creators:
+          type: array
+          items: { $ref: '#/components/schemas/TopCreator' }
+    ExportRequest:
+      type: object
+      required: [report_type, format]
+      properties:
+        report_type:
+          type: string
+          enum: [creator_dashboard, admin_financial_report]
+        format:
+          type: string
+          enum: [csv, json]
+        date_from: { type: string, format: date }
+        date_to: { type: string, format: date }
+        filters:
+          type: object
+          additionalProperties: { type: string }
+    ExportJob:
+      type: object
+      properties:
+        export_id: { type: string }
+        user_id: { type: string }
+        report_type: { type: string }
+        format: { type: string }
+        date_from: { type: string, format: date }
+        date_to: { type: string, format: date }
+        filters:
+          type: object
+          additionalProperties: { type: string }
+        status: { type: string, enum: [queued, ready] }
+        download_url: { type: string, format: uri }
+        idempotency_key: { type: string }
+        created_at: { type: string, format: date-time }
+        ready_at: { type: string, format: date-time }

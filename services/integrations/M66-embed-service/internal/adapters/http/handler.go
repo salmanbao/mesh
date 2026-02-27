@@ -34,6 +34,7 @@ func (h *Handler) renderEmbed(w http.ResponseWriter, r *http.Request) {
 		UserAgent:      r.UserAgent(),
 		DNT:            strings.TrimSpace(r.Header.Get("DNT")) == "1",
 		ClientIP:       clientIP(r),
+		RequestID:      requestIDFromContext(r.Context()),
 	})
 	if err != nil {
 		code, c := mapDomainError(err)

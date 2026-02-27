@@ -488,6 +488,10 @@ func (s *Service) validatePublishInput(ctx context.Context, in PublishInput) err
 	if in.PartitionKeyPath == "" || in.PartitionKey == "" || len(in.EventType) > 100 {
 		return domain.ErrInvalidEnvelope
 	}
+	// Audit-sink ops events must key by source_service per 04-services canonical rule PK-2.
+	if strings.EqualFold(in.PartitionKeyPath, "envelope.source_service") && in.PartitionKey != in.SourceService {
+		return domain.ErrInvalidEnvelope
+	}
 	if in.Format == "" {
 		in.Format = domain.SchemaTypeJSON
 	}

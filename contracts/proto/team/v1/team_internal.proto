@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package team.v1;
+
+option go_package = "github.com/viralforge/mesh/contracts/gen/go/team/v1;teamv1";
+
+// Internal owner API for the Team service.
+service TeamInternalService {
+  rpc CreateTeam(CreateTeamRequest) returns (CreateTeamResponse);
+  rpc GetTeam(GetTeamRequest) returns (GetTeamResponse);
+  rpc CreateInvite(CreateInviteRequest) returns (CreateInviteResponse);
+  rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
+  rpc CheckMembership(CheckMembershipRequest) returns (CheckMembershipResponse);
+}
+
+message CreateTeamRequest {
+  string subject_id = 1;
+  string role = 2;
+  string scope_type = 3;
+  string scope_id = 4;
+  string idempotency_key = 5;
+  string request_id = 6;
+}
+
+message CreateTeamResponse {
+  string team_id = 1;
+  string owner_id = 2;
+  string status = 3;
+}
+
+message GetTeamRequest {
+  string subject_id = 1;
+  string role = 2;
+  string team_id = 3;
+  string request_id = 4;
+}
+
+message TeamMember {
+  string user_id = 1;
+  string role = 2;
+  string joined_at = 3;
+}
+
+message Invite {
+  string invite_id = 1;
+  string status = 2;
+  string email = 3;
+  string role = 4;
+  string expires_at = 5;
+}
+
+message GetTeamResponse {
+  string team_id = 1;
+  repeated TeamMember members = 2;
+  repeated Invite invites = 3;
+}
+
+message CreateInviteRequest {
+  string subject_id = 1;
+  string role = 2;
+  string team_id = 3;
+  string email = 4;
+  string invite_role = 5;
+  string idempotency_key = 6;
+  string request_id = 7;
+}
+
+message CreateInviteResponse {
+  string invite_id = 1;
+  string status = 2;
+  string expires_at = 3;
+}
+
+message AcceptInviteRequest {
+  string subject_id = 1;
+  string role = 2;
+  string invite_id = 3;
+  string idempotency_key = 4;
+  string request_id = 5;
+}
+
+message AcceptInviteResponse {
+  string team_id = 1;
+  string member_role = 2;
+  string status = 3;
+}
+
+message CheckMembershipRequest {
+  string subject_id = 1;
+  string role = 2;
+  string team_id = 3;
+  string user_id = 4;
+  string permission = 5;
+  string request_id = 6;
+}
+
+message CheckMembershipResponse {
+  bool allowed = 1;
+  string role = 2;
+}

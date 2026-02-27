@@ -59,6 +59,7 @@ type UserBalance struct {
 	PendingBalance    float64   `json:"pending_balance"`
 	ReservedBalance   float64   `json:"reserved_balance"`
 	NegativeBalance   float64   `json:"negative_balance"`
+	Currency          string    `json:"currency"`
 	LastTransactionID string    `json:"last_transaction_id,omitempty"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }

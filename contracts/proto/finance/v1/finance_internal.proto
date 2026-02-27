@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package finance.v1;
+
+option go_package = "github.com/viralforge/mesh/contracts/gen/go/finance/v1;financev1";
+
+// Owner API for Finance service (M39)
+service FinanceInternalService {
+  rpc CreateTransaction(CreateTransactionRequest) returns (CreateTransactionResponse);
+  rpc GetTransaction(GetTransactionRequest) returns (GetTransactionResponse);
+  rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
+  rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse);
+  rpc CreateRefund(CreateRefundRequest) returns (CreateRefundResponse);
+}
+
+message CreateTransactionRequest {
+  string subject_id = 1;
+  string role = 2;
+  string idempotency_key = 3;
+  string request_id = 4;
+
+  string user_id = 10;
+  string campaign_id = 11;
+  string product_id = 12;
+  string provider = 13;
+  string provider_transaction_id = 14;
+  double amount = 15;
+  string currency = 16;
+  string traffic_source = 17;
+  string user_tier = 18;
+}
+
+message CreateTransactionResponse {
+  Transaction transaction = 1;
+}
+
+message GetTransactionRequest {
+  string subject_id = 1;
+  string role = 2;
+  string request_id = 3;
+
+  string transaction_id = 10;
+}
+
+message GetTransactionResponse {
+  Transaction transaction = 1;
+}
+
+message ListTransactionsRequest {
+  string subject_id = 1;
+  string role = 2;
+  string request_id = 3;
+
+  string user_id = 10;
+  int32 limit = 11;
+  int32 offset = 12;
+}
+
+message ListTransactionsResponse {
+  repeated Transaction items = 1;
+  Pagination pagination = 2;
+}
+
+message GetBalanceRequest {
+  string subject_id = 1;
+  string role = 2;
+  string request_id = 3;
+
+  string user_id = 10;
+}
+
+message GetBalanceResponse {
+  Balance balance = 1;
+}
+
+message CreateRefundRequest {
+  string subject_id = 1;
+  string role = 2;
+  string idempotency_key = 3;
+  string request_id = 4;
+
+  string transaction_id = 10;
+  string user_id = 11;
+  double amount = 12;
+  string reason = 13;
+}
+
+message CreateRefundResponse {
+  Refund refund = 1;
+}
+
+message Transaction {
+  string transaction_id = 1;
+  string user_id = 2;
+  string campaign_id = 3;
+  string product_id = 4;
+  string provider = 5;
+  string provider_transaction_id = 6;
+  double amount = 7;
+  string currency = 8;
+  double platform_fee_rate = 9;
+  string status = 10;
+  string failure_reason = 11;
+  string created_at = 12;
+  string updated_at = 13;
+  string succeeded_at = 14;
+  string failed_at = 15;
+  string refunded_at = 16;
+}
+
+message Refund {
+  string refund_id = 1;
+  string transaction_id = 2;
+  string user_id = 3;
+  double amount = 4;
+  string currency = 5;
+  string reason = 6;
+  string created_at = 7;
+}
+
+message Balance {
+  string user_id = 1;
+  double available_balance = 2;
+  double pending_balance = 3;
+  double reserved_balance = 4;
+  double negative_balance = 5;
+  string currency = 6;
+  string last_transaction_id = 7;
+  string updated_at = 8;
+}
+
+message Pagination {
+  int32 limit = 1;
+  int32 offset = 2;
+  int64 total = 3;
+}

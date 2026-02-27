@@ -1,0 +1,308 @@
+openapi: 3.0.3
+info:
+  title: M58 Content Recommendation Engine API
+  version: 1.0.0
+  description: Internal API for personalized campaign recommendations and feedback.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Recommendations
+  - name: Admin
+paths:
+  /api/v1/recommendations:
+    get:
+      tags: [Recommendations]
+      summary: Get personalized recommendations
+      operationId: getRecommendations
+      parameters:
+        - in: query
+          name: role
+          required: false
+          schema:
+            type: string
+            example: clipper
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - in: query
+          name: segment
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recommendation list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationListResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/recommendations/{recommendation_id}/feedback:
+    post:
+      tags: [Recommendations]
+      summary: Record feedback for a recommendation
+      operationId: recordRecommendationFeedback
+      parameters:
+        - $ref: '#/components/parameters/RecommendationID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecommendationFeedbackRequest'
+      responses:
+        '200':
+          description: Feedback recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/admin/recommendation-overrides:
+    post:
+      tags: [Admin]
+      summary: Create or update a recommendation override
+      operationId: applyRecommendationOverride
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecommendationOverrideRequest'
+      responses:
+        '201':
+          description: Override applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverrideResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    get:
+      tags: [Admin]
+      summary: List active overrides
+      operationId: listRecommendationOverrides
+      parameters:
+        - in: query
+          name: role
+          schema:
+            type: string
+            example: admin
+      responses:
+        '200':
+          description: Overrides list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverrideListResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    RecommendationID:
+      name: recommendation_id
+      in: path
+      required: true
+      schema:
+        type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Idempotency key; 7-day TTL; conflicts return 409.
+      schema:
+        type: string
+    XRequestID:
+      name: X-Request-Id
+      in: header
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    SuccessEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        message: { type: string }
+        data: {}
+
+    ErrorEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+
+    RecommendationItem:
+      type: object
+      properties:
+        recommendation_id: { type: string }
+        user_id: { type: string }
+        role: { type: string }
+        entity_id: { type: string }
+        entity_type: { type: string, example: campaign }
+        score: { type: number, format: float }
+        position: { type: integer }
+        reason: { type: string }
+        confidence_score: { type: number, format: float }
+        model_version: { type: string }
+        computed_at: { type: string, format: date-time }
+
+    RecommendationMeta:
+      type: object
+      properties:
+        computed_at: { type: string, format: date-time }
+        cache_hit: { type: boolean }
+        model_version: { type: string }
+        recommendation_mode: { type: string }
+
+    RecommendationList:
+      type: object
+      properties:
+        recommendations:
+          type: array
+          items: { $ref: '#/components/schemas/RecommendationItem' }
+        meta:
+          $ref: '#/components/schemas/RecommendationMeta'
+
+    RecommendationListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/RecommendationList'
+
+    RecommendationFeedbackRequest:
+      type: object
+      required: [event_id, event_type, occurred_at, source_service, trace_id, schema_version, data]
+      properties:
+        event_id: { type: string }
+        event_type: { type: string, example: embed.click }
+        occurred_at: { type: string, format: date-time }
+        source_service: { type: string }
+        trace_id: { type: string }
+        schema_version: { type: string, example: "1.0" }
+        partition_key_path: { type: string, example: data.entity_id }
+        partition_key: { type: string }
+        data:
+          type: object
+          required: [entity_id]
+          properties:
+            entity_id: { type: string }
+
+    FeedbackResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                feedback_id: { type: string }
+                recorded_at: { type: string, format: date-time }
+
+    RecommendationOverrideRequest:
+      type: object
+      required: [override_type, entity_id, scope, reason, multiplier]
+      properties:
+        override_type: { type: string, example: promote_campaign }
+        entity_id: { type: string }
+        scope: { type: string, example: role }
+        scope_value: { type: string }
+        multiplier: { type: number, format: float, minimum: 0.01, maximum: 2.0 }
+        reason: { type: string }
+        end_date: { type: string, format: date }
+
+    OverrideResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                override_id: { type: string }
+                created_at: { type: string, format: date-time }
+
+    OverrideListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      override_id: { type: string }
+                      override_type: { type: string }
+                      entity_id: { type: string }
+                      scope: { type: string }
+                      scope_value: { type: string }
+                      multiplier: { type: number, format: float }
+                      active: { type: boolean }
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Conflict:
+      description: Idempotency conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }

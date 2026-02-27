@@ -1,0 +1,299 @@
+openapi: 3.0.3
+info:
+  title: M89 Affiliate Service API
+  version: 1.0.0
+  description: Create referral links, track clicks, view dashboard/earnings, exports, admin suspend/attribution.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Affiliate
+  - name: Admin
+paths:
+  /r/{token}:
+    get:
+      tags: [Affiliate]
+      summary: Track referral click and redirect
+      operationId: trackClick
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema: { type: string }
+      responses:
+        '302':
+          description: Redirect to destination URL
+        '404': { $ref: '#/components/responses/NotFound' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /api/v1/affiliates/links:
+    post:
+      tags: [Affiliate]
+      summary: Create referral link (idempotent)
+      operationId: createReferralLink
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReferralLinkRequest' }
+      responses:
+        '201':
+          description: Link created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreateReferralLinkResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/affiliates/dashboard:
+    get:
+      tags: [Affiliate]
+      summary: Get affiliate dashboard metrics
+      operationId: getDashboard
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Dashboard metrics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DashboardResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/affiliates/earnings:
+    get:
+      tags: [Affiliate]
+      summary: List earnings history
+      operationId: listEarnings
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Earnings list
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EarningsListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/affiliates/exports:
+    post:
+      tags: [Affiliate]
+      summary: Create CSV export (idempotent)
+      operationId: createExport
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExportRequest' }
+      responses:
+        '202':
+          description: Export queued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/admin/affiliates/{affiliate_id}/suspend:
+    post:
+      tags: [Admin]
+      summary: Suspend affiliate (idempotent)
+      operationId: suspendAffiliate
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+        - in: path
+          name: affiliate_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SuspendAffiliateRequest' }
+      responses:
+        '200':
+          description: Affiliate suspended
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuspendAffiliateResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/admin/affiliates/{affiliate_id}/attributions:
+    post:
+      tags: [Admin]
+      summary: Create manual attribution (idempotent)
+      operationId: manualAttribution
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+        - in: path
+          name: affiliate_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ManualAttributionRequest' }
+      responses:
+        '201':
+          description: Attribution created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ManualAttributionResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string }
+      description: Required for mutating routes; 7-day TTL with body hash replay detection.
+    XRequestID:
+      in: header
+      name: X-Request-Id
+      schema: { type: string }
+      description: Correlation id; generated if absent.
+  responses:
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Caller not permitted
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Idempotency conflict or conflicting state
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InternalError:
+      description: Unexpected failure
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        status: { type: string, example: error }
+        code: { type: string }
+        message: { type: string }
+    CreateReferralLinkRequest:
+      type: object
+      properties:
+        channel: { type: string }
+        utm_source: { type: string }
+        utm_medium: { type: string }
+        utm_campaign: { type: string }
+    CreateReferralLinkResponse:
+      type: object
+      properties:
+        link_id: { type: string }
+        url: { type: string }
+    DashboardResponse:
+      type: object
+      properties:
+        affiliate_id: { type: string }
+        total_referrals: { type: integer }
+        total_clicks: { type: integer }
+        total_attributions: { type: integer }
+        conversion_rate: { type: number }
+        pending_earnings: { type: number }
+        paid_earnings: { type: number }
+        top_links:
+          type: array
+          items:
+            type: object
+            properties:
+              link_id: { type: string }
+              clicks: { type: integer }
+              channel: { type: string }
+    EarningsListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              earning_id: { type: string }
+              order_id: { type: string }
+              amount: { type: number }
+              status: { type: string }
+              created_at: { type: string, format: date-time }
+    ExportRequest:
+      type: object
+      properties:
+        format: { type: string, enum: [csv], default: csv }
+    ExportResponse:
+      type: object
+      properties:
+        export_id: { type: string }
+        status: { type: string }
+    SuspendAffiliateRequest:
+      type: object
+      properties:
+        reason: { type: string }
+    SuspendAffiliateResponse:
+      type: object
+      properties:
+        affiliate_id: { type: string }
+        status: { type: string }
+        updated_at: { type: string, format: date-time }
+    ManualAttributionRequest:
+      type: object
+      required: [order_id, conversion_id, amount]
+      properties:
+        click_id: { type: string }
+        order_id: { type: string }
+        conversion_id: { type: string }
+        amount: { type: number }
+        currency: { type: string }
+    ManualAttributionResponse:
+      type: object
+      properties:
+        attribution_id: { type: string }
+        affiliate_id: { type: string }
+        order_id: { type: string }
+        amount: { type: number }
+        attributed_at: { type: string, format: date-time }

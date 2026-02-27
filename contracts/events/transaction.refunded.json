@@ -2,6 +2,8 @@
   "event_type": "transaction.refunded",
   "version": "v1",
   "producer": "M39-Finance-Service",
+  "event_class": "domain",
+  "partition_key_path": "data.transaction_id",
   "payload_schema": {
     "type": "object",
     "required": [
@@ -9,6 +11,8 @@
       "refund_id",
       "user_id",
       "amount",
+      "currency",
+      "provider",
       "occurred_at",
       "reason"
     ],

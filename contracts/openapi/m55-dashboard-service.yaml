@@ -1,0 +1,280 @@
+openapi: 3.0.3
+info:
+  title: M55 Dashboard Service API
+  version: 1.0.0
+  description: |
+    OpenAPI contract for M55 Dashboard Service runtime routes.
+    Source alignment:
+    - REST runtime: services/data-ai/M55-dashboard-service/internal/adapters/http
+    - Canonical spec: viralForge/specs/M55-Dashboard-Service.md
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Dashboard
+paths:
+  /api/v1/dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard data
+      operationId: getDashboard
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - $ref: '#/components/parameters/ViewID'
+        - $ref: '#/components/parameters/DateRange'
+        - $ref: '#/components/parameters/FromDate'
+        - $ref: '#/components/parameters/ToDate'
+        - $ref: '#/components/parameters/DeviceType'
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/dashboard/layout:
+    put:
+      tags: [Dashboard]
+      summary: Save dashboard layout
+      operationId: saveLayout
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveLayoutRequest'
+      responses:
+        '200':
+          description: Layout saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LayoutResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/dashboard/views:
+    post:
+      tags: [Dashboard]
+      summary: Create custom dashboard view
+      operationId: createCustomView
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomViewRequest'
+      responses:
+        '201':
+          description: View created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCustomViewResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/dashboard/invalidate:
+    post:
+      tags: [Dashboard]
+      summary: Invalidate dashboard cache for a user
+      operationId: invalidateDashboard
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvalidateRequest'
+      responses:
+        '200':
+          description: Cache invalidated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidateResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    XRequestID:
+      name: X-Request-Id
+      in: header
+      required: false
+      schema: { type: string }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: 7-day idempotency key for mutating dashboard endpoints.
+      schema: { type: string }
+    ViewID:
+      name: view_id
+      in: query
+      required: false
+      schema: { type: string }
+    DateRange:
+      name: date_range
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [7d,30d,90d,ytd,custom]
+    FromDate:
+      name: from_date
+      in: query
+      required: false
+      schema: { type: string, format: date }
+    ToDate:
+      name: to_date
+      in: query
+      required: false
+      schema: { type: string, format: date }
+    DeviceType:
+      name: device_type
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [web,mobile]
+  schemas:
+    WidgetLayoutItem:
+      type: object
+      required: [widget_id, position, visible, size]
+      properties:
+        widget_id: { type: string }
+        position: { type: integer }
+        visible: { type: boolean }
+        size: { type: string, example: "2x2" }
+    SaveLayoutRequest:
+      type: object
+      required: [device_type, widgets]
+      properties:
+        device_type:
+          type: string
+          enum: [web, mobile]
+        widgets:
+          type: array
+          items:
+            $ref: '#/components/schemas/WidgetLayoutItem'
+    LayoutResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: object
+          properties:
+            layout_id: { type: string }
+            device_type: { type: string }
+            layout_version: { type: integer }
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/WidgetLayoutItem'
+    CreateCustomViewRequest:
+      type: object
+      required: [view_name, widget_ids]
+      properties:
+        view_name: { type: string }
+        widget_ids:
+          type: array
+          items: { type: string }
+        date_range_default:
+          type: string
+          enum: [7d,30d,90d,ytd,custom]
+        set_as_default:
+          type: boolean
+    CreateCustomViewResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: object
+          properties:
+            view_id: { type: string }
+            view_name: { type: string }
+    InvalidateRequest:
+      type: object
+      required: [trigger_event]
+      properties:
+        trigger_event: { type: string }
+        widgets:
+          type: array
+          items: { type: string }
+    InvalidateResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: object
+          properties:
+            invalidation_id: { type: string }
+            trigger_event: { type: string }
+            widgets:
+              type: array
+              items: { type: string }
+            invalidated_at: { type: string, format: date-time }
+    DashboardResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: object
+          properties:
+            dashboard: { type: object, additionalProperties: {} }
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+            details: {}
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Idempotency conflict or resource state conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

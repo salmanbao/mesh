@@ -30,16 +30,13 @@ type NotificationItem struct {
 }
 
 type ListNotificationsResponse struct {
-	Items    []NotificationItem `json:"items"`
-	Page     int                `json:"page"`
-	PageSize int                `json:"page_size"`
-	Total    int                `json:"total"`
-	HasMore  bool               `json:"has_more"`
+	Items       []NotificationItem `json:"items"`
+	NextCursor  string             `json:"next_cursor,omitempty"`
+	UnreadCount int                `json:"unread_count"`
 }
 
 type UnreadCountResponse struct {
-	UserID      string `json:"user_id"`
-	UnreadCount int    `json:"unread_count"`
+	UnreadCount int `json:"unread_count"`
 }
 
 type MarkStateResponse struct {
@@ -53,8 +50,9 @@ type BulkActionRequest struct {
 }
 
 type BulkActionResponse struct {
-	Action  string `json:"action"`
-	Updated int    `json:"updated"`
+	Action    string `json:"action"`
+	Processed int    `json:"processed"`
+	Failed    int    `json:"failed"`
 }
 
 type PreferencesResponse struct {
@@ -66,6 +64,9 @@ type PreferencesResponse struct {
 	QuietHoursEnabled bool     `json:"quiet_hours_enabled"`
 	QuietHoursStart   string   `json:"quiet_hours_start,omitempty"`
 	QuietHoursEnd     string   `json:"quiet_hours_end,omitempty"`
+	QuietHoursTZ      string   `json:"quiet_hours_timezone,omitempty"`
+	Language          string   `json:"language,omitempty"`
+	BatchingEnabled   bool     `json:"batching_enabled"`
 	MutedTypes        []string `json:"muted_types,omitempty"`
 	UpdatedAt         string   `json:"updated_at"`
 }
@@ -78,6 +79,9 @@ type UpdatePreferencesRequest struct {
 	QuietHoursEnabled *bool    `json:"quiet_hours_enabled,omitempty"`
 	QuietHoursStart   string   `json:"quiet_hours_start,omitempty"`
 	QuietHoursEnd     string   `json:"quiet_hours_end,omitempty"`
+	QuietHoursTZ      string   `json:"quiet_hours_timezone,omitempty"`
+	Language          string   `json:"language,omitempty"`
+	BatchingEnabled   *bool    `json:"batching_enabled,omitempty"`
 	MutedTypes        []string `json:"muted_types,omitempty"`
 }
 

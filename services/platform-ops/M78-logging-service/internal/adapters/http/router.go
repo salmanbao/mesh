@@ -21,7 +21,7 @@ func NewRouter(handler *Handler, service *application.Service) http.Handler {
 	r.Get("/health", handler.getHealth)
 	r.Get("/metrics", handler.getMetrics)
 
-	r.Group(func(r chi.Router) {
+	r.Route("/api/v1/logs", func(r chi.Router) {
 		r.Use(authMiddleware)
 		r.Post("/ingest", handler.ingestLogs)
 		r.Get("/search", handler.searchLogs)

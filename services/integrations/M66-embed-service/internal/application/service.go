@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/viralforge/mesh/services/integrations/M66-embed-service/internal/contracts"
 	"github.com/viralforge/mesh/services/integrations/M66-embed-service/internal/domain"
 )
 
@@ -68,6 +69,14 @@ func (s *Service) RenderEmbed(ctx context.Context, in RenderEmbedInput) (Rendere
 		if cached, err := s.cache.Get(ctx, cacheKey, now); err == nil && cached.HTML != "" {
 			if !in.DNT && s.impressions != nil {
 				_ = s.impressions.Append(ctx, domain.Impression{ID: "imp_" + uuid.NewString(), EntityType: in.EntityType, EntityID: in.EntityID, ReferrerDomain: referrerDomain, UserAgentBrowser: browserFamily(in.UserAgent), IPAnonymized: ipMasked, DNTEnabled: false, ThemeUsed: themeUsed, CustomColor: colorUsed, OccurredAt: now})
+				s.publishOpsEvent(ctx, "embed.impression_logged", map[string]any{
+					"entity_type":        in.EntityType,
+					"entity_id":          in.EntityID,
+					"referrer_domain":    referrerDomain,
+					"user_agent_browser": browserFamily(in.UserAgent),
+					"dnt_enabled":        false,
+					"ip_anonymized":      ipMasked,
+				}, in.RequestID)
 			}
 			return RenderedEmbed{HTML: cached.HTML}, nil
 		}
@@ -78,6 +87,14 @@ func (s *Service) RenderEmbed(ctx context.Context, in RenderEmbedInput) (Rendere
 	}
 	if !in.DNT && s.impressions != nil {
 		_ = s.impressions.Append(ctx, domain.Impression{ID: "imp_" + uuid.NewString(), EntityType: in.EntityType, EntityID: in.EntityID, ReferrerDomain: referrerDomain, UserAgentBrowser: browserFamily(in.UserAgent), IPAnonymized: ipMasked, DNTEnabled: false, ThemeUsed: themeUsed, CustomColor: colorUsed, OccurredAt: now})
+		s.publishOpsEvent(ctx, "embed.impression_logged", map[string]any{
+			"entity_type":        in.EntityType,
+			"entity_id":          in.EntityID,
+			"referrer_domain":    referrerDomain,
+			"user_agent_browser": browserFamily(in.UserAgent),
+			"dnt_enabled":        false,
+			"ip_anonymized":      ipMasked,
+		}, in.RequestID)
 	}
 	return RenderedEmbed{HTML: htmlDoc}, nil
 }
@@ -446,4 +463,27 @@ func (s *Service) completeIdempotencyJSON(ctx context.Context, key string, code 
 	}
 	raw, _ := json.Marshal(v)
 	return s.idempotency.Complete(ctx, key, code, raw, s.nowFn())
+}
+
+func (s *Service) publishOpsEvent(ctx context.Context, eventType string, data any, traceID string) {
+	if s.ops == nil {
+		return
+	}
+	if strings.TrimSpace(traceID) == "" {
+		traceID = strings.ReplaceAll(uuid.NewString(), "-", "")
+	}
+	payload, _ := json.Marshal(data)
+	env := contracts.EventEnvelope{
+		EventID:          uuid.NewString(),
+		EventType:        eventType,
+		EventClass:       domain.CanonicalEventClassOps,
+		OccurredAt:       s.nowFn(),
+		PartitionKeyPath: "envelope.source_service",
+		PartitionKey:     s.cfg.ServiceName,
+		SourceService:    s.cfg.ServiceName,
+		TraceID:          traceID,
+		SchemaVersion:    "v1",
+		Data:             payload,
+	}
+	_ = s.ops.PublishOps(ctx, env)
 }

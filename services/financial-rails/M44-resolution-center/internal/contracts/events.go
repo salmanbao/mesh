@@ -48,17 +48,6 @@ type DisputeResolvedPayload struct {
 	Resolution string `json:"resolution"`
 }
 
-type TransactionRefundedPayload struct {
-	TransactionID string  `json:"transaction_id"`
-	RefundID      string  `json:"refund_id"`
-	UserID        string  `json:"user_id"`
-	Amount        float64 `json:"amount"`
-	Currency      string  `json:"currency,omitempty"`
-	Provider      string  `json:"provider,omitempty"`
-	OccurredAt    string  `json:"occurred_at"`
-	Reason        string  `json:"reason"`
-}
-
 type DLQRecord struct {
 	OriginalEvent EventEnvelope `json:"original_event"`
 	ErrorSummary  string        `json:"error_summary"`

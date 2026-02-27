@@ -1,0 +1,21 @@
+{
+  "event_type": "affiliate.earning.calculated",
+  "version": "v1",
+  "producer": "M89-Affiliate-Service",
+  "event_class": "domain",
+  "partition_key_path": "data.affiliate_id",
+  "payload_schema": {
+    "type": "object",
+    "required": ["affiliate_id", "earning_id", "order_id", "amount", "calculated_at"],
+    "properties": {
+      "affiliate_id": { "type": "string" },
+      "earning_id": { "type": "string" },
+      "attribution_id": { "type": "string" },
+      "order_id": { "type": "string" },
+      "amount": { "type": "number" },
+      "currency": { "type": "string" },
+      "status": { "type": "string" },
+      "calculated_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

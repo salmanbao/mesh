@@ -45,3 +45,30 @@ type AffiliateAttributionCreatedPayload struct {
 	Currency     string  `json:"currency,omitempty"`
 	AttributedAt string  `json:"attributed_at"`
 }
+
+type AffiliateLinkCreatedPayload struct {
+	AffiliateID string `json:"affiliate_id"`
+	LinkID      string `json:"link_id"`
+	Token       string `json:"token"`
+	Channel     string `json:"channel,omitempty"`
+	CreatedAt   string `json:"created_at"`
+}
+
+type AffiliateEarningCalculatedPayload struct {
+	AffiliateID   string  `json:"affiliate_id"`
+	EarningID     string  `json:"earning_id"`
+	AttributionID string  `json:"attribution_id"`
+	OrderID       string  `json:"order_id"`
+	Amount        float64 `json:"amount"`
+	Currency      string  `json:"currency,omitempty"`
+	Status        string  `json:"status"`
+	CalculatedAt  string  `json:"calculated_at"`
+}
+
+type AffiliatePayoutQueuedPayload struct {
+	AffiliateID string  `json:"affiliate_id"`
+	PayoutID    string  `json:"payout_id"`
+	Amount      float64 `json:"amount"`
+	Status      string  `json:"status"`
+	QueuedAt    string  `json:"queued_at"`
+}

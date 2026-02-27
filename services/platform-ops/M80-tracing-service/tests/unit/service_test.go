@@ -43,7 +43,7 @@ func validSpan() domain.IngestedSpan {
 
 func TestIngestSearchAndTraceDetail(t *testing.T) {
 	svc := newService()
-	actor := application.Actor{SubjectID: "dev-1", Role: "admin"}
+	actor := application.Actor{SubjectID: "dev-1", Role: "admin", IdempotencyKey: "idem-ingest-1"}
 	span := validSpan()
 	_, err := svc.IngestSpans(context.Background(), actor, application.IngestInput{
 		Format: "otlp",

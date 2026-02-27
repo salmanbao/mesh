@@ -1,0 +1,18 @@
+{
+  "event_type": "affiliate.payout.queued",
+  "version": "v1",
+  "producer": "M89-Affiliate-Service",
+  "event_class": "domain",
+  "partition_key_path": "data.affiliate_id",
+  "payload_schema": {
+    "type": "object",
+    "required": ["affiliate_id", "payout_id", "amount", "queued_at"],
+    "properties": {
+      "affiliate_id": { "type": "string" },
+      "payout_id": { "type": "string" },
+      "amount": { "type": "number" },
+      "status": { "type": "string" },
+      "queued_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

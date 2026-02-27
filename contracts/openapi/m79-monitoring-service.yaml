@@ -1,0 +1,466 @@
+openapi: 3.0.3
+info:
+  title: M79 Monitoring Service
+  version: 1.0.0
+  description: >
+    Alert rule management, incidents, silences, audit logs, health and metrics.
+    Internal-only. Mutating endpoints require Idempotency-Key (7-day TTL, request-hash enforced).
+servers:
+  - url: https://monitoring.internal
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [health]
+      security: []
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HealthReport'
+        '503':
+          description: Unhealthy
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HealthReport'
+  /metrics:
+    get:
+      summary: Service metrics (Prometheus or JSON)
+      tags: [health]
+      security: []
+      parameters:
+        - in: header
+          name: Accept
+          schema:
+            type: string
+          description: Use `text/plain` to receive Prometheus exposition format.
+      responses:
+        '200':
+          description: Metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Prometheus exposition format
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ServiceMetricsResponse'
+  /alert-rules:
+    post:
+      summary: Create alert rule
+      tags: [alert-rules]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAlertRuleRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CreateAlertRuleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    get:
+      summary: List alert rules
+      tags: [alert-rules]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: enabled
+          schema:
+            type: boolean
+          description: If true (default) return only enabled rules.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+          description: Max items (default 100).
+      responses:
+        '200':
+          description: List
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ListAlertRulesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /incidents:
+    get:
+      summary: List incidents
+      tags: [incidents]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [investigating, mitigated, resolved]
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+          description: Max items (default 100).
+      responses:
+        '200':
+          description: List
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ListIncidentsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /silences:
+    post:
+      summary: Create silence window
+      tags: [silences]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSilenceRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CreateSilenceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /audit:
+    get:
+      summary: Query audit logs
+      tags: [audit]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: actor_id
+          schema:
+            type: string
+        - in: query
+          name: action_type
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+          description: Max items (default 100).
+      responses:
+        '200':
+          description: Logs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuditQueryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Required for mutating endpoints. Stored for 7 days with request hash; mismatched payload returns 409.
+  responses:
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing/invalid bearer token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Idempotency or state conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+        data:
+          type: object
+    ErrorResponse:
+      type: object
+      required: [status, message]
+      properties:
+        status:
+          type: string
+          example: error
+        code:
+          type: string
+        message:
+          type: string
+    HealthReport:
+      type: object
+      properties:
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        uptime_seconds:
+          type: integer
+        version:
+          type: string
+        checks:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ComponentCheck'
+    ComponentCheck:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+        latency_ms:
+          type: integer
+        last_checked:
+          type: string
+          format: date-time
+    CreateAlertRuleRequest:
+      type: object
+      required: [name, query, threshold, duration_seconds, severity]
+      properties:
+        name:
+          type: string
+        query:
+          type: string
+        threshold:
+          type: number
+        duration_seconds:
+          type: integer
+          minimum: 1
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        enabled:
+          type: boolean
+        service:
+          type: string
+        regex:
+          type: string
+    CreateAlertRuleResponse:
+      type: object
+      properties:
+        rule_id:
+          type: string
+    AlertRuleItem:
+      type: object
+      properties:
+        rule_id:
+          type: string
+        name:
+          type: string
+        query:
+          type: string
+        threshold:
+          type: number
+        duration_seconds:
+          type: integer
+        severity:
+          type: string
+        enabled:
+          type: boolean
+        service:
+          type: string
+        regex:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    ListAlertRulesResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlertRuleItem'
+    IncidentItem:
+      type: object
+      properties:
+        incident_id:
+          type: string
+        alert_id:
+          type: string
+        service:
+          type: string
+        severity:
+          type: string
+        status:
+          type: string
+        assignee:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+    ListIncidentsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentItem'
+    CreateSilenceRequest:
+      type: object
+      required: [rule_id, reason, start_at, end_at]
+      properties:
+        rule_id:
+          type: string
+        reason:
+          type: string
+        start_at:
+          type: string
+          format: date-time
+        end_at:
+          type: string
+          format: date-time
+    CreateSilenceResponse:
+      type: object
+      properties:
+        silence_id:
+          type: string
+    AuditLogItem:
+      type: object
+      properties:
+        audit_id:
+          type: string
+        actor_id:
+          type: string
+        action_type:
+          type: string
+        action_at:
+          type: string
+          format: date-time
+        ip_address:
+          type: string
+        details:
+          type: object
+    AuditQueryResponse:
+      type: object
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogItem'
+    ServiceMetricsResponse:
+      type: object
+      properties:
+        hits:
+          type: integer
+        misses:
+          type: integer
+        evictions:
+          type: integer
+        memory_used_bytes:
+          type: integer

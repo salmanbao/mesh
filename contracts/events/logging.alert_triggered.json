@@ -1,0 +1,21 @@
+{
+  "event_type": "logging.alert_triggered",
+  "version": "v1",
+  "producer": "M78-Logging-Service",
+  "event_class": "ops",
+  "partition_key_path": "envelope.source_service",
+  "payload_schema": {
+    "type": "object",
+    "required": ["service", "metric", "value", "threshold", "severity", "rule_id"],
+    "properties": {
+      "service": { "type": "string" },
+      "metric": { "type": "string" },
+      "value": { "type": "number" },
+      "threshold": { "type": "number" },
+      "severity": { "type": "string", "enum": ["info", "warning", "critical"] },
+      "rule_id": { "type": "string" },
+      "message": { "type": "string" },
+      "trace_id": { "type": "string" }
+    }
+  }
+}

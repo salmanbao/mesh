@@ -1,0 +1,18 @@
+{
+  "event_type": "affiliate.link.created",
+  "version": "v1",
+  "producer": "M89-Affiliate-Service",
+  "event_class": "domain",
+  "partition_key_path": "data.affiliate_id",
+  "payload_schema": {
+    "type": "object",
+    "required": ["affiliate_id", "link_id", "token", "created_at"],
+    "properties": {
+      "affiliate_id": { "type": "string" },
+      "link_id": { "type": "string" },
+      "token": { "type": "string" },
+      "channel": { "type": "string" },
+      "created_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

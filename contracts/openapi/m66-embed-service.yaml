@@ -1,0 +1,286 @@
+openapi: 3.0.3
+info:
+  title: M66 Embed Service API
+  version: 1.0.0
+  description: Public embed rendering plus authenticated settings and analytics management.
+servers:
+  - url: /
+tags:
+  - name: Embed
+  - name: Settings
+  - name: Analytics
+paths:
+  /embed/{entity_type}/{entity_id}:
+    get:
+      tags: [Embed]
+      summary: Render embeddable HTML for an entity
+      operationId: renderEmbed
+      parameters:
+        - $ref: '#/components/parameters/EntityType'
+        - $ref: '#/components/parameters/EntityID'
+        - in: query
+          name: theme
+          schema: { type: string, enum: [auto, light, dark] }
+        - in: query
+          name: color
+          schema: { type: string, pattern: '^#[0-9A-Fa-f]{6}$' }
+        - in: query
+          name: button_text
+          schema: { type: string, maxLength: 20 }
+        - in: query
+          name: auto_play
+          schema: { type: boolean }
+        - in: query
+          name: language
+          schema: { type: string, minLength: 2, maxLength: 2 }
+      responses:
+        '200':
+          description: HTML embed page
+          content:
+            text/html:
+              schema:
+                type: string
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/embeds/{entity_type}/{entity_id}/settings:
+    get:
+      tags: [Settings]
+      security: [{ bearerAuth: [] }]
+      summary: Get embed settings and generated embed code
+      operationId: getEmbedSettings
+      parameters:
+        - $ref: '#/components/parameters/EntityType'
+        - $ref: '#/components/parameters/EntityID'
+      responses:
+        '200':
+          description: Current settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmbedSettingsResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    post:
+      tags: [Settings]
+      security: [{ bearerAuth: [] }]
+      summary: Update embed settings (idempotent)
+      operationId: updateEmbedSettings
+      parameters:
+        - $ref: '#/components/parameters/EntityType'
+        - $ref: '#/components/parameters/EntityID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateEmbedSettingsRequest' }
+      responses:
+        '200':
+          description: Updated settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmbedSettingsResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/embeds/{entity_type}/{entity_id}/analytics:
+    get:
+      tags: [Analytics]
+      security: [{ bearerAuth: [] }]
+      summary: Retrieve impressions/interactions analytics
+      operationId: getEmbedAnalytics
+      parameters:
+        - $ref: '#/components/parameters/EntityType'
+        - $ref: '#/components/parameters/EntityID'
+        - in: query
+          name: start_date
+          schema: { type: string, format: date }
+        - in: query
+          name: end_date
+          schema: { type: string, format: date }
+        - in: query
+          name: granularity
+          schema: { type: string, enum: [daily, hourly], default: daily }
+        - in: query
+          name: group_by
+          schema: { type: string }
+      responses:
+        '200':
+          description: Analytics summary
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmbedAnalyticsResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    EntityType:
+      in: path
+      name: entity_type
+      required: true
+      schema:
+        type: string
+        enum: [whop, campaign, app, clip]
+    EntityID:
+      in: path
+      name: entity_id
+      required: true
+      schema: { type: string }
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string }
+      description: Required for mutating routes; 7-day TTL with body hash replay detection.
+  responses:
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Caller not permitted or embedding disabled
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Idempotency conflict or conflicting state
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Entity not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InternalError:
+      description: Unexpected failure
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data: {}
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        status: { type: string, example: error }
+        code: { type: string }
+        message: { type: string }
+        retry_after_seconds: { type: integer }
+    EmbedSettingsResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                entity_type: { type: string }
+                entity_id: { type: string }
+                allow_embedding: { type: boolean }
+                default_theme: { type: string, enum: [light, dark, auto] }
+                primary_color: { type: string }
+                custom_button_text: { type: string }
+                auto_play_video: { type: boolean }
+                show_creator_info: { type: boolean }
+                whitelisted_domains:
+                  type: array
+                  items: { type: string }
+                embed_code: { type: string }
+                metrics:
+                  type: object
+                  properties:
+                    total_impressions: { type: integer }
+                    total_interactions: { type: integer }
+                    click_through_rate: { type: number }
+                    top_referrers:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          domain: { type: string }
+                          referrer_domain: { type: string }
+                          impressions: { type: integer }
+                          interactions: { type: integer }
+                          ctr: { type: number }
+                updated_at: { type: string, format: date-time }
+    UpdateEmbedSettingsRequest:
+      type: object
+      properties:
+        allow_embedding: { type: boolean }
+        default_theme: { type: string, enum: [light, dark, auto] }
+        primary_color: { type: string, pattern: '^#[0-9A-Fa-f]{6}$' }
+        custom_button_text: { type: string, maxLength: 20 }
+        auto_play_video: { type: boolean }
+        show_creator_info: { type: boolean }
+        whitelisted_domains:
+          type: array
+          items: { type: string }
+    EmbedAnalyticsResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                summary:
+                  type: object
+                  properties:
+                    total_impressions: { type: integer }
+                    total_interactions: { type: integer }
+                    click_through_rate: { type: number }
+                    top_actions:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          action: { type: string }
+                          count: { type: integer }
+                by_referrer:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      referrer_domain: { type: string }
+                      impressions: { type: integer }
+                      interactions: { type: integer }
+                      ctr: { type: number }
+                trend:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      date: { type: string }
+                      impressions: { type: integer }
+                      interactions: { type: integer }
+                      ctr: { type: number }
