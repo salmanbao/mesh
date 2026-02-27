@@ -7,10 +7,10 @@ import (
 )
 
 const (
-	// Minimum length raises attacker cost and aligns with stronger modern defaults.
-	minPasswordLength = 12
+	// Minimum length follows the M01 specification baseline.
+	minPasswordLength = 8
 	// Maximum length bounds storage and hashing cost to avoid abuse via oversized payloads.
-	maxPasswordLength = 128
+	maxPasswordLength = 256
 )
 
 // ValidatePassword enforces baseline M01 password policy.

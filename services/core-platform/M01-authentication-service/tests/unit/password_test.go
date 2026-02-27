@@ -15,6 +15,7 @@ func TestValidatePassword(t *testing.T) {
 		wantError bool
 	}{
 		{name: "valid", password: "StrongPass123!", wantError: false},
+		{name: "minimum length valid", password: "Aa1!aaaa", wantError: false},
 		{name: "too short", password: "Ab1!", wantError: true},
 		{name: "no symbol", password: "StrongPass1234", wantError: true},
 		{name: "weak pattern", password: "Password123!", wantError: true},

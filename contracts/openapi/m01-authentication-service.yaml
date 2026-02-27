@@ -764,6 +764,8 @@ components:
         password:
           type: string
           format: password
+          minLength: 8
+          maxLength: 256
           description: Local account password.
         role:
           type: string
@@ -940,6 +942,8 @@ components:
         new_password:
           type: string
           format: password
+          minLength: 8
+          maxLength: 256
 
     EmailVerifyRequest:
       type: object

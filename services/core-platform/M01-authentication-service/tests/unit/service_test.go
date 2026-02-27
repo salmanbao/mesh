@@ -2,6 +2,7 @@ package unit
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/url"
 	"strings"
@@ -325,6 +326,39 @@ func TestOIDCCallbackRegistrationIncompleteAndComplete(t *testing.T) {
 	}
 }
 
+func TestOIDCCallbackNewUserEventContainsRegisteredAt(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture()
+	ctx := context.Background()
+
+	authRes, err := f.service.OIDCAuthorize(ctx, "google", "https://app.example.com/auth/callback", "", "", "127.0.0.1")
+	if err != nil {
+		t.Fatalf("oidc authorize failed: %v", err)
+	}
+	if _, err := f.service.OIDCCallback(ctx, "code-ok", authRes.State); err != nil {
+		t.Fatalf("oidc callback failed: %v", err)
+	}
+
+	f.users.mu.Lock()
+	defer f.users.mu.Unlock()
+	if len(f.users.events) == 0 {
+		t.Fatalf("expected user creation outbox event to be captured")
+	}
+	lastEvent := f.users.events[len(f.users.events)-1]
+	if lastEvent.EventType != "user.registered" {
+		t.Fatalf("expected user.registered event, got %s", lastEvent.EventType)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(lastEvent.Payload, &payload); err != nil {
+		t.Fatalf("invalid user.registered payload: %v", err)
+	}
+	if _, ok := payload["registered_at"]; !ok {
+		t.Fatalf("expected registered_at in user.registered payload")
+	}
+}
+
 func TestRegisterRateLimitedByIP(t *testing.T) {
 	t.Parallel()
 
@@ -504,9 +538,10 @@ type fakeUsers struct {
 	mu      sync.Mutex
 	byEmail map[string]domain.User
 	byID    map[uuid.UUID]domain.User
+	events  []ports.OutboxEvent
 }
 
-func (f *fakeUsers) CreateWithOutboxTx(_ context.Context, params ports.CreateUserTxParams, _ ports.OutboxEvent) (domain.User, error) {
+func (f *fakeUsers) CreateWithOutboxTx(_ context.Context, params ports.CreateUserTxParams, outboxEvent ports.OutboxEvent) (domain.User, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if _, ok := f.byEmail[params.Email]; ok {
@@ -523,6 +558,7 @@ func (f *fakeUsers) CreateWithOutboxTx(_ context.Context, params ports.CreateUse
 	}
 	f.byEmail[u.Email] = u
 	f.byID[u.UserID] = u
+	f.events = append(f.events, outboxEvent)
 	return u, nil
 }
 

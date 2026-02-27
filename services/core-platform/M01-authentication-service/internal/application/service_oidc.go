@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -390,7 +391,10 @@ func (s *Service) resolveOIDCUser(ctx context.Context, identity ports.OIDCIdenti
 	}
 
 	now := s.nowFn()
-	payload := []byte(`{}`)
+	payload, _ := json.Marshal(map[string]any{
+		"registered_at": now,
+		"email":         email,
+	})
 	created, createErr := s.users.CreateWithOutboxTx(ctx, ports.CreateUserTxParams{
 		Email:           email,
 		PasswordHash:    "",
