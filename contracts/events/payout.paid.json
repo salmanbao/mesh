@@ -6,30 +6,22 @@
     "type": "object",
     "required": [
       "payout_id",
-      "creator_id",
-      "gross_amount",
-      "fee_amount",
-      "net_amount",
-      "currency",
+      "user_id",
+      "amount",
+      "method",
       "paid_at"
     ],
     "properties": {
       "payout_id": {
         "type": "string"
       },
-      "creator_id": {
+      "user_id": {
         "type": "string"
       },
-      "gross_amount": {
+      "amount": {
         "type": "number"
       },
-      "fee_amount": {
-        "type": "number"
-      },
-      "net_amount": {
-        "type": "number"
-      },
-      "currency": {
+      "method": {
         "type": "string"
       },
       "paid_at": {

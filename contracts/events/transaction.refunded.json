@@ -1,0 +1,43 @@
+{
+  "event_type": "transaction.refunded",
+  "version": "v1",
+  "producer": "M39-Finance-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "transaction_id",
+      "refund_id",
+      "user_id",
+      "amount",
+      "occurred_at",
+      "reason"
+    ],
+    "properties": {
+      "transaction_id": {
+        "type": "string"
+      },
+      "refund_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "amount": {
+        "type": "number"
+      },
+      "currency": {
+        "type": "string"
+      },
+      "provider": {
+        "type": "string"
+      },
+      "occurred_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "reason": {
+        "type": "string"
+      }
+    }
+  }
+}

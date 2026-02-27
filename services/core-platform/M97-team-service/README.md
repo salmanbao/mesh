@@ -4,14 +4,13 @@
 - Module ID: M97
 - Canonical Name: M97-Team-Service
 - Runtime Cluster: core-platform
-- Category: Internal Admin & Operations
 - Architecture: microservice
 
 ## Primary Responsibility
-The system must allow creators to create one team per account or per storefront, with immutable team identity.
+Manage team creation, membership, invitations, role policies, and membership authorization checks.
 
 ## Dependency Snapshot
-### DBR Dependencies
+### DBR Dependencies (owner_api)
 - none
 
 ### Event Dependencies
@@ -19,16 +18,17 @@ The system must allow creators to create one team per account or per storefront,
 
 ### Event Provides
 - team.created
-- team.invite.accepted
-- team.invite.sent
 - team.member.added
 - team.member.removed
+- team.invite.sent
+- team.invite.accepted
 - team.role.changed
 
 ### HTTP Provides
 - yes
 
 ## Implementation Notes
-- Internal service calls: gRPC.
-- External/public interfaces: REST.
-- Follow canonical contracts from viralForge/specs/M97-*.md.
+- Internal sync: gRPC runtime is health-only in this implementation (no business proto authored yet).
+- Public edge: REST endpoints under `/v1/team*` for create/details/invite/accept/membership-check.
+- Async: consumes no canonical events; emits canonical `team.*` domain events through outbox with DLQ + dedup semantics.
+- Persistence/integrations are in-memory adapters for mesh wiring and tests (no production Postgres/Redis/Kafka yet).

@@ -4,26 +4,25 @@
 - Module ID: M95
 - Canonical Name: M95-Referral-Analytics-Service
 - Runtime Cluster: data-ai
-- Category: Analytics & Reporting
 - Architecture: microservice
 
 ## Primary Responsibility
-Consume Kafka topics affiliate.click.tracked, affiliate.attribution.created, transaction.succeeded, user.registered; batch 100 events; max 5-minute latency; deduplicate by event_id.
+Serve referral funnel/leaderboard/cohort/geo/forecast analytics and export jobs using M95-owned referral aggregate tables.
 
 ## Dependency Snapshot
-### DBR Dependencies
+### DBR Dependencies (owner_api)
 - M89-Affiliate-Service
 
 ### Event Dependencies
-- none
+- none (canonical `dependencies.yaml` declares none)
 
 ### Event Provides
-- none
+- none (canonical `dependencies.yaml` declares none)
 
 ### HTTP Provides
 - yes
 
 ## Implementation Notes
-- Internal service calls: gRPC.
-- External/public interfaces: REST.
-- Follow canonical contracts from viralForge/specs/M95-*.md.
+- Internal synchronous calls: gRPC client ports (stubbed owner-api adapter for M89).
+- Public edge: REST endpoints under `/api/v1/referral-analytics/*`.
+- Async canonical event handler validates envelope semantics and returns unsupported because M95 has no canonical event deps/provides.

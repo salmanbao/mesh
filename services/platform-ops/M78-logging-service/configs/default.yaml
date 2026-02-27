@@ -3,6 +3,11 @@ service:
   cluster: platform-ops
   http_port: 8080
   grpc_port: 9090
+  version: 0.1.0
+runtime:
+  idempotency_ttl_hours: 168
+  event_dedup_ttl_hours: 168
+  consumer_poll_seconds: 2
 dependencies:
   postgres_url: ${POSTGRES_URL}
   redis_url: ${REDIS_URL}

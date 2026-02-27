@@ -1,0 +1,15 @@
+{
+  "event_type": "escrow.partial_release",
+  "version": "v1",
+  "producer": "M13-Escrow-Ledger-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": ["escrow_id", "amount", "remaining_balance", "released_at"],
+    "properties": {
+      "escrow_id": { "type": "string" },
+      "amount": { "type": "number" },
+      "remaining_balance": { "type": "number" },
+      "released_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "event_type": "team.role.changed",
+  "version": "v1",
+  "producer": "M97-Team-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": ["team_id", "user_id", "old_role", "new_role", "changed_at"],
+    "properties": {
+      "team_id": { "type": "string" },
+      "user_id": { "type": "string" },
+      "old_role": { "type": "string" },
+      "new_role": { "type": "string" },
+      "changed_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

@@ -1,3 +1,3 @@
 # M66-Embed-Service
 
-Scaffold placeholder service in integrations cluster.
+Mesh implementation for embed rendering, settings, and analytics with ownership-safe in-memory repositories.

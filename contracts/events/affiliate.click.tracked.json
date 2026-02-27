@@ -1,0 +1,22 @@
+{
+  "event_type": "affiliate.click.tracked",
+  "version": "v1",
+  "producer": "M89-Affiliate-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "affiliate_id",
+      "link_id",
+      "referrer_url",
+      "ip_hash",
+      "tracked_at"
+    ],
+    "properties": {
+      "affiliate_id": { "type": "string" },
+      "link_id": { "type": "string" },
+      "referrer_url": { "type": "string" },
+      "ip_hash": { "type": "string" },
+      "tracked_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

@@ -4,14 +4,13 @@
 - Module ID: M96
 - Canonical Name: M96-Referral-Fraud-Detection-Service
 - Runtime Cluster: trust-compliance
-- Category: Moderation & Compliance
 - Architecture: microservice
 
 ## Primary Responsibility
-The service must assign a `risk_score` (0 1.0) to each referral event using an ML model and block events above a configurable threshold.
+Score referral events for fraud risk, store fraud decisions/audit trails/disputes, and provide admin fraud metrics.
 
 ## Dependency Snapshot
-### DBR Dependencies
+### DBR Dependencies (owner_api)
 - M89-Affiliate-Service
 
 ### Event Dependencies
@@ -21,12 +20,12 @@ The service must assign a `risk_score` (0 1.0) to each referral event using an M
 - user.registered
 
 ### Event Provides
-- none
+- none (canonical `dependencies.yaml` declares none)
 
 ### HTTP Provides
 - yes
 
 ## Implementation Notes
-- Internal service calls: gRPC.
-- External/public interfaces: REST.
-- Follow canonical contracts from viralForge/specs/M96-*.md.
+- Internal synchronous calls: gRPC owner-api stub to M89.
+- Public edge: REST endpoints under `/v1/referral-fraud/*`.
+- Async: consumes canonical events only; module-internal emitted events described in spec are intentionally not emitted as cross-service contracts.

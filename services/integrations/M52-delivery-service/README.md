@@ -1,3 +1,3 @@
 # M52-Delivery-Service
 
-Scaffold placeholder service in integrations cluster.
+Mesh implementation for delivery link generation and token-based download access.

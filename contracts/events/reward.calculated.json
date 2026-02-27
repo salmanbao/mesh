@@ -1,0 +1,33 @@
+{
+  "event_type": "reward.calculated",
+  "version": "v1",
+  "producer": "M41-Reward-Engine",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "submission_id",
+      "user_id",
+      "gross_amount",
+      "net_amount",
+      "calculated_at"
+    ],
+    "properties": {
+      "submission_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "gross_amount": {
+        "type": "number"
+      },
+      "net_amount": {
+        "type": "number"
+      },
+      "calculated_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

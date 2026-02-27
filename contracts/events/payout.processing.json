@@ -1,0 +1,33 @@
+{
+  "event_type": "payout.processing",
+  "version": "v1",
+  "producer": "M14-Payout-Settlement-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "payout_id",
+      "user_id",
+      "amount",
+      "method",
+      "processing_at"
+    ],
+    "properties": {
+      "payout_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "amount": {
+        "type": "number"
+      },
+      "method": {
+        "type": "string"
+      },
+      "processing_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

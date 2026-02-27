@@ -1,0 +1,15 @@
+{
+  "event_type": "social.status_changed",
+  "version": "v1",
+  "producer": "M10-Social-Integration-Verification-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": ["user_id", "platform", "status", "changed_at"],
+    "properties": {
+      "user_id": { "type": "string" },
+      "platform": { "type": "string" },
+      "status": { "type": "string" },
+      "changed_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

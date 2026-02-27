@@ -4,3 +4,30 @@ implemented_services:
   - M02-Profile-Service
   - M03-Notification-Service
   - M05-Billing-Service
+  - M06-Media-Processing-Pipeline
+  - M10-Social-Integration-Verification-Service
+  - M13-Escrow-Ledger-Service
+  - M14-Payout-Settlement-Service
+  - M17-Observability-Monitoring
+  - M18-Cache-State-Management
+  - M19-Storage-Lifecycle-Management
+  - M30-Social-Integration-Service
+  - M36-Risk-Service
+  - M39-Finance-Service
+  - M41-Reward-Engine
+  - M44-Resolution-Center
+  - M45-Community-Service
+  - M52-Delivery-Service
+  - M54-Analytics-Service
+  - M55-Dashboard-Service
+  - M58-Content-Recommendation-Engine
+  - M66-Embed-Service
+  - M67-Event-Bus
+  - M77-Config-Service
+  - M78-Logging-Service
+  - M79-Monitoring-Service
+  - M80-Tracing-Service
+  - M89-Affiliate-Service
+  - M95-Referral-Analytics-Service
+  - M96-Referral-Fraud-Detection-Service
+  - M97-Team-Service

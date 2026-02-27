@@ -8,22 +8,24 @@
 - Architecture: microservice
 
 ## Primary Responsibility
-Accept spans in OTLP, Zipkin JSON, or Jaeger Thrift formats with gRPC and HTTP ingestion.
+Accept tracing spans over REST ingestion endpoints, store/query trace timelines, manage sampling policies, and create trace export jobs.
 
-## Dependency Snapshot
+## Canonical Dependency Snapshot
 ### DBR Dependencies
 - none
 
 ### Event Dependencies
-- none
+- none (canonical async inputs not declared)
 
 ### Event Provides
-- none
+- none (module-internal tracing events from spec are not canonical mesh contracts)
 
 ### HTTP Provides
 - yes
 
-## Implementation Notes
-- Internal service calls: gRPC.
-- External/public interfaces: REST.
-- Follow canonical contracts from viralForge/specs/M80-*.md.
+## Mesh Implementation Notes
+- Public edge is REST.
+- Internal sync runtime includes gRPC health server only (business proto surface not authored yet).
+- Canonical event handler validates envelope + partition key + 7-day dedup, then rejects unsupported event types (M80 has no canonical events declared).
+- Idempotency enforced for mutating endpoints requiring `Idempotency-Key` (`POST /sampling-policies`, `POST /exports`) with 7-day TTL.
+- Persistence/external dependencies are modeled with in-memory repositories and stubbed infra behavior.

@@ -1,7 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+
+	"github.com/viralforge/mesh/services/integrations/M89-affiliate-service/internal/app/bootstrap"
+)
 
 func main() {
-    fmt.Println("M89-Affiliate-Service worker placeholder")
+	r, err := bootstrap.NewRuntime(context.Background(), "configs/default.yaml")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := r.RunWorker(context.Background()); err != nil {
+		log.Fatal(err)
+	}
 }

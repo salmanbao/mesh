@@ -1,11 +1,16 @@
 service:
   id: M30-Social-Integration-Service
   cluster: integrations
+  version: 0.1.0
   http_port: 8080
   grpc_port: 9090
+runtime:
+  idempotency_ttl_hours: 168
+  event_dedup_ttl_hours: 168
+  consumer_poll_seconds: 2
 dependencies:
-  postgres_url: \\
-  redis_url: \\
-  kafka_brokers: \\
+  postgres_url: ""
+  redis_url: ""
+  kafka_brokers: ""
 observability:
-  otlp_endpoint: \\
+  otlp_endpoint: ""

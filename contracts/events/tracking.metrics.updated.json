@@ -1,0 +1,41 @@
+{
+  "event_type": "tracking.metrics.updated",
+  "version": "v1",
+  "producer": "M11-Distribution-Tracking-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "tracked_post_id",
+      "platform",
+      "views",
+      "likes",
+      "shares",
+      "comments",
+      "polled_at"
+    ],
+    "properties": {
+      "tracked_post_id": {
+        "type": "string"
+      },
+      "platform": {
+        "type": "string"
+      },
+      "views": {
+        "type": "integer"
+      },
+      "likes": {
+        "type": "integer"
+      },
+      "shares": {
+        "type": "integer"
+      },
+      "comments": {
+        "type": "integer"
+      },
+      "polled_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

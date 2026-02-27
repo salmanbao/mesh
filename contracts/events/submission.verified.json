@@ -1,0 +1,29 @@
+{
+  "event_type": "submission.verified",
+  "version": "v1",
+  "producer": "M26-Submission-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "submission_id",
+      "user_id",
+      "campaign_id",
+      "verified_at"
+    ],
+    "properties": {
+      "submission_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "campaign_id": {
+        "type": "string"
+      },
+      "verified_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

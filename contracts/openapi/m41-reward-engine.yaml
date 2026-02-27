@@ -1,0 +1,317 @@
+openapi: 3.0.3
+info:
+  title: M41 Reward Engine Service API
+  version: 1.0.0
+  description: |
+    OpenAPI contract for M41 Reward Engine runtime routes.
+    Source alignment:
+    - REST runtime: services/financial-rails/M41-reward-engine/internal/adapters/http
+    - Canonical spec: viralForge/specs/M41-Reward-Engine.md
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Rewards
+paths:
+  /v1/rewards/calculate:
+    post:
+      tags: [Rewards]
+      summary: Calculate submission reward
+      operationId: calculateReward
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalculateRewardRequest'
+      responses:
+        '201':
+          description: Reward calculated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/rewards/submissions/{submission_id}:
+    get:
+      tags: [Rewards]
+      summary: Get reward by submission id
+      operationId: getReward
+      parameters:
+        - $ref: '#/components/parameters/SubmissionID'
+      responses:
+        '200':
+          description: Reward details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/rewards/rollovers/{user_id}:
+    get:
+      tags: [Rewards]
+      summary: Get creator rollover balance
+      operationId: getRollover
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        '200':
+          description: Rollover details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolloverResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/rewards/history:
+    get:
+      tags: [Rewards]
+      summary: List reward history
+      operationId: listRewardHistory
+      parameters:
+        - $ref: '#/components/parameters/UserIDQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+        - $ref: '#/components/parameters/OffsetQuery'
+      responses:
+        '200':
+          description: Reward history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardHistoryResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    SubmissionID:
+      name: submission_id
+      in: path
+      required: true
+      schema:
+        type: string
+    UserID:
+      name: user_id
+      in: path
+      required: true
+      schema:
+        type: string
+    XRequestID:
+      name: X-Request-Id
+      in: header
+      required: true
+      schema:
+        type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: 7-day idempotency key for mutating reward calculation endpoint.
+      schema:
+        type: string
+    UserIDQuery:
+      name: user_id
+      in: query
+      schema:
+        type: string
+    LimitQuery:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+    OffsetQuery:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  schemas:
+    CalculateRewardRequest:
+      type: object
+      required: [user_id, submission_id, campaign_id]
+      properties:
+        user_id:
+          type: string
+        submission_id:
+          type: string
+        campaign_id:
+          type: string
+        locked_views:
+          type: integer
+        rate_per_1k:
+          type: number
+          format: double
+        fraud_score:
+          type: number
+          format: double
+        verification_completed_at:
+          type: string
+          format: date-time
+    Reward:
+      type: object
+      properties:
+        submission_id:
+          type: string
+        user_id:
+          type: string
+        campaign_id:
+          type: string
+        locked_views:
+          type: integer
+        rate_per_1k:
+          type: number
+          format: double
+        gross_amount:
+          type: number
+          format: double
+        net_amount:
+          type: number
+          format: double
+        rollover_applied:
+          type: number
+          format: double
+        rollover_balance:
+          type: number
+          format: double
+        fraud_score:
+          type: number
+          format: double
+        status:
+          type: string
+          enum: [calculated, below_threshold, reward_eligible, fraud_rejected, cancelled]
+        verification_completed_at:
+          type: string
+          format: date-time
+        calculated_at:
+          type: string
+          format: date-time
+        eligible_at:
+          type: string
+          format: date-time
+          nullable: true
+    RolloverBalance:
+      type: object
+      properties:
+        user_id:
+          type: string
+        balance:
+          type: number
+          format: double
+        updated_at:
+          type: string
+          format: date-time
+    RewardResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        data:
+          $ref: '#/components/schemas/Reward'
+    RolloverResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        data:
+          $ref: '#/components/schemas/RolloverBalance'
+    RewardHistoryResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Reward'
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+    Pagination:
+      type: object
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            request_id:
+              type: string
+            details: {}
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Insufficient access
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: State conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

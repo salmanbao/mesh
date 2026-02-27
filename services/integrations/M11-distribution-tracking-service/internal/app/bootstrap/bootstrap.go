@@ -1,6 +1,8 @@
 package bootstrap
 
-// Build wires runtime dependencies for this service.
+import "context"
+
 func Build() error {
-    return nil
+	_, err := NewRuntime(context.Background(), "configs/default.yaml")
+	return err
 }

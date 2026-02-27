@@ -6,18 +6,26 @@
     "type": "object",
     "required": [
       "payout_id",
-      "creator_id",
-      "reason_code",
-      "failed_at"
+      "user_id",
+      "amount",
+      "method",
+      "failed_at",
+      "reason"
     ],
     "properties": {
       "payout_id": {
         "type": "string"
       },
-      "creator_id": {
+      "user_id": {
         "type": "string"
       },
-      "reason_code": {
+      "amount": {
+        "type": "number"
+      },
+      "method": {
+        "type": "string"
+      },
+      "reason": {
         "type": "string"
       },
       "failed_at": {

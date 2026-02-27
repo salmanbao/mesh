@@ -20,19 +20,26 @@ type EventEnvelope struct {
 
 type PayoutPaidPayload struct {
 	PayoutID    string  `json:"payout_id"`
-	CreatorID   string  `json:"creator_id"`
-	GrossAmount float64 `json:"gross_amount"`
-	FeeAmount   float64 `json:"fee_amount"`
-	NetAmount   float64 `json:"net_amount"`
-	Currency    string  `json:"currency"`
+	UserID      string  `json:"user_id"`
+	CreatorID   string  `json:"creator_id,omitempty"`
+	Amount      float64 `json:"amount"`
+	GrossAmount float64 `json:"gross_amount,omitempty"`
+	FeeAmount   float64 `json:"fee_amount,omitempty"`
+	NetAmount   float64 `json:"net_amount,omitempty"`
+	Currency    string  `json:"currency,omitempty"`
+	Method      string  `json:"method,omitempty"`
 	PaidAt      string  `json:"paid_at"`
 }
 
 type PayoutFailedPayload struct {
-	PayoutID   string `json:"payout_id"`
-	CreatorID  string `json:"creator_id"`
-	ReasonCode string `json:"reason_code"`
-	FailedAt   string `json:"failed_at"`
+	PayoutID   string  `json:"payout_id"`
+	UserID     string  `json:"user_id"`
+	CreatorID  string  `json:"creator_id,omitempty"`
+	Amount     float64 `json:"amount,omitempty"`
+	Method     string  `json:"method,omitempty"`
+	Reason     string  `json:"reason,omitempty"`
+	ReasonCode string  `json:"reason_code,omitempty"`
+	FailedAt   string  `json:"failed_at"`
 }
 
 type DLQRecord struct {

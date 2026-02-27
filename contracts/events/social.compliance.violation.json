@@ -1,0 +1,16 @@
+{
+  "event_type": "social.compliance.violation",
+  "version": "v1",
+  "producer": "M10-Social-Integration-Verification-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": ["user_id", "platform", "post_id", "violation_at", "reason"],
+    "properties": {
+      "user_id": { "type": "string" },
+      "platform": { "type": "string" },
+      "post_id": { "type": "string" },
+      "violation_at": { "type": "string", "format": "date-time" },
+      "reason": { "type": "string" }
+    }
+  }
+}

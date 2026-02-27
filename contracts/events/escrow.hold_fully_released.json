@@ -1,0 +1,13 @@
+{
+  "event_type": "escrow.hold_fully_released",
+  "version": "v1",
+  "producer": "M13-Escrow-Ledger-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": ["escrow_id", "released_at"],
+    "properties": {
+      "escrow_id": { "type": "string" },
+      "released_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

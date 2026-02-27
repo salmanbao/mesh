@@ -1,0 +1,23 @@
+{
+  "event_type": "affiliate.attribution.created",
+  "version": "v1",
+  "producer": "M89-Affiliate-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "affiliate_id",
+      "conversion_id",
+      "order_id",
+      "amount",
+      "attributed_at"
+    ],
+    "properties": {
+      "affiliate_id": { "type": "string" },
+      "conversion_id": { "type": "string" },
+      "order_id": { "type": "string" },
+      "amount": { "type": "number" },
+      "currency": { "type": "string" },
+      "attributed_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

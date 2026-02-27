@@ -24,6 +24,8 @@ System must automatically delete raw footage files 30 days after campaign closur
 - yes
 
 ## Implementation Notes
-- Internal service calls: gRPC.
+- Internal service calls: gRPC (runtime currently exposes health-only gRPC server).
 - External/public interfaces: REST.
-- Follow canonical contracts from viralForge/specs/M19-*.md.
+- Canonical async events: none declared; canonical event handler validates envelope + 7-day dedup then rejects unsupported event types.
+- Idempotency enforced (7-day TTL) for mutating endpoints (`POST /v1/storage/policies`, `POST /storage/move-to-glacier`, `POST /storage/schedule-deletion`).
+- In-memory repositories model lifecycle state, policies, batches, and audit logs while preserving ownership boundaries.

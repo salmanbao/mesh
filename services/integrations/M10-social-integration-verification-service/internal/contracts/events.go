@@ -1,0 +1,65 @@
+package contracts
+
+import (
+	"encoding/json"
+	"time"
+)
+
+type EventEnvelope struct {
+	EventID          string          `json:"event_id"`
+	EventType        string          `json:"event_type"`
+	EventClass       string          `json:"event_class,omitempty"`
+	OccurredAt       time.Time       `json:"occurred_at"`
+	PartitionKeyPath string          `json:"partition_key_path"`
+	PartitionKey     string          `json:"partition_key"`
+	SourceService    string          `json:"source_service"`
+	TraceID          string          `json:"trace_id"`
+	SchemaVersion    string          `json:"schema_version"`
+	Data             json.RawMessage `json:"data"`
+}
+
+type SocialAccountConnectedPayload struct {
+	UserID      string `json:"user_id"`
+	Platform    string `json:"platform"`
+	ConnectedAt string `json:"connected_at"`
+}
+
+type SocialPostValidatedPayload struct {
+	UserID       string `json:"user_id"`
+	Platform     string `json:"platform"`
+	PostID       string `json:"post_id"`
+	ValidatedAt  string `json:"validated_at"`
+}
+
+type SocialComplianceViolationPayload struct {
+	UserID       string `json:"user_id"`
+	Platform     string `json:"platform"`
+	PostID       string `json:"post_id"`
+	ViolationAt  string `json:"violation_at"`
+	Reason       string `json:"reason"`
+}
+
+type SocialStatusChangedPayload struct {
+	UserID     string `json:"user_id"`
+	Platform   string `json:"platform"`
+	Status     string `json:"status"`
+	ChangedAt  string `json:"changed_at"`
+}
+
+type SocialFollowersSyncedPayload struct {
+	UserID         string `json:"user_id"`
+	Platform       string `json:"platform"`
+	FollowerCount  int    `json:"follower_count"`
+	SyncedAt       string `json:"synced_at"`
+}
+
+type DLQRecord struct {
+	OriginalEvent EventEnvelope `json:"original_event"`
+	ErrorSummary  string        `json:"error_summary"`
+	RetryCount    int           `json:"retry_count"`
+	FirstSeenAt   time.Time     `json:"first_seen_at"`
+	LastErrorAt   time.Time     `json:"last_error_at"`
+	SourceTopic   string        `json:"source_topic,omitempty"`
+	DLQTopic      string        `json:"dlq_topic,omitempty"`
+	TraceID       string        `json:"trace_id,omitempty"`
+}

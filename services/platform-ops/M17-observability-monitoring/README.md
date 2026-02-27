@@ -1,29 +1,31 @@
 # M17-Observability-Monitoring
 
-## Module Metadata
-- Module ID: M17
-- Canonical Name: M17-Observability-Monitoring
-- Runtime Cluster: platform-ops
-- Category: Operational & Infrastructure
-- Architecture: microservice
+Mesh implementation of the observability/monitoring service with clean layering under `internal/{domain,application,ports,adapters,contracts}`.
 
-## Primary Responsibility
-System must expose a `/health` endpoint for load balancer checks.
+## Scope
+- Public REST endpoints:
+  - `GET /health`
+  - `GET /metrics` (Prometheus text format)
+- Internal admin REST helpers for mock component state:
+  - `GET /api/v1/observability/components`
+  - `PUT /api/v1/observability/components/{name}`
+- Internal gRPC runtime: health-check protocol only
+- No canonical event consume/emit (per canonical dependencies)
 
-## Dependency Snapshot
-### DBR Dependencies
-- none
-
-### Event Dependencies
-- none
-
-### Event Provides
-- none
-
-### HTTP Provides
-- yes
+## Canonical Alignment
+- `dependencies.yaml` declares `provides: [http]` and `depends_on: []` for M17.
+- `service-data-ownership-map.yaml` declares no owned canonical tables and no DBR reads.
+- Spec also states M17 does not emit or consume Kafka events.
 
 ## Implementation Notes
-- Internal service calls: gRPC.
-- External/public interfaces: REST.
-- Follow canonical contracts from viralForge/specs/M17-*.md.
+- Health endpoint returns spec-aligned JSON with `database`, `redis`, and `kafka` checks.
+- Metrics endpoint exports Prometheus-style counters/histograms from in-memory request instrumentation.
+- Event handler path still enforces envelope validation + 7-day dedup and rejects unsupported canonical events.
+- Idempotency store (7-day TTL) is applied to the admin component update endpoint.
+
+## Local Run
+```bash
+go test ./...
+go run ./cmd/api
+go run ./cmd/worker
+```

@@ -3,9 +3,15 @@ service:
   cluster: data-ai
   http_port: 8080
   grpc_port: 9090
+
 dependencies:
-  postgres_url: ${POSTGRES_URL}
-  redis_url: ${REDIS_URL}
-  kafka_brokers: ${KAFKA_BROKERS}
-observability:
-  otlp_endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+  profile_grpc_url: ${PROFILE_GRPC_URL}
+  billing_grpc_url: ${BILLING_GRPC_URL}
+  content_grpc_url: ${CONTENT_GRPC_URL}
+  escrow_grpc_url: ${ESCROW_GRPC_URL}
+  onboarding_grpc_url: ${ONBOARDING_GRPC_URL}
+  finance_grpc_url: ${FINANCE_GRPC_URL}
+  reward_grpc_url: ${REWARD_GRPC_URL}
+  gamification_grpc_url: ${GAMIFICATION_GRPC_URL}
+  analytics_grpc_url: ${ANALYTICS_GRPC_URL}
+  product_grpc_url: ${PRODUCT_GRPC_URL}

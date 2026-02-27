@@ -1,0 +1,33 @@
+{
+  "event_type": "submission.view_locked",
+  "version": "v1",
+  "producer": "M26-Submission-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "submission_id",
+      "user_id",
+      "campaign_id",
+      "locked_views",
+      "locked_at"
+    ],
+    "properties": {
+      "submission_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "campaign_id": {
+        "type": "string"
+      },
+      "locked_views": {
+        "type": "integer"
+      },
+      "locked_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

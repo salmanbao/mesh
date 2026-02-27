@@ -3,9 +3,15 @@ service:
   cluster: integrations
   http_port: 8080
   grpc_port: 9090
-dependencies:
-  postgres_url: \\
-  redis_url: \\
-  kafka_brokers: \\
-observability:
-  otlp_endpoint: \\
+
+affiliate:
+  public_base_url: https://platform.com
+  commission_rate: 0.10
+  payout_threshold: 100.0
+
+runtime:
+  referral_cookie_ttl_hours: 720
+  idempotency_ttl_hours: 168
+  event_dedup_ttl_hours: 168
+  consumer_poll_seconds: 2
+  outbox_flush_batch_size: 100

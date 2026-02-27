@@ -4,8 +4,19 @@ service:
   http_port: 8080
   grpc_port: 9090
 dependencies:
-  postgres_url: ${POSTGRES_URL}
-  redis_url: ${REDIS_URL}
+  auth_grpc_url: ${AUTH_GRPC_URL}
+  profile_grpc_url: ${PROFILE_GRPC_URL}
+  billing_grpc_url: ${BILLING_GRPC_URL}
+  escrow_grpc_url: ${ESCROW_GRPC_URL}
+  risk_grpc_url: ${RISK_GRPC_URL}
+  finance_grpc_url: ${FINANCE_GRPC_URL}
+  reward_grpc_url: ${REWARD_GRPC_URL}
   kafka_brokers: ${KAFKA_BROKERS}
+  kafka_consumer_group: m14-payout-settlement-service
+  topic_reward_payout_eligible: reward.payout_eligible
+  topic_payout_processing: payout.processing
+  topic_payout_paid: payout.paid
+  topic_payout_failed: payout.failed
+  topic_dlq: payout-engine.dlq
 observability:
   otlp_endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}

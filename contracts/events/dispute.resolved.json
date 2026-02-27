@@ -1,0 +1,18 @@
+{
+  "event_type": "dispute.resolved",
+  "version": "v1",
+  "producer": "M44-Resolution-Center",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "dispute_id",
+      "resolved_at",
+      "resolution"
+    ],
+    "properties": {
+      "dispute_id": { "type": "string" },
+      "resolved_at": { "type": "string", "format": "date-time" },
+      "resolution": { "type": "string" }
+    }
+  }
+}

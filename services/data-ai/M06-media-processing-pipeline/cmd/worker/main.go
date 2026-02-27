@@ -1,7 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+
+	"github.com/viralforge/mesh/services/data-ai/M06-media-processing-pipeline/internal/app/bootstrap"
+)
 
 func main() {
-    fmt.Println("M06-Media-Processing-Pipeline worker placeholder")
+	runtime, err := bootstrap.NewRuntime(context.Background(), "configs/default.yaml")
+	if err != nil {
+		log.Fatalf("bootstrap runtime: %v", err)
+	}
+	if err := runtime.RunWorker(context.Background()); err != nil {
+		log.Fatalf("run worker: %v", err)
+	}
 }

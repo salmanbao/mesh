@@ -1,29 +1,27 @@
 # M77-Config-Service
 
-## Module Metadata
-- Module ID: M77
-- Canonical Name: M77-Config-Service
-- Runtime Cluster: platform-ops
-- Category: Operational & Infrastructure
-- Architecture: microservice
+Mesh implementation of the ViralForge config service with strict layering:
+`domain -> application -> ports -> adapters -> contracts`.
 
-## Primary Responsibility
-System must store arbitrary configuration as key-value pairs with multiple data types, including encrypted values.
+## Canonical Snapshot
+- Service: `M77-Config-Service`
+- Cluster: `platform-ops`
+- Architecture: `microservice`
+- Provides: `http`
+- Event deps/provides: none (canonical)
+- DB read dependencies: none
 
-## Dependency Snapshot
-### DBR Dependencies
-- none
+## Implemented Surface (REST)
+- `GET /api/v1/config`
+- `PATCH /api/v1/config/{key}`
+- `POST /api/v1/config/import`
+- `GET /api/v1/config/export`
+- `POST /api/v1/config/rollback`
+- `GET /api/v1/config/audit`
+- `POST /api/v1/config/rollout-rules`
+- `GET /health`, `GET /metrics`, `GET /healthz`, `GET /readyz`
 
-### Event Dependencies
-- none
-
-### Event Provides
-- none
-
-### HTTP Provides
-- yes
-
-## Implementation Notes
-- Internal service calls: gRPC.
-- External/public interfaces: REST.
-- Follow canonical contracts from viralForge/specs/M77-*.md.
+## Runtime Notes
+- Internal sync runtime includes gRPC health server only (business gRPC proto/API not yet authored).
+- Async canonical event consume/emit is disabled because canonical dependencies declare no events for M77.
+- Idempotency (`Idempotency-Key`) and event dedup TTL defaults are 7 days.

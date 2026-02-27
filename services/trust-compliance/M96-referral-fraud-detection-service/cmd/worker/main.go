@@ -1,7 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+
+	"github.com/viralforge/mesh/services/trust-compliance/M96-referral-fraud-detection-service/internal/app/bootstrap"
+)
 
 func main() {
-    fmt.Println("M96-Referral-Fraud-Detection-Service worker placeholder")
+	r, err := bootstrap.NewRuntime(context.Background(), "configs/default.yaml")
+	if err != nil {
+		log.Fatalf("bootstrap runtime: %v", err)
+	}
+	if err := r.RunWorker(context.Background()); err != nil {
+		log.Fatalf("run worker: %v", err)
+	}
 }

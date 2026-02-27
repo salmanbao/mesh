@@ -4,8 +4,20 @@ service:
   http_port: 8080
   grpc_port: 9090
 dependencies:
-  postgres_url: ${POSTGRES_URL}
-  redis_url: ${REDIS_URL}
+  auth_grpc_url: ${AUTH_GRPC_URL}
+  campaign_grpc_url: ${CAMPAIGN_GRPC_URL}
+  voting_grpc_url: ${VOTING_GRPC_URL}
+  tracking_grpc_url: ${TRACKING_GRPC_URL}
+  submission_grpc_url: ${SUBMISSION_GRPC_URL}
   kafka_brokers: ${KAFKA_BROKERS}
+  kafka_consumer_group: m41-reward-engine
+  topic_submission_auto_approved: submission.auto_approved
+  topic_submission_cancelled: submission.cancelled
+  topic_submission_verified: submission.verified
+  topic_submission_view_locked: submission.view_locked
+  topic_tracking_metrics_updated: tracking.metrics.updated
+  topic_reward_calculated: reward.calculated
+  topic_reward_payout_eligible: reward.payout_eligible
+  topic_dlq: reward-engine.dlq
 observability:
   otlp_endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}

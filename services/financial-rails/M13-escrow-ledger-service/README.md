@@ -1,32 +1,17 @@
 # M13-Escrow-Ledger-Service
 
-## Module Metadata
-- Module ID: M13
-- Canonical Name: M13-Escrow-Ledger-Service
-- Runtime Cluster: financial-rails
-- Category: Financials & Economy
-- Architecture: microservice
+Mesh implementation of the escrow and ledger microservice.
 
-## Primary Responsibility
-See canonical service specification.
+## Canonical dependencies
+- Provides: `http`, `escrow.hold_created`, `escrow.partial_release`, `escrow.hold_fully_released`, `escrow.refund_processed`
+- Depends on: none
 
-## Dependency Snapshot
-### DBR Dependencies
-- none
+## Runtime surfaces
+- Public/internal edge (REST): `/v1/escrow/*`, `/v1/wallet/balance`
+- Internal sync: gRPC health server placeholder
+- Async: canonical escrow events via outbox relay
 
-### Event Dependencies
-- none
-
-### Event Provides
-- escrow.hold_created
-- escrow.hold_fully_released
-- escrow.partial_release
-- escrow.refund_processed
-
-### HTTP Provides
-- yes
-
-## Implementation Notes
-- Internal service calls: gRPC.
-- External/public interfaces: REST.
-- Follow canonical contracts from viralForge/specs/M13-*.md.
+## Notes
+- In-memory repositories are used for mesh implementation/test wiring.
+- Idempotency and event dedup TTL defaults are 7 days.
+- Event classes follow canonical registry: three `analytics_only`, one `domain` (`escrow.refund_processed`).

@@ -1,0 +1,14 @@
+{
+  "event_type": "team.member.removed",
+  "version": "v1",
+  "producer": "M97-Team-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": ["team_id", "user_id", "removed_at"],
+    "properties": {
+      "team_id": { "type": "string" },
+      "user_id": { "type": "string" },
+      "removed_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

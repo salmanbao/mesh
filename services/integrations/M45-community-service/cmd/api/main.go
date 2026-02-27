@@ -1,7 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+
+	"github.com/viralforge/mesh/services/integrations/M45-community-service/internal/app/bootstrap"
+)
 
 func main() {
-    fmt.Println("M45-Community-Service API placeholder")
+	r, err := bootstrap.NewRuntime(context.Background(), "configs/default.yaml")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := r.RunAPI(context.Background()); err != nil {
+		log.Fatal(err)
+	}
 }

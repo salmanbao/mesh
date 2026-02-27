@@ -1,0 +1,35 @@
+{
+  "event_type": "transaction.succeeded",
+  "version": "v1",
+  "producer": "M39-Finance-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "transaction_id",
+      "user_id",
+      "amount",
+      "occurred_at"
+    ],
+    "properties": {
+      "transaction_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "amount": {
+        "type": "number"
+      },
+      "currency": {
+        "type": "string"
+      },
+      "provider": {
+        "type": "string"
+      },
+      "occurred_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

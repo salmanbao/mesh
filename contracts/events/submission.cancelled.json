@@ -1,0 +1,33 @@
+{
+  "event_type": "submission.cancelled",
+  "version": "v1",
+  "producer": "M26-Submission-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "submission_id",
+      "user_id",
+      "campaign_id",
+      "cancelled_at",
+      "reason"
+    ],
+    "properties": {
+      "submission_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "campaign_id": {
+        "type": "string"
+      },
+      "cancelled_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "reason": {
+        "type": "string"
+      }
+    }
+  }
+}

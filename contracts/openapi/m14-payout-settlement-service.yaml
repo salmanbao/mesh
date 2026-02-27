@@ -1,0 +1,273 @@
+openapi: 3.0.3
+info:
+  title: M14 Payout Settlement Service API
+  version: 1.0.0
+  description: |
+    OpenAPI contract for M14 Payout Settlement Service runtime routes.
+    Source alignment:
+    - REST runtime: services/financial-rails/M14-payout-settlement-service/internal/adapters/http
+    - Canonical spec: viralForge/specs/M14-Payout-Settlement-Service.md
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Payouts
+paths:
+  /v1/payouts/request:
+    post:
+      tags: [Payouts]
+      summary: Request payout
+      operationId: requestPayout
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPayoutRequest'
+      responses:
+        '201':
+          description: Payout request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/payouts/{id}:
+    get:
+      tags: [Payouts]
+      summary: Get payout by ID
+      operationId: getPayout
+      parameters:
+        - $ref: '#/components/parameters/PayoutID'
+      responses:
+        '200':
+          description: Payout details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/payouts/history:
+    get:
+      tags: [Payouts]
+      summary: List payout history
+      operationId: listPayoutHistory
+      parameters:
+        - $ref: '#/components/parameters/UserIDQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+        - $ref: '#/components/parameters/OffsetQuery'
+      responses:
+        '200':
+          description: Payout history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutHistoryResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    PayoutID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    XRequestID:
+      name: X-Request-Id
+      in: header
+      required: true
+      schema:
+        type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: 7-day idempotency key for mutating payout request endpoint.
+      schema:
+        type: string
+    UserIDQuery:
+      name: user_id
+      in: query
+      schema:
+        type: string
+    LimitQuery:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+    OffsetQuery:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  schemas:
+    RequestPayoutRequest:
+      type: object
+      required: [user_id, submission_id, amount, method, scheduled_at]
+      properties:
+        user_id:
+          type: string
+        submission_id:
+          type: string
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+          default: USD
+        method:
+          type: string
+          enum: [standard, instant]
+        scheduled_at:
+          type: string
+          format: date-time
+    Payout:
+      type: object
+      properties:
+        payout_id:
+          type: string
+        user_id:
+          type: string
+        submission_id:
+          type: string
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+        method:
+          type: string
+        status:
+          type: string
+          enum: [scheduled, processing, paid, failed]
+        failure_reason:
+          type: string
+        scheduled_at:
+          type: string
+          format: date-time
+        processing_at:
+          type: string
+          format: date-time
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        failed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    PayoutResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        data:
+          $ref: '#/components/schemas/Payout'
+    PayoutHistoryResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Payout'
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+    Pagination:
+      type: object
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            request_id:
+              type: string
+            details: {}
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Insufficient access
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: State conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

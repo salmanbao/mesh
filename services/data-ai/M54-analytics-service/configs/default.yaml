@@ -4,8 +4,10 @@ service:
   http_port: 8080
   grpc_port: 9090
 dependencies:
-  postgres_url: ${POSTGRES_URL}
-  redis_url: ${REDIS_URL}
-  kafka_brokers: ${KAFKA_BROKERS}
+  voting_grpc_url: ${VOTING_GRPC_URL}
+  social_grpc_url: ${SOCIAL_GRPC_URL}
+  tracking_grpc_url: ${TRACKING_GRPC_URL}
+  submission_grpc_url: ${SUBMISSION_GRPC_URL}
+  finance_grpc_url: ${FINANCE_GRPC_URL}
 observability:
   otlp_endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}

@@ -1,7 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+
+	"github.com/viralforge/mesh/services/platform-ops/M19-storage-lifecycle-management/internal/app/bootstrap"
+)
 
 func main() {
-    fmt.Println("M19-Storage-Lifecycle-Management API placeholder")
+	r, err := bootstrap.NewRuntime(context.Background(), "configs/default.yaml")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := r.RunAPI(context.Background()); err != nil {
+		log.Fatal(err)
+	}
 }

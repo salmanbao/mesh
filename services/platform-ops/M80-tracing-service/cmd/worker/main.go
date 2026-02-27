@@ -1,7 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+
+	"github.com/viralforge/mesh/services/platform-ops/M80-tracing-service/internal/app/bootstrap"
+)
 
 func main() {
-    fmt.Println("M80-Tracing-Service worker placeholder")
+	r, err := bootstrap.NewRuntime(context.Background(), "configs/default.yaml")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := r.RunWorker(context.Background()); err != nil {
+		log.Fatal(err)
+	}
 }

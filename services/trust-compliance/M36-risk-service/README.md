@@ -4,14 +4,13 @@
 - Module ID: M36
 - Canonical Name: M36-Risk-Service
 - Runtime Cluster: trust-compliance
-- Category: Moderation & Compliance
 - Architecture: microservice
 
 ## Primary Responsibility
-System must assign risk_score (0.0 1.0) to sellers based on weighted factors. 
+Compute seller risk dashboards, track dispute logs/evidence, and process chargeback webhooks into risk/escrow/debt records.
 
 ## Dependency Snapshot
-### DBR Dependencies
+### DBR Dependencies (owner_api)
 - M01-Authentication-Service
 - M02-Profile-Service
 - M12-Fraud-Detection-Engine
@@ -20,15 +19,15 @@ System must assign risk_score (0.0 1.0) to sellers based on weighted factors.
 - M48-Reputation-Service
 
 ### Event Dependencies
-- none
+- none (canonical `dependencies.yaml` currently declares none)
 
 ### Event Provides
-- none
+- none (canonical `dependencies.yaml` currently declares none)
 
 ### HTTP Provides
 - yes
 
 ## Implementation Notes
-- Internal service calls: gRPC.
-- External/public interfaces: REST.
-- Follow canonical contracts from viralForge/specs/M36-*.md.
+- Internal synchronous calls: gRPC client ports (stubbed in-memory adapters in this mesh implementation).
+- Public edge: REST (`/api/v1/seller/risk-dashboard`, dispute/evidence endpoints, chargeback webhook ingress).
+- Async path accepts canonical envelope validation only; no canonical event processing is implemented because M36 has no canonical event deps/provides declared.

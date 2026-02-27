@@ -1,0 +1,16 @@
+{
+  "event_type": "team.invite.sent",
+  "version": "v1",
+  "producer": "M97-Team-Service",
+  "payload_schema": {
+    "type": "object",
+    "required": ["team_id", "invite_id", "email", "role", "sent_at"],
+    "properties": {
+      "team_id": { "type": "string" },
+      "invite_id": { "type": "string" },
+      "email": { "type": "string" },
+      "role": { "type": "string" },
+      "sent_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

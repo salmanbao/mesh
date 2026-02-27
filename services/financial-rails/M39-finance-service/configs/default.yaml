@@ -4,8 +4,17 @@ service:
   http_port: 8080
   grpc_port: 9090
 dependencies:
-  postgres_url: ${POSTGRES_URL}
-  redis_url: ${REDIS_URL}
+  auth_grpc_url: ${AUTH_GRPC_URL}
+  campaign_grpc_url: ${CAMPAIGN_GRPC_URL}
+  content_library_grpc_url: ${CONTENT_LIBRARY_GRPC_URL}
+  escrow_grpc_url: ${ESCROW_GRPC_URL}
+  fee_engine_grpc_url: ${FEE_ENGINE_GRPC_URL}
+  product_grpc_url: ${PRODUCT_GRPC_URL}
   kafka_brokers: ${KAFKA_BROKERS}
+  kafka_consumer_group: m39-finance-service
+  topic_transaction_succeeded: transaction.succeeded
+  topic_transaction_failed: transaction.failed
+  topic_transaction_refunded: transaction.refunded
+  topic_dlq: finance-service.dlq
 observability:
   otlp_endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}

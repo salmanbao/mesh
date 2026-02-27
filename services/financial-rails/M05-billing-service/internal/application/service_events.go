@@ -38,13 +38,25 @@ func (s *Service) HandleDomainEvent(ctx context.Context, event contracts.EventEn
 		if parseErr != nil {
 			paidAt = now
 		}
+		creatorID := payload.UserID
+		if strings.TrimSpace(creatorID) == "" {
+			creatorID = payload.CreatorID
+		}
+		grossAmount := payload.GrossAmount
+		if grossAmount == 0 {
+			grossAmount = payload.Amount
+		}
+		netAmount := payload.NetAmount
+		if netAmount == 0 {
+			netAmount = payload.Amount
+		}
 		if err := s.invoices.CreatePayoutReceipt(ctx, domain.PayoutReceipt{
 			ReceiptID:    uuid.NewString(),
 			PayoutID:     payload.PayoutID,
-			CreatorID:    payload.CreatorID,
-			GrossAmount:  payload.GrossAmount,
+			CreatorID:    creatorID,
+			GrossAmount:  grossAmount,
 			PlatformFee:  payload.FeeAmount,
-			NetPayout:    payload.NetAmount,
+			NetPayout:    netAmount,
 			Currency:     payload.Currency,
 			PayoutDate:   paidAt,
 			PayoutStatus: "paid",
@@ -57,7 +69,8 @@ func (s *Service) HandleDomainEvent(ctx context.Context, event contracts.EventEn
 		if err := json.Unmarshal(event.Data, &payload); err != nil {
 			return fmt.Errorf("decode payout.failed payload: %w", err)
 		}
-		_ = payload
+		_ = payload.Reason
+		_ = payload.ReasonCode
 	default:
 		return domain.ErrUnsupportedEventType
 	}

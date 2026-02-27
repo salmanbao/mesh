@@ -1,7 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+
+	"github.com/viralforge/mesh/services/data-ai/M95-referral-analytics-service/internal/app/bootstrap"
+)
 
 func main() {
-    fmt.Println("M95-Referral-Analytics-Service API placeholder")
+	runtime, err := bootstrap.NewRuntime(context.Background(), "configs/default.yaml")
+	if err != nil {
+		log.Fatalf("bootstrap runtime: %v", err)
+	}
+	if err := runtime.RunAPI(context.Background()); err != nil {
+		log.Fatalf("run api: %v", err)
+	}
 }

@@ -8,31 +8,43 @@
 - Architecture: microservice
 
 ## Primary Responsibility
-System must serve tailored dashboards per user role: Creator (campaigns, earnings, submissions, payouts), Clipper (submissions, views, rewards, history), Developer (app installs, revenue, ratings), Admin (platform GMV, top creators, disputes, system health).  
+Serve role-based dashboard views and persist dashboard personalization (layouts, custom views, preferences) while orchestrating upstream owner APIs.
 
 ## Dependency Snapshot
 ### DBR Dependencies
-- M02-Profile-Service
-- M05-Billing-Service
-- M09-Content-Library-Marketplace
-- M13-Escrow-Ledger-Service
-- M22-Onboarding-Service
-- M39-Finance-Service
-- M41-Reward-Engine
-- M47-Gamification-Service
-- M54-Analytics-Service
-- M60-Product-Service
+- M02-Profile-Service (owner_api)
+- M05-Billing-Service (owner_api)
+- M09-Content-Library-Marketplace (owner_api)
+- M13-Escrow-Ledger-Service (owner_api)
+- M22-Onboarding-Service (owner_api)
+- M39-Finance-Service (owner_api)
+- M41-Reward-Engine (owner_api)
+- M47-Gamification-Service (owner_api)
+- M54-Analytics-Service (owner_api)
+- M60-Product-Service (owner_api)
 
 ### Event Dependencies
 - none
 
 ### Event Provides
-- none
+- none (canonical)
 
 ### HTTP Provides
 - yes
 
-## Implementation Notes
-- Internal service calls: gRPC.
-- External/public interfaces: REST.
-- Follow canonical contracts from viralForge/specs/M55-*.md.
+## Owned Tables (Canonical)
+- `dashboard_cache_invalidation`
+- `dashboard_custom_views`
+- `dashboard_layouts`
+- `user_preferences`
+
+## API Surface
+- `GET /api/v1/dashboard`
+- `PUT /api/v1/dashboard/layout` (requires `Idempotency-Key`, TTL 7 days)
+- `POST /api/v1/dashboard/views` (requires `Idempotency-Key`, TTL 7 days)
+- `POST /api/v1/dashboard/invalidate`
+
+## Operational Notes
+- Internal sync dependency calls are modelled as gRPC clients.
+- Event dedup store enforced for worker events (TTL 7 days).
+- No cross-service direct DB writes; cross-service reads only via declared owner_api ports.
