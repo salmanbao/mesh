@@ -13,8 +13,11 @@ type ErrorPayload struct {
 }
 
 type ErrorResponse struct {
-	Status string       `json:"status"`
-	Error  ErrorPayload `json:"error"`
+	Status    string       `json:"status"`
+	Code      string       `json:"code,omitempty"`
+	Message   string       `json:"message,omitempty"`
+	RequestID string       `json:"request_id,omitempty"`
+	Error     ErrorPayload `json:"error"`
 }
 
 type ValidatePostRequest struct {

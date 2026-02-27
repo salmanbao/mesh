@@ -17,7 +17,13 @@ func writeSuccess(w http.ResponseWriter, status int, message string, data any) {
 	writeJSON(w, status, contracts.SuccessResponse{Status: "success", Message: message, Data: data})
 }
 func writeError(w http.ResponseWriter, status int, code, message, requestID string) {
-	writeJSON(w, status, contracts.ErrorResponse{Status: "error", Error: contracts.ErrorPayload{Code: code, Message: message, RequestID: requestID}})
+	writeJSON(w, status, contracts.ErrorResponse{
+		Status:    "error",
+		Code:      code,
+		Message:   message,
+		RequestID: requestID,
+		Error:     contracts.ErrorPayload{Code: code, Message: message, RequestID: requestID},
+	})
 }
 func mapDomainError(err error) (int, string) {
 	switch err {
@@ -35,6 +41,12 @@ func mapDomainError(err error) (int, string) {
 		return http.StatusBadRequest, "idempotency_key_required"
 	case domain.ErrIdempotencyConflict, domain.ErrConflict:
 		return http.StatusConflict, "conflict"
+	case domain.ErrUnsupportedEventType:
+		return http.StatusBadRequest, "unsupported_event_type"
+	case domain.ErrUnsupportedEventClass:
+		return http.StatusBadRequest, "unsupported_event_class"
+	case domain.ErrInvalidEnvelope:
+		return http.StatusBadRequest, "invalid_event_envelope"
 	default:
 		return http.StatusInternalServerError, "internal_error"
 	}

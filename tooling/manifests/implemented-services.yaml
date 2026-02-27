@@ -6,6 +6,7 @@ implemented_services:
   - M05-Billing-Service
   - M06-Media-Processing-Pipeline
   - M10-Social-Integration-Verification-Service
+  - M11-Distribution-Tracking-Service
   - M13-Escrow-Ledger-Service
   - M14-Payout-Settlement-Service
   - M17-Observability-Monitoring

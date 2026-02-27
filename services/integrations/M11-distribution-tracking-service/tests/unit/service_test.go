@@ -29,8 +29,15 @@ func TestRegisterAndPollEmitsTrackingMetricsUpdated(t *testing.T) {
 	if len(events) == 0 {
 		t.Fatalf("expected emitted event")
 	}
-	if events[0].EventType != "tracking.metrics.updated" {
-		t.Fatalf("unexpected event type: %s", events[0].EventType)
+	event := events[0]
+	if event.EventType != "tracking.metrics.updated" {
+		t.Fatalf("unexpected event type: %s", event.EventType)
+	}
+	if event.EventClass != "domain" {
+		t.Fatalf("unexpected event class: %s", event.EventClass)
+	}
+	if event.PartitionKeyPath != "data.tracked_post_id" {
+		t.Fatalf("unexpected partition key path: %s", event.PartitionKeyPath)
 	}
 	metricsPost, snaps, err := svc.GetTrackedPostMetrics(context.Background(), application.Actor{SubjectID: "u1", Role: "user"}, post.TrackedPostID)
 	if err != nil {

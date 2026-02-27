@@ -91,7 +91,9 @@ services:
     cluster: integrations
     module_path: mesh/services/integrations/M11-distribution-tracking-service
     dbr_deps:
-      []
+      - M09-Content-Library-Marketplace
+      - M10-Social-Integration-Verification-Service
+      - M31-Distribution-Service
     event_deps:
       []
     provides:

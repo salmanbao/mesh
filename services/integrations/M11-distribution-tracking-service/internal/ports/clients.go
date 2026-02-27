@@ -1,3 +1,3 @@
 package ports
 
-// M11 has no declared synchronous owner_api dependencies in canonical dependencies.yaml.
+// Phase 0 implementation does not require concrete upstream owner_api clients yet.

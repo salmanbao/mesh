@@ -23,8 +23,18 @@ var canonicalInputEvents = map[string]canonicalEventMeta{
 	EventDistributionFailed:    {class: CanonicalEventClassDomain, partitionKeyPath: "data.distribution_item_id"},
 }
 
+var canonicalEmittedEvents = map[string]canonicalEventMeta{
+	EventTrackingMetricsUpdated: {class: CanonicalEventClassDomain, partitionKeyPath: "data.tracked_post_id"},
+	EventTrackingPostArchived:   {class: CanonicalEventClassDomain, partitionKeyPath: "data.tracked_post_id"},
+}
+
 func IsCanonicalInputEvent(eventType string) bool {
 	_, ok := canonicalInputEvents[eventType]
+	return ok
+}
+
+func IsCanonicalEmittedEvent(eventType string) bool {
+	_, ok := canonicalEmittedEvents[eventType]
 	return ok
 }
 
@@ -39,16 +49,15 @@ func CanonicalPartitionKeyPath(eventType string) string {
 	if m, ok := lookupCanonicalMeta(eventType); ok {
 		return m.partitionKeyPath
 	}
-	switch eventType {
-	case EventTrackingMetricsUpdated:
-		return "data.tracked_post_id"
-	case EventTrackingPostArchived:
-		return "data.tracked_post_id"
-	}
 	return ""
 }
 
 func lookupCanonicalMeta(eventType string) (canonicalEventMeta, bool) {
-	m, ok := canonicalInputEvents[eventType]
-	return m, ok
+	if m, ok := canonicalInputEvents[eventType]; ok {
+		return m, true
+	}
+	if m, ok := canonicalEmittedEvents[eventType]; ok {
+		return m, true
+	}
+	return canonicalEventMeta{}, false
 }
