@@ -32,6 +32,7 @@ implemented_services:
   - M70-Developer-Portal
   - M71-Integration-Hub
   - M72-Webhook-Manager
+  - M73-Support-Service
   - M77-Config-Service
   - M78-Logging-Service
   - M79-Monitoring-Service

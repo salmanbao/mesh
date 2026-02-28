@@ -1,7 +1,22 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+)
 
 func main() {
-    fmt.Println("M73-Support-Service worker placeholder")
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	log.Printf("M73-Support-Service worker started")
+	<-ctx.Done()
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	<-shutdownCtx.Done()
+	log.Printf("M73-Support-Service worker stopped")
 }

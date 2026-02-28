@@ -1,0 +1,58 @@
+package bootstrap
+
+import (
+	"context"
+	"fmt"
+	stdhttp "net/http"
+	"time"
+
+	httpadapter "github.com/viralforge/mesh/services/integrations/M73-support-service/internal/adapters/http"
+	"github.com/viralforge/mesh/services/integrations/M73-support-service/internal/adapters/postgres"
+	"github.com/viralforge/mesh/services/integrations/M73-support-service/internal/application"
+)
+
+type Runtime struct {
+	httpServer *stdhttp.Server
+}
+
+func NewRuntime(_ context.Context, configPath string) (*Runtime, error) {
+	cfg, err := LoadConfig(configPath)
+	if err != nil {
+		return nil, err
+	}
+	repos := postgres.NewRepositories()
+	svc := application.NewService(application.Dependencies{
+		Config:      application.Config{ServiceName: cfg.ServiceID, Version: cfg.Version, IdempotencyTTL: cfg.IdempotencyTTL},
+		Tickets:     repos.Tickets,
+		Replies:     repos.Replies,
+		CSAT:        repos.CSAT,
+		Agents:      repos.Agents,
+		Idempotency: repos.Idempotency,
+	})
+	router := httpadapter.NewRouter(httpadapter.NewHandler(svc))
+	server := &stdhttp.Server{
+		Addr:              fmt.Sprintf(":%d", cfg.HTTPPort),
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	return &Runtime{httpServer: server}, nil
+}
+
+func (r *Runtime) Run(ctx context.Context) error {
+	errCh := make(chan error, 1)
+	go func() {
+		if err := r.httpServer.ListenAndServe(); err != nil && err != stdhttp.ErrServerClosed {
+			errCh <- err
+		}
+	}()
+	select {
+	case <-ctx.Done():
+	case err := <-errCh:
+		if err != nil {
+			return err
+		}
+	}
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return r.httpServer.Shutdown(shutdownCtx)
+}
