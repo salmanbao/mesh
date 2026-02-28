@@ -37,6 +37,7 @@ implemented_services:
   - M78-Logging-Service
   - M79-Monitoring-Service
   - M80-Tracing-Service
+  - M83-CDN-Management-Service
   - M89-Affiliate-Service
   - M95-Referral-Analytics-Service
   - M96-Referral-Fraud-Detection-Service

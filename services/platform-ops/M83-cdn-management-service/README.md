@@ -1,29 +1,16 @@
 # M83-CDN-Management-Service
 
-## Module Metadata
-- Module ID: M83
-- Canonical Name: M83-CDN-Management-Service
-- Runtime Cluster: platform-ops
-- Category: Operational & Infrastructure
-- Architecture: microservice
+M83 is the CDN control-plane microservice for configuration versioning, purge requests, metrics, and certificate visibility.
 
-## Primary Responsibility
-Manage CDN configurations with versioning and rollback.
+## HTTP surface
+- `GET /health`
+- `GET /metrics`
+- `GET /configs`
+- `POST /configs`
+- `POST /purge`
 
-## Dependency Snapshot
-### DBR Dependencies
-- none
-
-### Event Dependencies
-- none
-
-### Event Provides
-- none
-
-### HTTP Provides
-- yes
-
-## Implementation Notes
-- Internal service calls: gRPC.
-- External/public interfaces: REST.
-- Follow canonical contracts from viralForge/specs/M83-*.md.
+## Contract rules
+- Dedicated single-writer ownership over M83 CDN tables only.
+- `Idempotency-Key` is enforced on mutating POST operations.
+- Errors return the canonical top-level and nested error envelope (`status`, `code`, `message`, `request_id`, `error`).
+- No cross-service DB reads or event-contract dependencies are assumed by the implementation.
