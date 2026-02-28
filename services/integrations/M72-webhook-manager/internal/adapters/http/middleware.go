@@ -4,8 +4,9 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"sync/atomic"
+	"time"
 
-	"github.com/google/uuid"
 	"github.com/viralforge/mesh/services/integrations/M72-webhook-manager/internal/application"
 )
 
@@ -16,11 +17,34 @@ const (
 	actorKey     contextKey = "actor"
 )
 
+var requestCounter uint64
+
+func nextRequestID() string {
+	n := atomic.AddUint64(&requestCounter, 1)
+	return "req-" + time.Now().UTC().Format("20060102150405.000000000") + "-" + formatUint(n)
+}
+
+func formatUint(v uint64) string {
+	const digits = "0123456789"
+	if v == 0 {
+		return "0"
+	}
+	buf := make([]byte, 0, 20)
+	for v > 0 {
+		buf = append(buf, digits[v%10])
+		v /= 10
+	}
+	for i, j := 0, len(buf)-1; i < j; i, j = i+1, j-1 {
+		buf[i], buf[j] = buf[j], buf[i]
+	}
+	return string(buf)
+}
+
 func requestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimSpace(r.Header.Get("X-Request-Id"))
 		if id == "" {
-			id = uuid.NewString()
+			id = nextRequestID()
 		}
 		w.Header().Set("X-Request-Id", id)
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), requestIDKey, id)))

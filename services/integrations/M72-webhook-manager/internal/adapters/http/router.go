@@ -1,24 +1,91 @@
 package http
 
-import (
-	"net/http"
-
-	"github.com/go-chi/chi/v5"
-)
+import "net/http"
 
 func NewRouter(handler *Handler) http.Handler {
-	r := chi.NewRouter()
-	r.Use(requestIDMiddleware)
-	r.Get("/health", handler.health)
-
-	r.Route("/api/v1", func(r chi.Router) {
-		r.Use(authMiddleware)
-		r.Post("/webhooks", handler.createWebhook)
-		r.Get("/webhooks/{webhook_id}", handler.getWebhook)
-		r.Post("/webhooks/{webhook_id}/test", handler.testWebhook)
-		r.Get("/webhooks/{webhook_id}/deliveries", handler.listDeliveries)
-		r.Get("/webhooks/{webhook_id}/analytics", handler.analytics)
-		r.Post("/webhooks/{webhook_id}/enable", handler.enableWebhook)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+			return
+		}
+		handler.health(w, r)
 	})
-	return r
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+			return
+		}
+		handler.health(w, r)
+	})
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+			return
+		}
+		handler.health(w, r)
+	})
+
+	mux.Handle("/api/v1/webhooks", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+			return
+		}
+		handler.createWebhook(w, r)
+	})))
+
+	mux.Handle("/api/v1/webhooks/{id}", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handler.getWebhook(w, r)
+		case http.MethodPatch:
+			handler.updateWebhook(w, r)
+		case http.MethodDelete:
+			handler.deleteWebhook(w, r)
+		default:
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+		}
+	})))
+
+	mux.Handle("/api/v1/webhooks/{id}/test", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+			return
+		}
+		handler.testWebhook(w, r)
+	})))
+
+	mux.Handle("/api/v1/webhooks/{id}/deliveries", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+			return
+		}
+		handler.listDeliveries(w, r)
+	})))
+
+	mux.Handle("/api/v1/webhooks/{id}/analytics", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+			return
+		}
+		handler.analytics(w, r)
+	})))
+
+	mux.Handle("/api/v1/webhooks/{id}/enable", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+			return
+		}
+		handler.enableWebhook(w, r)
+	})))
+
+	mux.HandleFunc("/webhook", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+			return
+		}
+		handler.receiveCompatibilityWebhook(w, r)
+	})
+
+	return requestIDMiddleware(mux)
 }

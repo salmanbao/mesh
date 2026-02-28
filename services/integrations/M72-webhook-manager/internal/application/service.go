@@ -6,10 +6,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"net"
+	"net/url"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/viralforge/mesh/services/integrations/M72-webhook-manager/internal/domain"
 	"github.com/viralforge/mesh/services/integrations/M72-webhook-manager/internal/ports"
 )
@@ -53,8 +54,12 @@ func (s *Service) CreateWebhook(ctx context.Context, actor Actor, req CreateWebh
 	if strings.TrimSpace(actor.IdempotencyKey) == "" {
 		return domain.Webhook{}, domain.ErrIdempotencyRequired
 	}
-	req.EndpointURL = strings.TrimSpace(req.EndpointURL)
-	if !strings.HasPrefix(strings.ToLower(req.EndpointURL), "https://") || len(req.EventTypes) == 0 {
+	cleanURL := strings.TrimSpace(req.EndpointURL)
+	if !validEndpointURL(cleanURL) {
+		return domain.Webhook{}, domain.ErrInvalidInput
+	}
+	cleanEvents := dedup(req.EventTypes)
+	if len(cleanEvents) == 0 {
 		return domain.Webhook{}, domain.ErrInvalidInput
 	}
 	requestHash := hashJSON(req)
@@ -68,11 +73,11 @@ func (s *Service) CreateWebhook(ctx context.Context, actor Actor, req CreateWebh
 
 	now := s.nowFn()
 	wh := domain.Webhook{
-		WebhookID:          "wh-" + uuid.NewString(),
-		EndpointURL:        req.EndpointURL,
-		EventTypes:         dedup(req.EventTypes),
+		WebhookID:          newID("wh"),
+		EndpointURL:        cleanURL,
+		EventTypes:         cleanEvents,
 		Status:             "active",
-		SigningSecret:      randomSecret(),
+		SigningSecret:      randomSecret(32),
 		BatchModeEnabled:   req.BatchModeEnabled,
 		BatchSize:          clampInt(req.BatchSize, 1, 100, 10),
 		BatchWindowSeconds: clampInt(req.BatchWindowSeconds, 5, 300, 60),
@@ -85,7 +90,85 @@ func (s *Service) CreateWebhook(ctx context.Context, actor Actor, req CreateWebh
 			return domain.Webhook{}, err
 		}
 	}
-	_ = s.completeIdempotent(ctx, actor.IdempotencyKey, wh)
+	_ = s.completeIdempotent(ctx, actor.IdempotencyKey, requestHash, wh)
+	return wh, nil
+}
+
+func (s *Service) UpdateWebhook(ctx context.Context, actor Actor, id string, req UpdateWebhookInput) (domain.Webhook, error) {
+	if strings.TrimSpace(actor.SubjectID) == "" {
+		return domain.Webhook{}, domain.ErrUnauthorized
+	}
+	if strings.TrimSpace(actor.IdempotencyKey) == "" {
+		return domain.Webhook{}, domain.ErrIdempotencyRequired
+	}
+	requestHash := hashJSON(map[string]any{"id": strings.TrimSpace(id), "body": req})
+	if rec, ok, err := s.getIdempotent(ctx, actor.IdempotencyKey, requestHash); err != nil {
+		return domain.Webhook{}, err
+	} else if ok {
+		var wh domain.Webhook
+		_ = json.Unmarshal(rec, &wh)
+		return wh, nil
+	}
+
+	wh, err := s.webhooks.Get(ctx, id)
+	if err != nil {
+		return domain.Webhook{}, err
+	}
+	if !wh.DeletedAt.IsZero() || wh.Status == "deleted" {
+		return domain.Webhook{}, domain.ErrNotFound
+	}
+	if len(req.EventTypes) > 0 {
+		cleanEvents := dedup(req.EventTypes)
+		if len(cleanEvents) == 0 {
+			return domain.Webhook{}, domain.ErrInvalidInput
+		}
+		wh.EventTypes = cleanEvents
+	}
+	if req.BatchModeEnabled != nil {
+		wh.BatchModeEnabled = *req.BatchModeEnabled
+	}
+	if req.BatchSize != 0 {
+		wh.BatchSize = clampInt(req.BatchSize, 1, 100, wh.BatchSize)
+	}
+	if req.BatchWindowSeconds != 0 {
+		wh.BatchWindowSeconds = clampInt(req.BatchWindowSeconds, 5, 300, wh.BatchWindowSeconds)
+	}
+	if req.RateLimitPerMinute != 0 {
+		wh.RateLimitPerMinute = clampInt(req.RateLimitPerMinute, 1, 100, wh.RateLimitPerMinute)
+	}
+	if status := strings.ToLower(strings.TrimSpace(req.Status)); status != "" {
+		switch status {
+		case "active", "disabled":
+			wh.Status = status
+		default:
+			return domain.Webhook{}, domain.ErrInvalidInput
+		}
+	}
+	wh.UpdatedAt = s.nowFn()
+	if err := s.webhooks.Update(ctx, wh); err != nil {
+		return domain.Webhook{}, err
+	}
+	_ = s.completeIdempotent(ctx, actor.IdempotencyKey, requestHash, wh)
+	return wh, nil
+}
+
+func (s *Service) DeleteWebhook(ctx context.Context, actor Actor, id string) (domain.Webhook, error) {
+	if strings.TrimSpace(actor.SubjectID) == "" {
+		return domain.Webhook{}, domain.ErrUnauthorized
+	}
+	wh, err := s.webhooks.Get(ctx, id)
+	if err != nil {
+		return domain.Webhook{}, err
+	}
+	if wh.Status != "deleted" {
+		now := s.nowFn()
+		wh.Status = "deleted"
+		wh.DeletedAt = now
+		wh.UpdatedAt = now
+		if err := s.webhooks.Update(ctx, wh); err != nil {
+			return domain.Webhook{}, err
+		}
+	}
 	return wh, nil
 }
 
@@ -96,14 +179,21 @@ func (s *Service) GetWebhook(ctx context.Context, actor Actor, id string) (domai
 	return s.webhooks.Get(ctx, id)
 }
 
-func (s *Service) TestWebhook(ctx context.Context, actor Actor, id string, payload json.RawMessage) (TestResult, error) {
+func (s *Service) TestWebhook(ctx context.Context, actor Actor, id string, req TestWebhookInput) (TestResult, error) {
 	if strings.TrimSpace(actor.SubjectID) == "" {
 		return TestResult{}, domain.ErrUnauthorized
 	}
 	if strings.TrimSpace(actor.IdempotencyKey) == "" {
 		return TestResult{}, domain.ErrIdempotencyRequired
 	}
-	requestHash := hashJSON(map[string]any{"id": id, "payload": payload})
+	wh, err := s.webhooks.Get(ctx, id)
+	if err != nil {
+		return TestResult{}, err
+	}
+	if !wh.DeletedAt.IsZero() || wh.Status == "deleted" {
+		return TestResult{}, domain.ErrNotFound
+	}
+	requestHash := hashJSON(map[string]any{"id": id, "payload": req.Payload})
 	if rec, ok, err := s.getIdempotent(ctx, actor.IdempotencyKey, requestHash); err != nil {
 		return TestResult{}, err
 	} else if ok {
@@ -111,6 +201,7 @@ func (s *Service) TestWebhook(ctx context.Context, actor Actor, id string, paylo
 		_ = json.Unmarshal(rec, &tr)
 		return tr, nil
 	}
+	_ = wh
 	now := s.nowFn()
 	result := TestResult{
 		WebhookID:  id,
@@ -120,7 +211,7 @@ func (s *Service) TestWebhook(ctx context.Context, actor Actor, id string, paylo
 		Timestamp:  now,
 	}
 	_ = s.deliveries.Add(ctx, domain.Delivery{
-		DeliveryID:      "del-" + uuid.NewString(),
+		DeliveryID:      newID("del"),
 		WebhookID:       id,
 		OriginalEventID: "test",
 		OriginalType:    "webhook.test",
@@ -131,7 +222,7 @@ func (s *Service) TestWebhook(ctx context.Context, actor Actor, id string, paylo
 		IsTest:          true,
 		Success:         true,
 	})
-	_ = s.completeIdempotent(ctx, actor.IdempotencyKey, result)
+	_ = s.completeIdempotent(ctx, actor.IdempotencyKey, requestHash, result)
 	return result, nil
 }
 
@@ -139,12 +230,18 @@ func (s *Service) ListDeliveries(ctx context.Context, actor Actor, webhookID str
 	if strings.TrimSpace(actor.SubjectID) == "" {
 		return nil, domain.ErrUnauthorized
 	}
+	if _, err := s.webhooks.Get(ctx, webhookID); err != nil {
+		return nil, err
+	}
 	return s.deliveries.ListByWebhook(ctx, webhookID, limit)
 }
 
 func (s *Service) GetAnalytics(ctx context.Context, actor Actor, webhookID string) (domain.Analytics, error) {
 	if strings.TrimSpace(actor.SubjectID) == "" {
 		return domain.Analytics{}, domain.ErrUnauthorized
+	}
+	if _, err := s.webhooks.Get(ctx, webhookID); err != nil {
+		return domain.Analytics{}, err
 	}
 	return s.analytics.Snapshot(ctx, webhookID)
 }
@@ -174,8 +271,15 @@ func (s *Service) EnableWebhook(ctx context.Context, actor Actor, id string) (do
 	if err := s.webhooks.Update(ctx, wh); err != nil {
 		return domain.Webhook{}, err
 	}
-	_ = s.completeIdempotent(ctx, actor.IdempotencyKey, wh)
+	_ = s.completeIdempotent(ctx, actor.IdempotencyKey, requestHash, wh)
 	return wh, nil
+}
+
+func (s *Service) ReceiveCompatibilityWebhook(_ context.Context, payload json.RawMessage) map[string]any {
+	return map[string]any{
+		"accepted": true,
+		"size":     len(payload),
+	}
 }
 
 func (s *Service) getIdempotent(ctx context.Context, key, hash string) ([]byte, bool, error) {
@@ -192,14 +296,14 @@ func (s *Service) getIdempotent(ctx context.Context, key, hash string) ([]byte, 
 	return rec.Response, true, nil
 }
 
-func (s *Service) completeIdempotent(ctx context.Context, key string, payload any) error {
+func (s *Service) completeIdempotent(ctx context.Context, key, requestHash string, payload any) error {
 	if s.idempotency == nil || strings.TrimSpace(key) == "" {
 		return nil
 	}
 	raw, _ := json.Marshal(payload)
 	return s.idempotency.Upsert(ctx, domain.IdempotencyRecord{
 		Key:         key,
-		RequestHash: hashJSON(payload),
+		RequestHash: requestHash,
 		Response:    raw,
 		ExpiresAt:   s.nowFn().Add(s.cfg.IdempotencyTTL),
 	})
@@ -241,10 +345,37 @@ func clampInt(v, min, max, def int) int {
 	return v
 }
 
-func randomSecret() string {
-	b := make([]byte, 16)
+func validEndpointURL(raw string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || parsed == nil {
+		return false
+	}
+	if strings.ToLower(parsed.Scheme) != "https" || strings.TrimSpace(parsed.Hostname()) == "" {
+		return false
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if host == "localhost" {
+		return false
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() {
+			return false
+		}
+	}
+	return true
+}
+
+func randomSecret(size int) string {
+	if size <= 0 {
+		size = 16
+	}
+	b := make([]byte, size)
 	if _, err := rand.Read(b); err != nil {
-		return uuid.NewString()
+		return hex.EncodeToString([]byte(time.Now().UTC().Format("20060102150405.000000000")))
 	}
 	return hex.EncodeToString(b)
+}
+
+func newID(prefix string) string {
+	return prefix + "-" + randomSecret(8)
 }

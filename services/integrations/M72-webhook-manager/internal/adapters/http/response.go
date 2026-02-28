@@ -5,42 +5,38 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/viralforge/mesh/services/integrations/M72-webhook-manager/internal/contracts"
 	"github.com/viralforge/mesh/services/integrations/M72-webhook-manager/internal/domain"
 )
 
-type successResponse struct {
-	Status  string      `json:"status"`
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-}
-
-type errorResponse struct {
-	Status string       `json:"status"`
-	Error  errorPayload `json:"error"`
-}
-
-type errorPayload struct {
-	Code      string `json:"code"`
-	Message   string `json:"message"`
-	RequestID string `json:"request_id,omitempty"`
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload interface{}) {
+func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
-func writeSuccess(w http.ResponseWriter, status int, message string, data interface{}) {
-	writeJSON(w, status, successResponse{Status: "success", Message: message, Data: data})
+func writeSuccess(w http.ResponseWriter, status int, message string, data any) {
+	writeJSON(w, status, contracts.SuccessResponse{Status: "success", Message: message, Data: data})
 }
 
 func writeError(w http.ResponseWriter, status int, code, message, requestID string) {
-	writeJSON(w, status, errorResponse{Status: "error", Error: errorPayload{Code: code, Message: message, RequestID: requestID}})
+	writeJSON(w, status, contracts.ErrorResponse{
+		Status:    "error",
+		Code:      code,
+		Message:   message,
+		RequestID: requestID,
+		Error: contracts.ErrorPayload{
+			Code:      code,
+			Message:   message,
+			RequestID: requestID,
+		},
+	})
 }
 
 func mapDomainError(err error) (int, string) {
 	switch err {
+	case nil:
+		return http.StatusOK, ""
 	case domain.ErrUnauthorized:
 		return http.StatusUnauthorized, "unauthorized"
 	case domain.ErrForbidden:

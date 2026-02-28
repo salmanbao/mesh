@@ -31,6 +31,7 @@ implemented_services:
   - M69-Legal-Service
   - M70-Developer-Portal
   - M71-Integration-Hub
+  - M72-Webhook-Manager
   - M77-Config-Service
   - M78-Logging-Service
   - M79-Monitoring-Service
