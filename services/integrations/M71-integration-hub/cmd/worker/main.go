@@ -1,7 +1,7 @@
 package main
 
-import "fmt"
+import "log"
 
 func main() {
-    fmt.Println("M71-Integration-Hub worker placeholder")
+	log.Println("M71-Integration-Hub worker initialized")
 }
