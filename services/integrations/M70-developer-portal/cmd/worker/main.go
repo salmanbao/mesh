@@ -1,7 +1,7 @@
 package main
 
-import "fmt"
+import "log"
 
 func main() {
-    fmt.Println("M70-Developer-Portal worker placeholder")
+	log.Println("M70-Developer-Portal worker initialized")
 }
