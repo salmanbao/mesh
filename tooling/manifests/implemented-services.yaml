@@ -28,6 +28,7 @@ implemented_services:
   - M66-Embed-Service
   - M67-Event-Bus
   - M68-Retention-Service
+  - M69-Legal-Service
   - M77-Config-Service
   - M78-Logging-Service
   - M79-Monitoring-Service

@@ -1,7 +1,7 @@
 package main
 
-import "fmt"
+import "log"
 
 func main() {
-    fmt.Println("M69-Legal-Service worker placeholder")
+	log.Println("M69-Legal-Service worker initialized")
 }
