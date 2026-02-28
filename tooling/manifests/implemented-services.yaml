@@ -19,6 +19,7 @@ implemented_services:
   - M41-Reward-Engine
   - M44-Resolution-Center
   - M45-Community-Service
+  - M51-Data-Portability-Service
   - M52-Delivery-Service
   - M54-Analytics-Service
   - M55-Dashboard-Service

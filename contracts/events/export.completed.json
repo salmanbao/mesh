@@ -1,0 +1,37 @@
+{
+  "event_type": "export.completed",
+  "version": "v1",
+  "producer": "M51-Data-Portability-Service",
+  "partition_key_path": "data.user_id",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "request_id",
+      "user_id",
+      "request_type",
+      "completed_at",
+      "status"
+    ],
+    "properties": {
+      "request_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "request_type": {
+        "type": "string"
+      },
+      "completed_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "status": {
+        "type": "string"
+      },
+      "download_url": {
+        "type": "string"
+      }
+    }
+  }
+}
