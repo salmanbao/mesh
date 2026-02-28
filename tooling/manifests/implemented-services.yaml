@@ -27,6 +27,7 @@ implemented_services:
   - M58-Content-Recommendation-Engine
   - M66-Embed-Service
   - M67-Event-Bus
+  - M68-Retention-Service
   - M77-Config-Service
   - M78-Logging-Service
   - M79-Monitoring-Service

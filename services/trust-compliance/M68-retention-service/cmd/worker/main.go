@@ -1,7 +1,7 @@
 package main
 
-import "fmt"
+import "log"
 
 func main() {
-    fmt.Println("M68-Retention-Service worker placeholder")
+	log.Println("M68-Retention-Service worker initialized")
 }
