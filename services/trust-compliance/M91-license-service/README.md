@@ -1,29 +1,19 @@
 # M91-License-Service
 
-## Module Metadata
-- Module ID: M91
-- Canonical Name: M91-License-Service
-- Runtime Cluster: trust-compliance
-- Category: Compliance & Data Governance
-- Architecture: microservice
+M91 is the license-management microservice for license listing, activation, validation, deactivation, and export.
 
-## Primary Responsibility
-Generate cryptographically strong license keys in format XXXXX-XXXXX-XXXXX-XXXXX (25 chars total) using CSPRNG; keys must be unguessable.
+## HTTP surface
+- `GET /health`
+- `GET /licenses`
+- `GET /licenses/validate`
+- `GET /validate`
+- `POST /licenses/activate`
+- `POST /activate`
+- `POST /licenses/deactivate`
+- `POST /licenses/exports`
 
-## Dependency Snapshot
-### DBR Dependencies
-- none
-
-### Event Dependencies
-- none
-
-### Event Provides
-- none
-
-### HTTP Provides
-- yes
-
-## Implementation Notes
-- Internal service calls: gRPC.
-- External/public interfaces: REST.
-- Follow canonical contracts from viralForge/specs/M91-*.md.
+## Contract rules
+- Dedicated single-writer ownership over M91 license tables only.
+- `Idempotency-Key` is enforced on mutating POST operations.
+- Errors return the canonical top-level and nested error envelope (`status`, `code`, `message`, `request_id`, `error`).
+- No cross-service DB reads or event-contract dependencies are assumed by the implementation.

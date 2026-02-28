@@ -40,6 +40,7 @@ implemented_services:
   - M83-CDN-Management-Service
   - M84-Data-Migration-Service
   - M89-Affiliate-Service
+  - M91-License-Service
   - M95-Referral-Analytics-Service
   - M96-Referral-Fraud-Detection-Service
   - M97-Team-Service
