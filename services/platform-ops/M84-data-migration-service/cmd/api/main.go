@@ -1,7 +1,23 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/viralforge/mesh/services/platform-ops/M84-data-migration-service/internal/app/bootstrap"
+)
 
 func main() {
-    fmt.Println("M84-Data-Migration-Service API placeholder")
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	rt, err := bootstrap.NewRuntime(ctx, "configs/default.yaml")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := rt.Run(ctx); err != nil {
+		log.Fatal(err)
+	}
 }
