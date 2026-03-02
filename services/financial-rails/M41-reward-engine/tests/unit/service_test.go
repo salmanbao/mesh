@@ -109,3 +109,95 @@ func TestHandleSubmissionViewLockedEventDedup(t *testing.T) {
 		t.Fatalf("handle duplicate event: %v", err)
 	}
 }
+
+func TestHandleSubmissionViewLockedEventAllowsLegacyPartitionPath(t *testing.T) {
+	t.Parallel()
+
+	repos := postgres.NewRepositories()
+	svc := application.NewService(application.Dependencies{
+		Rewards:      repos.Rewards,
+		Rollovers:    repos.Rollovers,
+		Snapshots:    repos.Snapshots,
+		Audit:        repos.Audit,
+		Idempotency:  repos.Idempotency,
+		EventDedup:   repos.EventDedup,
+		Outbox:       repos.Outbox,
+		Auth:         grpcadapter.NewAuthClient(""),
+		Campaign:     grpcadapter.NewCampaignClient(""),
+		Voting:       grpcadapter.NewVotingClient(""),
+		Tracking:     grpcadapter.NewTrackingClient(""),
+		Submission:   grpcadapter.NewSubmissionClient(""),
+		DomainEvents: eventadapter.NewMemoryDomainPublisher(),
+		Analytics:    eventadapter.NewMemoryAnalyticsPublisher(),
+		DLQ:          eventadapter.NewLoggingDLQPublisher(),
+	})
+
+	event := contracts.EventEnvelope{
+		EventID:          "evt-legacy-submission-path",
+		EventType:        domain.EventSubmissionViewLocked,
+		EventClass:       domain.CanonicalEventClassDomain,
+		OccurredAt:       time.Now().UTC(),
+		PartitionKeyPath: "submission_id",
+		PartitionKey:     "sub-legacy-1",
+		SourceService:    "M26-Submission-Service",
+		TraceID:          "trace-legacy-submission-path",
+		SchemaVersion:    "v1",
+		Data: []byte(`{
+			"submission_id":"sub-legacy-1",
+			"user_id":"user-legacy-1",
+			"campaign_id":"camp-legacy-1",
+			"locked_views":1250,
+			"locked_at":"2026-02-10T00:00:00Z"
+		}`),
+	}
+	if err := svc.HandleDomainEvent(context.Background(), event); err != nil {
+		t.Fatalf("expected legacy partition path to be accepted, got: %v", err)
+	}
+}
+
+func TestHandleTrackingMetricsEventAllowsLegacyPartitionPath(t *testing.T) {
+	t.Parallel()
+
+	repos := postgres.NewRepositories()
+	svc := application.NewService(application.Dependencies{
+		Rewards:      repos.Rewards,
+		Rollovers:    repos.Rollovers,
+		Snapshots:    repos.Snapshots,
+		Audit:        repos.Audit,
+		Idempotency:  repos.Idempotency,
+		EventDedup:   repos.EventDedup,
+		Outbox:       repos.Outbox,
+		Auth:         grpcadapter.NewAuthClient(""),
+		Campaign:     grpcadapter.NewCampaignClient(""),
+		Voting:       grpcadapter.NewVotingClient(""),
+		Tracking:     grpcadapter.NewTrackingClient(""),
+		Submission:   grpcadapter.NewSubmissionClient(""),
+		DomainEvents: eventadapter.NewMemoryDomainPublisher(),
+		Analytics:    eventadapter.NewMemoryAnalyticsPublisher(),
+		DLQ:          eventadapter.NewLoggingDLQPublisher(),
+	})
+
+	event := contracts.EventEnvelope{
+		EventID:          "evt-legacy-tracking-path",
+		EventType:        domain.EventTrackingMetricsUpdated,
+		EventClass:       domain.CanonicalEventClassDomain,
+		OccurredAt:       time.Now().UTC(),
+		PartitionKeyPath: "tracked_post_id",
+		PartitionKey:     "sub-legacy-track-1",
+		SourceService:    "M11-Distribution-Tracking-Service",
+		TraceID:          "trace-legacy-tracking-path",
+		SchemaVersion:    "v1",
+		Data: []byte(`{
+			"tracked_post_id":"sub-legacy-track-1",
+			"platform":"tiktok",
+			"views":900,
+			"likes":30,
+			"shares":6,
+			"comments":4,
+			"polled_at":"2026-02-10T00:00:00Z"
+		}`),
+	}
+	if err := svc.HandleDomainEvent(context.Background(), event); err != nil {
+		t.Fatalf("expected legacy tracking partition path to be accepted, got: %v", err)
+	}
+}

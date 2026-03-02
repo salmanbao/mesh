@@ -21,11 +21,11 @@ func (s *Service) HandleDomainEvent(ctx context.Context, event contracts.EventEn
 		return domain.ErrUnsupportedEventClass
 	}
 
-	expectedPath := "data.submission_id"
+	allowedPartitionPaths := []string{"data.submission_id", "submission_id"}
 	if event.EventType == domain.EventTrackingMetricsUpdated {
-		expectedPath = "data.tracked_post_id"
+		allowedPartitionPaths = []string{"data.tracked_post_id", "tracked_post_id"}
 	}
-	if err := validateDomainEventEnvelope(event, expectedPath); err != nil {
+	if err := validateDomainEventEnvelope(event, allowedPartitionPaths...); err != nil {
 		return err
 	}
 
@@ -265,7 +265,10 @@ func isSupportedEventType(eventType string) bool {
 	}
 }
 
-func validateDomainEventEnvelope(event contracts.EventEnvelope, expectedPartitionPath string) error {
+func validateDomainEventEnvelope(event contracts.EventEnvelope, allowedPartitionPaths ...string) error {
+	if len(allowedPartitionPaths) == 0 {
+		return fmt.Errorf("%w: missing partition key policy", domain.ErrInvalidInput)
+	}
 	if strings.TrimSpace(event.EventID) == "" {
 		return fmt.Errorf("%w: missing event_id", domain.ErrInvalidInput)
 	}
@@ -284,8 +287,16 @@ func validateDomainEventEnvelope(event contracts.EventEnvelope, expectedPartitio
 	if len(event.Data) == 0 {
 		return fmt.Errorf("%w: missing data payload", domain.ErrInvalidInput)
 	}
-	if event.PartitionKeyPath != expectedPartitionPath {
-		return fmt.Errorf("%w: expected partition_key_path %s", domain.ErrInvalidInput, expectedPartitionPath)
+
+	allowed := false
+	for _, path := range allowedPartitionPaths {
+		if event.PartitionKeyPath == path {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return fmt.Errorf("%w: expected partition_key_path %s", domain.ErrInvalidInput, allowedPartitionPaths[0])
 	}
 	field := strings.TrimPrefix(event.PartitionKeyPath, "data.")
 	if strings.TrimSpace(field) == "" {
