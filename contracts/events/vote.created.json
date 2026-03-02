@@ -1,0 +1,31 @@
+{
+  "event_type": "vote.created",
+  "version": "v1",
+  "producer": "M08-Voting-Engine",
+  "event_class": "domain",
+  "partition_key_path": "data.submission_id",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "submission_id",
+      "user_id",
+      "vote_type",
+      "voted_at"
+    ],
+    "properties": {
+      "submission_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "vote_type": {
+        "type": "string"
+      },
+      "voted_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

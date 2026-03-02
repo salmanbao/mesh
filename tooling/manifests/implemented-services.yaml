@@ -7,11 +7,14 @@ implemented_services:
   - M06-Media-Processing-Pipeline
   - M10-Social-Integration-Verification-Service
   - M11-Distribution-Tracking-Service
+  - M12-Fraud-Detection-Engine
   - M13-Escrow-Ledger-Service
   - M14-Payout-Settlement-Service
+  - M16-API-Gateway-Rate-Limiting
   - M17-Observability-Monitoring
   - M18-Cache-State-Management
   - M19-Storage-Lifecycle-Management
+  - M25-Auto-Clipping-AI
   - M30-Social-Integration-Service
   - M36-Risk-Service
   - M38-Content-License-Verification
@@ -19,6 +22,7 @@ implemented_services:
   - M41-Reward-Engine
   - M44-Resolution-Center
   - M45-Community-Service
+  - M50-Consent-Service
   - M51-Data-Portability-Service
   - M52-Delivery-Service
   - M54-Analytics-Service

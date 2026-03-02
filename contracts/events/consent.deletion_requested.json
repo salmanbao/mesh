@@ -1,0 +1,31 @@
+{
+  "event_type": "consent.deletion_requested",
+  "version": "v1",
+  "producer": "M50-Consent-Service",
+  "event_class": "domain",
+  "partition_key_path": "data.user_id",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "request_id",
+      "user_id",
+      "deletion_scope",
+      "requested_at"
+    ],
+    "properties": {
+      "request_id": {
+        "type": "string"
+      },
+      "user_id": {
+        "type": "string"
+      },
+      "deletion_scope": {
+        "type": "string"
+      },
+      "requested_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}

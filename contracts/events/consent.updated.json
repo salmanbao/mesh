@@ -1,0 +1,39 @@
+{
+  "event_type": "consent.updated",
+  "version": "v1",
+  "producer": "M50-Consent-Service",
+  "event_class": "domain",
+  "partition_key_path": "data.user_id",
+  "payload_schema": {
+    "type": "object",
+    "required": [
+      "user_id",
+      "region_code",
+      "necessary",
+      "analytics",
+      "marketing",
+      "updated_at"
+    ],
+    "properties": {
+      "user_id": {
+        "type": "string"
+      },
+      "region_code": {
+        "type": "string"
+      },
+      "necessary": {
+        "type": "boolean"
+      },
+      "analytics": {
+        "type": "boolean"
+      },
+      "marketing": {
+        "type": "boolean"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  }
+}
