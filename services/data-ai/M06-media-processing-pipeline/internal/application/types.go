@@ -7,10 +7,11 @@ import (
 )
 
 type Config struct {
-	ServiceName       string
-	IdempotencyTTL    time.Duration
-	EventDedupTTL     time.Duration
-	QueuePollInterval time.Duration
+	ServiceName         string
+	IdempotencyTTL      time.Duration
+	EventDedupTTL       time.Duration
+	QueuePollInterval   time.Duration
+	FullPipelineEnabled bool
 }
 
 type Actor struct {

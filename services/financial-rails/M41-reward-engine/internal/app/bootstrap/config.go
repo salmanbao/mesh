@@ -36,6 +36,9 @@ type Config struct {
 	IdempotencyTTL       time.Duration
 	EventDedupTTL        time.Duration
 	ConsumerPollInterval time.Duration
+
+	EnableDomainEventConsumption bool
+	EnablePayoutEligibleEmission bool
 }
 
 type configFile struct {
@@ -61,25 +64,31 @@ type configFile struct {
 		TopicRewardPayoutEligible   string   `yaml:"topic_reward_payout_eligible"`
 		TopicDLQ                    string   `yaml:"topic_dlq"`
 	} `yaml:"dependencies"`
+	FeatureFlags struct {
+		EnableDomainEventConsumption *bool `yaml:"enable_domain_event_consumption"`
+		EnablePayoutEligibleEmission *bool `yaml:"enable_payout_eligible_emission"`
+	} `yaml:"feature_flags"`
 }
 
 func LoadConfig(path string) (Config, error) {
 	cfg := Config{
-		ServiceID:                  "M41-Reward-Engine",
-		HTTPPort:                   8080,
-		GRPCPort:                   9090,
-		KafkaConsumerGroup:         "m41-reward-engine",
-		TopicSubmissionAutoApprove: "submission.auto_approved",
-		TopicSubmissionCancelled:   "submission.cancelled",
-		TopicSubmissionVerified:    "submission.verified",
-		TopicSubmissionViewLocked:  "submission.view_locked",
-		TopicTrackingUpdated:       "tracking.metrics.updated",
-		TopicRewardCalculated:      "reward.calculated",
-		TopicRewardPayoutEligible:  "reward.payout_eligible",
-		DLQTopic:                   "reward-engine.dlq",
-		IdempotencyTTL:             7 * 24 * time.Hour,
-		EventDedupTTL:              7 * 24 * time.Hour,
-		ConsumerPollInterval:       2 * time.Second,
+		ServiceID:                    "M41-Reward-Engine",
+		HTTPPort:                     8080,
+		GRPCPort:                     9090,
+		KafkaConsumerGroup:           "m41-reward-engine",
+		TopicSubmissionAutoApprove:   "submission.auto_approved",
+		TopicSubmissionCancelled:     "submission.cancelled",
+		TopicSubmissionVerified:      "submission.verified",
+		TopicSubmissionViewLocked:    "submission.view_locked",
+		TopicTrackingUpdated:         "tracking.metrics.updated",
+		TopicRewardCalculated:        "reward.calculated",
+		TopicRewardPayoutEligible:    "reward.payout_eligible",
+		DLQTopic:                     "reward-engine.dlq",
+		IdempotencyTTL:               7 * 24 * time.Hour,
+		EventDedupTTL:                7 * 24 * time.Hour,
+		ConsumerPollInterval:         2 * time.Second,
+		EnableDomainEventConsumption: true,
+		EnablePayoutEligibleEmission: true,
 	}
 
 	raw, err := os.ReadFile(path)
@@ -132,6 +141,12 @@ func LoadConfig(path string) (Config, error) {
 		if f.Dependencies.TopicDLQ != "" {
 			cfg.DLQTopic = f.Dependencies.TopicDLQ
 		}
+		if f.FeatureFlags.EnableDomainEventConsumption != nil {
+			cfg.EnableDomainEventConsumption = *f.FeatureFlags.EnableDomainEventConsumption
+		}
+		if f.FeatureFlags.EnablePayoutEligibleEmission != nil {
+			cfg.EnablePayoutEligibleEmission = *f.FeatureFlags.EnablePayoutEligibleEmission
+		}
 	}
 
 	cfg.AuthGRPCURL = envOrDefault("AUTH_GRPC_URL", cfg.AuthGRPCURL)
@@ -154,6 +169,8 @@ func LoadConfig(path string) (Config, error) {
 	cfg.IdempotencyTTL = time.Duration(envInt("IDEMPOTENCY_TTL_HOURS", int(cfg.IdempotencyTTL.Hours()))) * time.Hour
 	cfg.EventDedupTTL = time.Duration(envInt("EVENT_DEDUP_TTL_HOURS", int(cfg.EventDedupTTL.Hours()))) * time.Hour
 	cfg.ConsumerPollInterval = time.Duration(envInt("CONSUMER_POLL_SECONDS", int(cfg.ConsumerPollInterval.Seconds()))) * time.Second
+	cfg.EnableDomainEventConsumption = envBool("ENABLE_DOMAIN_EVENT_CONSUMPTION", cfg.EnableDomainEventConsumption)
+	cfg.EnablePayoutEligibleEmission = envBool("ENABLE_PAYOUT_ELIGIBLE_EMISSION", cfg.EnablePayoutEligibleEmission)
 
 	return cfg, nil
 }
@@ -184,6 +201,21 @@ func envCSV(name string, fallback []string) []string {
 	}
 	items := strings.Split(raw, ",")
 	return trimNonEmpty(items)
+}
+
+func envBool(name string, fallback bool) bool {
+	raw := strings.TrimSpace(strings.ToLower(os.Getenv(name)))
+	if raw == "" {
+		return fallback
+	}
+	switch raw {
+	case "1", "true", "t", "yes", "y", "on":
+		return true
+	case "0", "false", "f", "no", "n", "off":
+		return false
+	default:
+		return fallback
+	}
 }
 
 func trimNonEmpty(values []string) []string {

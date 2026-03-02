@@ -14,6 +14,9 @@ import (
 )
 
 func (s *Service) HandleDomainEvent(ctx context.Context, event contracts.EventEnvelope) error {
+	if !s.cfg.EnableDomainEventConsumption {
+		return nil
+	}
 	if !isSupportedEventType(event.EventType) {
 		return domain.ErrUnsupportedEventType
 	}
@@ -212,6 +215,9 @@ func (s *Service) enqueueDomainRewardCalculated(ctx context.Context, reward doma
 }
 
 func (s *Service) enqueueDomainRewardPayoutEligible(ctx context.Context, reward domain.Reward) error {
+	if !s.cfg.EnablePayoutEligibleEmission {
+		return nil
+	}
 	eligibleAt := s.nowFn()
 	if reward.EligibleAt != nil {
 		eligibleAt = *reward.EligibleAt

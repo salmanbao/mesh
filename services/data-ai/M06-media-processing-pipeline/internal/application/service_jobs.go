@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/google/uuid"
@@ -11,6 +12,9 @@ import (
 )
 
 func (s *Service) ProcessNextJob(ctx context.Context) error {
+	if !s.cfg.FullPipelineEnabled {
+		return io.EOF
+	}
 	jobID, err := s.queue.Dequeue(ctx)
 	if err != nil {
 		return err

@@ -42,7 +42,13 @@ func NewRuntime(ctx context.Context, configPath string) (*Runtime, error) {
 	dlq := eventadapter.NewMemoryDLQPublisher()
 
 	service := application.NewService(application.Dependencies{
-		Config: application.Config{ServiceName: cfg.ServiceID, IdempotencyTTL: cfg.IdempotencyTTL(), EventDedupTTL: cfg.EventDedupTTL(), QueuePollInterval: cfg.WorkerPollInterval()},
+		Config: application.Config{
+			ServiceName:         cfg.ServiceID,
+			IdempotencyTTL:      cfg.IdempotencyTTL(),
+			EventDedupTTL:       cfg.EventDedupTTL(),
+			QueuePollInterval:   cfg.WorkerPollInterval(),
+			FullPipelineEnabled: cfg.FullPipelineEnabled,
+		},
 		Assets: repos.Assets, Jobs: repos.Jobs, Outputs: repos.Outputs, Thumbnails: repos.Thumbnails, Watermarks: repos.Watermarks, Idempotency: repos.Idempotency, EventDedup: repos.EventDedup,
 		Campaign: grpcadapter.NewCampaignClient(cfg.CampaignGRPCURL),
 		Queue:    queue,

@@ -8,14 +8,16 @@ import (
 )
 
 type Config struct {
-	ServiceName            string
-	IdempotencyTTL         time.Duration
-	EventDedupTTL          time.Duration
-	OutboxFlushBatchSize   int
-	MinimumPayoutThreshold float64
-	MaxRolloverBalance     float64
-	FraudRejectThreshold   float64
-	DefaultRatePer1K       float64
+	ServiceName                  string
+	IdempotencyTTL               time.Duration
+	EventDedupTTL                time.Duration
+	OutboxFlushBatchSize         int
+	MinimumPayoutThreshold       float64
+	MaxRolloverBalance           float64
+	FraudRejectThreshold         float64
+	DefaultRatePer1K             float64
+	EnableDomainEventConsumption bool
+	EnablePayoutEligibleEmission bool
 }
 
 type Actor struct {

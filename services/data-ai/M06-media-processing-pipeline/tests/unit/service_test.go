@@ -26,7 +26,12 @@ func newService() testDeps {
 	queue := eventadapter.NewMemoryJobQueue()
 	dlq := eventadapter.NewMemoryDLQPublisher()
 	service := application.NewService(application.Dependencies{
-		Config: application.Config{ServiceName: "M06-Media-Processing-Pipeline", IdempotencyTTL: 7 * 24 * time.Hour, EventDedupTTL: 7 * 24 * time.Hour},
+		Config: application.Config{
+			ServiceName:         "M06-Media-Processing-Pipeline",
+			IdempotencyTTL:      7 * 24 * time.Hour,
+			EventDedupTTL:       7 * 24 * time.Hour,
+			FullPipelineEnabled: true,
+		},
 		Assets: repos.Assets, Jobs: repos.Jobs, Outputs: repos.Outputs, Thumbnails: repos.Thumbnails, Watermarks: repos.Watermarks, Idempotency: repos.Idempotency, EventDedup: repos.EventDedup,
 		Campaign: grpcadapter.NewCampaignClient(""),
 		Queue:    queue,
@@ -259,5 +264,50 @@ func TestHandleInternalEventRejectsMissingRequiredEnvelopeFields(t *testing.T) {
 	}
 	if err := deps.service.HandleInternalEvent(context.Background(), event); err != domain.ErrUnsupportedEvent {
 		t.Fatalf("expected unsupported event for missing envelope fields, got %v", err)
+	}
+}
+
+func TestProcessNextJobNoOpWhenPipelineDisabled(t *testing.T) {
+	repos := postgres.NewRepositories()
+	queue := eventadapter.NewMemoryJobQueue()
+	dlq := eventadapter.NewMemoryDLQPublisher()
+	svc := application.NewService(application.Dependencies{
+		Config: application.Config{
+			ServiceName:         "M06-Media-Processing-Pipeline",
+			IdempotencyTTL:      7 * 24 * time.Hour,
+			EventDedupTTL:       7 * 24 * time.Hour,
+			FullPipelineEnabled: false,
+		},
+		Assets: repos.Assets, Jobs: repos.Jobs, Outputs: repos.Outputs, Thumbnails: repos.Thumbnails, Watermarks: repos.Watermarks, Idempotency: repos.Idempotency, EventDedup: repos.EventDedup,
+		Campaign: grpcadapter.NewCampaignClient(""),
+		Queue:    queue,
+		DLQ:      dlq,
+	})
+
+	actor := application.Actor{SubjectID: "user-flag", Role: "user", IdempotencyKey: "media-upload:sub-flag:hash"}
+	upload, err := svc.CreateUpload(context.Background(), actor, application.CreateUploadInput{
+		SubmissionID:   "sub-flag",
+		FileName:       "clip.mp4",
+		MIMEType:       "video/mp4",
+		FileSize:       1000,
+		ChecksumSHA256: "hash",
+	})
+	if err != nil {
+		t.Fatalf("create upload: %v", err)
+	}
+	if queue.Len() == 0 {
+		t.Fatalf("expected queued jobs")
+	}
+
+	if err := svc.ProcessNextJob(context.Background()); err != io.EOF {
+		t.Fatalf("expected io.EOF when pipeline disabled, got %v", err)
+	}
+
+	status, err := svc.GetAssetStatus(context.Background(), application.Actor{SubjectID: "user-flag"}, upload.AssetID)
+	if err != nil {
+		t.Fatalf("get status: %v", err)
+	}
+	if status.Status != string(domain.AssetStatusProcessing) {
+		t.Fatalf("expected processing status when pipeline disabled, got %s", status.Status)
 	}
 }

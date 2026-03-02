@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"io"
+	"slices"
 	"sync"
 
 	"github.com/viralforge/mesh/services/financial-rails/M41-reward-engine/internal/contracts"
@@ -50,6 +51,12 @@ func (p *MemoryDomainPublisher) PublishDomain(_ context.Context, event contracts
 	return nil
 }
 
+func (p *MemoryDomainPublisher) Events() []contracts.EventEnvelope {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return slices.Clone(p.events)
+}
+
 type MemoryAnalyticsPublisher struct {
 	mu     sync.Mutex
 	events []contracts.EventEnvelope
@@ -64,6 +71,12 @@ func (p *MemoryAnalyticsPublisher) PublishAnalytics(_ context.Context, event con
 	defer p.mu.Unlock()
 	p.events = append(p.events, event)
 	return nil
+}
+
+func (p *MemoryAnalyticsPublisher) Events() []contracts.EventEnvelope {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return slices.Clone(p.events)
 }
 
 type LoggingDLQPublisher struct{}

@@ -17,7 +17,13 @@ func TestCalculateRewardIdempotency(t *testing.T) {
 	t.Parallel()
 
 	repos := postgres.NewRepositories()
+	domainPublisher := eventadapter.NewMemoryDomainPublisher()
 	svc := application.NewService(application.Dependencies{
+		Config: application.Config{
+			ServiceName:                  "M41-Reward-Engine",
+			EnableDomainEventConsumption: true,
+			EnablePayoutEligibleEmission: true,
+		},
 		Rewards:      repos.Rewards,
 		Rollovers:    repos.Rollovers,
 		Snapshots:    repos.Snapshots,
@@ -30,7 +36,7 @@ func TestCalculateRewardIdempotency(t *testing.T) {
 		Voting:       grpcadapter.NewVotingClient(""),
 		Tracking:     grpcadapter.NewTrackingClient(""),
 		Submission:   grpcadapter.NewSubmissionClient(""),
-		DomainEvents: eventadapter.NewMemoryDomainPublisher(),
+		DomainEvents: domainPublisher,
 		Analytics:    eventadapter.NewMemoryAnalyticsPublisher(),
 		DLQ:          eventadapter.NewLoggingDLQPublisher(),
 	})
@@ -67,6 +73,11 @@ func TestHandleSubmissionViewLockedEventDedup(t *testing.T) {
 
 	repos := postgres.NewRepositories()
 	svc := application.NewService(application.Dependencies{
+		Config: application.Config{
+			ServiceName:                  "M41-Reward-Engine",
+			EnableDomainEventConsumption: true,
+			EnablePayoutEligibleEmission: true,
+		},
 		Rewards:      repos.Rewards,
 		Rollovers:    repos.Rollovers,
 		Snapshots:    repos.Snapshots,
@@ -115,6 +126,11 @@ func TestHandleSubmissionViewLockedEventAllowsLegacyPartitionPath(t *testing.T) 
 
 	repos := postgres.NewRepositories()
 	svc := application.NewService(application.Dependencies{
+		Config: application.Config{
+			ServiceName:                  "M41-Reward-Engine",
+			EnableDomainEventConsumption: true,
+			EnablePayoutEligibleEmission: true,
+		},
 		Rewards:      repos.Rewards,
 		Rollovers:    repos.Rollovers,
 		Snapshots:    repos.Snapshots,
@@ -160,6 +176,11 @@ func TestHandleTrackingMetricsEventAllowsLegacyPartitionPath(t *testing.T) {
 
 	repos := postgres.NewRepositories()
 	svc := application.NewService(application.Dependencies{
+		Config: application.Config{
+			ServiceName:                  "M41-Reward-Engine",
+			EnableDomainEventConsumption: true,
+			EnablePayoutEligibleEmission: true,
+		},
 		Rewards:      repos.Rewards,
 		Rollovers:    repos.Rollovers,
 		Snapshots:    repos.Snapshots,
@@ -199,5 +220,121 @@ func TestHandleTrackingMetricsEventAllowsLegacyPartitionPath(t *testing.T) {
 	}
 	if err := svc.HandleDomainEvent(context.Background(), event); err != nil {
 		t.Fatalf("expected legacy tracking partition path to be accepted, got: %v", err)
+	}
+}
+
+func TestPayoutEligibleEmissionCanBeDisabledByFlag(t *testing.T) {
+	t.Parallel()
+
+	repos := postgres.NewRepositories()
+	domainPublisher := eventadapter.NewMemoryDomainPublisher()
+	svc := application.NewService(application.Dependencies{
+		Config: application.Config{
+			ServiceName:                  "M41-Reward-Engine",
+			EnableDomainEventConsumption: true,
+			EnablePayoutEligibleEmission: false,
+		},
+		Rewards:      repos.Rewards,
+		Rollovers:    repos.Rollovers,
+		Snapshots:    repos.Snapshots,
+		Audit:        repos.Audit,
+		Idempotency:  repos.Idempotency,
+		EventDedup:   repos.EventDedup,
+		Outbox:       repos.Outbox,
+		Auth:         grpcadapter.NewAuthClient(""),
+		Campaign:     grpcadapter.NewCampaignClient(""),
+		Voting:       grpcadapter.NewVotingClient(""),
+		Tracking:     grpcadapter.NewTrackingClient(""),
+		Submission:   grpcadapter.NewSubmissionClient(""),
+		DomainEvents: domainPublisher,
+		Analytics:    eventadapter.NewMemoryAnalyticsPublisher(),
+		DLQ:          eventadapter.NewLoggingDLQPublisher(),
+	})
+
+	_, err := svc.CalculateReward(context.Background(), application.Actor{
+		SubjectID:      "user-flag",
+		Role:           "user",
+		IdempotencyKey: "reward:req:user-flag:sub-flag",
+	}, application.CalculateRewardInput{
+		UserID:                  "user-flag",
+		SubmissionID:            "sub-flag",
+		CampaignID:              "camp-flag",
+		LockedViews:             2500,
+		RatePer1K:               2.5,
+		VerificationCompletedAt: time.Now().UTC(),
+	})
+	if err != nil {
+		t.Fatalf("calculate reward: %v", err)
+	}
+
+	events := domainPublisher.Events()
+	if len(events) == 0 {
+		t.Fatalf("expected at least one domain event")
+	}
+	foundCalculated := false
+	for _, evt := range events {
+		if evt.EventType == domain.EventRewardCalculated {
+			foundCalculated = true
+		}
+		if evt.EventType == domain.EventRewardPayoutEligible {
+			t.Fatalf("did not expect %s when flag disabled", domain.EventRewardPayoutEligible)
+		}
+	}
+	if !foundCalculated {
+		t.Fatalf("expected %s event", domain.EventRewardCalculated)
+	}
+}
+
+func TestDomainEventConsumptionCanBeDisabledByFlag(t *testing.T) {
+	t.Parallel()
+
+	repos := postgres.NewRepositories()
+	svc := application.NewService(application.Dependencies{
+		Config: application.Config{
+			ServiceName:                  "M41-Reward-Engine",
+			EnableDomainEventConsumption: false,
+			EnablePayoutEligibleEmission: true,
+		},
+		Rewards:      repos.Rewards,
+		Rollovers:    repos.Rollovers,
+		Snapshots:    repos.Snapshots,
+		Audit:        repos.Audit,
+		Idempotency:  repos.Idempotency,
+		EventDedup:   repos.EventDedup,
+		Outbox:       repos.Outbox,
+		Auth:         grpcadapter.NewAuthClient(""),
+		Campaign:     grpcadapter.NewCampaignClient(""),
+		Voting:       grpcadapter.NewVotingClient(""),
+		Tracking:     grpcadapter.NewTrackingClient(""),
+		Submission:   grpcadapter.NewSubmissionClient(""),
+		DomainEvents: eventadapter.NewMemoryDomainPublisher(),
+		Analytics:    eventadapter.NewMemoryAnalyticsPublisher(),
+		DLQ:          eventadapter.NewLoggingDLQPublisher(),
+	})
+
+	event := contracts.EventEnvelope{
+		EventID:          "evt-consumer-disabled",
+		EventType:        domain.EventSubmissionViewLocked,
+		EventClass:       domain.CanonicalEventClassDomain,
+		OccurredAt:       time.Now().UTC(),
+		PartitionKeyPath: "data.submission_id",
+		PartitionKey:     "sub-consumer-disabled",
+		SourceService:    "M26-Submission-Service",
+		TraceID:          "trace-consumer-disabled",
+		SchemaVersion:    "v1",
+		Data: []byte(`{
+			"submission_id":"sub-consumer-disabled",
+			"user_id":"user-consumer-disabled",
+			"campaign_id":"camp-consumer-disabled",
+			"locked_views":1500,
+			"locked_at":"2026-02-10T00:00:00Z"
+		}`),
+	}
+	if err := svc.HandleDomainEvent(context.Background(), event); err != nil {
+		t.Fatalf("handle event with consumer disabled: %v", err)
+	}
+
+	if _, err := repos.Rewards.GetBySubmissionID(context.Background(), "sub-consumer-disabled"); err == nil {
+		t.Fatalf("expected no reward write when domain consumption disabled")
 	}
 }
