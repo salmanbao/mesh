@@ -1,0 +1,187 @@
+openapi: 3.0.3
+info:
+  title: M56 Predictive Analytics API
+  version: 1.0.0
+  description: |
+    OpenAPI contract for M56 Predictive Analytics runtime routes.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Predictions
+paths:
+  /api/v1/predictions/view-forecast:
+    get:
+      tags: [Predictions]
+      summary: Get forecasted views for a user
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/WindowDays'
+      responses:
+        '200':
+          description: Forecast generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/predictions/clip-recommendations:
+    get:
+      tags: [Predictions]
+      summary: Get top clip recommendations for a user
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Recommendations generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/predictions/churn-risk:
+    get:
+      tags: [Predictions]
+      summary: Get churn risk score for a user
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - $ref: '#/components/parameters/UserID'
+      responses:
+        '200':
+          description: Churn risk generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/campaigns/{campaign_id}/predict-success:
+    post:
+      tags: [Predictions]
+      summary: Predict campaign success likelihood
+      parameters:
+        - $ref: '#/components/parameters/XRequestID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: campaign_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignSuccessRequest'
+      responses:
+        '200':
+          description: Campaign prediction generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    XRequestID:
+      name: X-Request-Id
+      in: header
+      required: false
+      schema: { type: string }
+    UserID:
+      name: user_id
+      in: query
+      required: false
+      schema: { type: string }
+    WindowDays:
+      name: window_days
+      in: query
+      required: false
+      schema:
+        type: integer
+        enum: [7, 30, 90]
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 10
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string }
+  schemas:
+    CampaignSuccessRequest:
+      type: object
+      required: [reward_rate, budget, niche]
+      properties:
+        reward_rate: { type: number, format: double }
+        budget: { type: number, format: double }
+        niche: { type: string }
+    SuccessResponse:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        message: { type: string }
+        data: {}
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+            details: {}
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Access denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Idempotency conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

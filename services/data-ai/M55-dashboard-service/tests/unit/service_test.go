@@ -93,3 +93,25 @@ func TestHandleInternalEventDedup(t *testing.T) {
 		t.Fatalf("duplicate handle should no-op, got: %v", err)
 	}
 }
+
+func TestGetDashboardAggregatesProviderWidgets(t *testing.T) {
+	svc := newService()
+	dashboard, err := svc.GetDashboard(context.Background(), application.Actor{
+		SubjectID: "user-1",
+		Role:      "creator",
+		RequestID: "r2",
+	}, application.DashboardQueryInput{
+		DateRange:  "30d",
+		DeviceType: "web",
+		Timezone:   "UTC",
+	})
+	if err != nil {
+		t.Fatalf("get dashboard: %v", err)
+	}
+	if _, ok := dashboard.Widgets["analytics"]; !ok {
+		t.Fatalf("expected analytics widget to be present")
+	}
+	if _, ok := dashboard.Widgets["payouts"]; !ok {
+		t.Fatalf("expected payouts widget to be present")
+	}
+}

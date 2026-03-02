@@ -60,3 +60,55 @@ func TestBulkActionIdempotency(t *testing.T) {
 		t.Fatalf("unexpected updated counts: %d/%d failed %d/%d", updated1, updated2, failed1, failed2)
 	}
 }
+
+func TestHandlePhase6DependencyEvents(t *testing.T) {
+	svc := newService()
+	now := time.Now().UTC()
+	cases := []struct {
+		eventID   string
+		eventType string
+		payload   map[string]any
+		keyPath   string
+		key       string
+	}{
+		{
+			eventID:   "evt-phase6-1",
+			eventType: domain.EventPayoutFailed,
+			payload:   map[string]any{"user_id": "u3", "payout_id": "p-1"},
+			keyPath:   "data.payout_id",
+			key:       "p-1",
+		},
+		{
+			eventID:   "evt-phase6-2",
+			eventType: domain.EventDisputeCreated,
+			payload:   map[string]any{"dispute_id": "d-1", "user_id": "u3"},
+			keyPath:   "data.dispute_id",
+			key:       "d-1",
+		},
+	}
+	for _, tc := range cases {
+		data, _ := json.Marshal(tc.payload)
+		err := svc.HandleCanonicalEvent(context.Background(), contracts.EventEnvelope{
+			EventID:          tc.eventID,
+			EventType:        tc.eventType,
+			EventClass:       domain.CanonicalEventClassDomain,
+			OccurredAt:       now,
+			PartitionKeyPath: tc.keyPath,
+			PartitionKey:     tc.key,
+			SourceService:    "phase6-smoke",
+			TraceID:          "trace-phase6",
+			SchemaVersion:    "v1",
+			Data:             data,
+		})
+		if err != nil {
+			t.Fatalf("handle %s failed: %v", tc.eventType, err)
+		}
+	}
+	items, _, unread, err := svc.ListNotifications(context.Background(), application.Actor{SubjectID: "u3", Role: "user"}, application.ListNotificationsInput{})
+	if err != nil {
+		t.Fatalf("list notifications: %v", err)
+	}
+	if len(items) != 2 || unread != 2 {
+		t.Fatalf("expected 2 unread notifications for phase6 smoke, got len=%d unread=%d", len(items), unread)
+	}
+}

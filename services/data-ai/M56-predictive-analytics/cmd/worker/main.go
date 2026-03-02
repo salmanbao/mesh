@@ -1,7 +1,7 @@
 package main
 
-import "fmt"
+import "log"
 
 func main() {
-    fmt.Println("M56-Predictive-Analytics worker placeholder")
+	log.Println("M56-Predictive-Analytics worker has no async consumers configured yet")
 }

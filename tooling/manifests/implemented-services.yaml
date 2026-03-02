@@ -23,6 +23,7 @@ implemented_services:
   - M52-Delivery-Service
   - M54-Analytics-Service
   - M55-Dashboard-Service
+  - M56-Predictive-Analytics
   - M57-AI-Service
   - M58-Content-Recommendation-Engine
   - M66-Embed-Service

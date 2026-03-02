@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,7 +25,19 @@ func (s *Service) HandleInternalEvent(ctx context.Context, envelope contracts.Ev
 	if err := s.eventDedup.MarkProcessed(ctx, envelope.EventID, envelope.EventType, now.Add(s.cfg.EventDedupTTL)); err != nil {
 		return err
 	}
-	return domain.ErrUnsupportedEvent
+	switch strings.TrimSpace(envelope.EventType) {
+	case "dashboard.cache_invalidation":
+		userID := userIDFromEnvelope(envelope)
+		if userID == "" {
+			return domain.ErrInvalidInput
+		}
+		return s.cache.InvalidateByUser(ctx, userID)
+	case "dashboard.real_time_update":
+		// Best-effort transient update; no persistence requirement in this service.
+		return nil
+	default:
+		return domain.ErrUnsupportedEvent
+	}
 }
 
 func (s *Service) publishDLQIdempotencyConflict(ctx context.Context, key, traceID string) error {
@@ -52,4 +65,15 @@ func (s *Service) publishDLQIdempotencyConflict(ctx context.Context, key, traceI
 		SourceTopic:  "api",
 		TraceID:      traceID,
 	})
+}
+
+func userIDFromEnvelope(envelope contracts.EventEnvelope) string {
+	if payload, ok := envelope.Data.(map[string]interface{}); ok {
+		if raw, ok := payload["user_id"]; ok {
+			if userID, ok := raw.(string); ok {
+				return strings.TrimSpace(userID)
+			}
+		}
+	}
+	return strings.TrimSpace(envelope.PartitionKey)
 }
