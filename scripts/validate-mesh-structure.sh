@@ -93,7 +93,7 @@ metadata_name() {
 
 is_bootstrap_package_valid() {
   local bootstrap_dir="$1"
-  mapfile -t bootstrap_files < <(find "$bootstrap_dir" -maxdepth 1 -type f -name "*.go" | LC_ALL=C sort)
+  mapfile -t bootstrap_files < <(mesh_find "$bootstrap_dir" -maxdepth 1 -type f -name "*.go" | tr -d '\r' | mesh_sort)
 
   if [[ "${#bootstrap_files[@]}" -eq 0 ]]; then
     return 1
@@ -118,7 +118,7 @@ svc=""
 for svc in "${SERVICES[@]}"; do
   id="${SERVICE_ID[$svc]}"
   dir_name="$(directory_name "$id" "${SERVICE_NAME[$svc]}")"
-  mapfile -t matches < <(find "$ROOT_PATH/services" -type d -name "$dir_name")
+  mapfile -t matches < <(mesh_find "$ROOT_PATH/services" -type d -name "$dir_name" | tr -d '\r')
 
   if [[ "${#matches[@]}" -eq 0 ]]; then
     errors+=("Missing service directory for $svc: expected $dir_name")

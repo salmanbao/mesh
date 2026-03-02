@@ -28,7 +28,8 @@ This folder contains all mesh automation for scaffold generation, dependency ind
 | `generate-mesh-index.sh` | Generator/Check | Yes in normal mode, No in `--check` | `services/services-index.yaml`, `docs/dependency-load-order.md` |
 | `validate-mesh-structure.sh` | Validator | No | Structural pass/fail report |
 | `gate-mesh1.sh` | Gate | No | Composite check for structure + index freshness |
-| `gate-mesh-events-contracts.sh` | Gate | No | Event contract coverage pass/fail for implemented services |
+| `gate-alias-lineage.sh` | Gate | No | Alias lineage allowlist/supersedes integrity for category map |
+| `gate-mesh-events-contracts.sh` | Gate | No | Active microservice manifest coverage + event contract coverage |
 | `run-mesh-gates.sh` | Gate Runner | No | Full mesh gate sequence |
 | `contracts-buf-lint.sh` | Validator | No | Protobuf lint result |
 | `contracts-buf-breaking.sh` | Validator | No | Protobuf breaking-change result |
@@ -136,7 +137,7 @@ This folder contains all mesh automation for scaffold generation, dependency ind
   - `bash mesh/scripts/gate-mesh1.sh`
 
 ### `gate-mesh-events-contracts.sh`
-- Purpose: ensure implemented services have event schema files for all consumed/emitted canonical events.
+- Purpose: enforce active microservice coverage in implemented manifest and event schema coverage for all consumed/emitted canonical events.
 - Reads:
   - architecture map
   - dependencies
@@ -159,7 +160,8 @@ This folder contains all mesh automation for scaffold generation, dependency ind
 - Purpose: one command to run full mesh gate suite.
 - Executes:
   1. `gate-mesh1.sh`
-  2. `gate-mesh-events-contracts.sh`
+  2. `gate-alias-lineage.sh`
+  3. `gate-mesh-events-contracts.sh`
 - Typical usage:
   - `bash mesh/scripts/run-mesh-gates.sh`
 
@@ -236,6 +238,7 @@ This folder contains all mesh automation for scaffold generation, dependency ind
 - `validate-mesh-structure` fails on bootstrap:
   - ensure `internal/app/bootstrap/*.go` has `package bootstrap` and exported `Build` or `NewRuntime`.
 - `gate-mesh-events-contracts` fails:
+  - add missing active services to `tooling/manifests/implemented-services.yaml`.
   - add missing event schema JSON files in `contracts/events/`.
 
 ## Exit Semantics

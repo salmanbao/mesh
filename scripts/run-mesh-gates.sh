@@ -10,6 +10,10 @@ fi
 
 echo "[mesh-gates] running gate-mesh1..."
 bash "$ROOT_DIR/gate-mesh1.sh"
+echo "[mesh-gates] running gate-alias-lineage..."
+bash "$ROOT_DIR/gate-alias-lineage.sh" \
+  --root-path "$MESH_ROOT" \
+  --category-map-path "$SPEC_ROOT/service-category-map.yaml"
 echo "[mesh-gates] running gate-mesh-events-contracts..."
 bash "$ROOT_DIR/gate-mesh-events-contracts.sh" \
   --root-path "$MESH_ROOT" \

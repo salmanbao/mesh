@@ -1,6 +1,35 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+resolve_unix_tool() {
+  local tool="$1"
+  local candidate=""
+  for candidate in "/usr/bin/$tool" "/bin/$tool"; do
+    if [[ -x "$candidate" ]]; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+  candidate="$(type -P "$tool" 2>/dev/null || true)"
+  if [[ -n "$candidate" ]]; then
+    printf '%s' "$candidate"
+    return 0
+  fi
+  echo "Required tool '$tool' not found in Unix toolchain paths." >&2
+  return 1
+}
+
+MESH_FIND_BIN="${MESH_FIND_BIN:-$(resolve_unix_tool find)}"
+MESH_SORT_BIN="${MESH_SORT_BIN:-$(resolve_unix_tool sort)}"
+
+mesh_find() {
+  "$MESH_FIND_BIN" "$@"
+}
+
+mesh_sort() {
+  LC_ALL=C "$MESH_SORT_BIN" "$@"
+}
+
 trim() {
   local s="${1-}"
   s="${s#"${s%%[![:space:]]*}"}"
@@ -65,7 +94,7 @@ sorted_unique_block() {
   if [[ -z "$block" ]]; then
     return 0
   fi
-  printf '%s\n' "$block" | sed '/^[[:space:]]*$/d' | LC_ALL=C sort -u
+  printf '%s\n' "$block" | sed '/^[[:space:]]*$/d' | mesh_sort -u
 }
 
 map_sorted_unique() {
@@ -137,7 +166,7 @@ get_spec_summary() {
   local specs_root="$1"
   local service_id="$2"
   local spec_file=""
-  spec_file="$(find "$specs_root" -maxdepth 1 -type f -name "${service_id}-*.md" | LC_ALL=C sort | head -n1 || true)"
+  spec_file="$(mesh_find "$specs_root" -maxdepth 1 -type f -name "${service_id}-*.md" | mesh_sort | head -n1 || true)"
   if [[ -z "$spec_file" ]]; then
     printf '%s' "See canonical service specification."
     return 0
@@ -175,7 +204,7 @@ load_microservices() {
 
   local sorted_rows=()
   if ((${#rows[@]} > 0)); then
-    mapfile -t sorted_rows < <(printf '%s\n' "${rows[@]}" | LC_ALL=C sort)
+    mapfile -t sorted_rows < <(printf '%s\n' "${rows[@]}" | mesh_sort)
   fi
 
   local row=""

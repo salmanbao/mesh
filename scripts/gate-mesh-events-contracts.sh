@@ -62,10 +62,37 @@ for svc in "${SERVICES[@]}"; do
   known_micro["$svc"]="1"
 done
 
+declare -A implemented_set=()
+duplicates=()
+for svc in "${implemented[@]}"; do
+  if [[ -n "${implemented_set[$svc]-}" ]]; then
+    duplicates+=("Implemented service listed multiple times: $svc")
+  fi
+  implemented_set["$svc"]="1"
+done
+
+coverage_errors=()
+for svc in "${SERVICES[@]}"; do
+  if [[ -z "${implemented_set[$svc]-}" ]]; then
+    coverage_errors+=("Missing active microservice in implemented-services manifest: $svc")
+  fi
+done
+for svc in "${!implemented_set[@]}"; do
+  if [[ -z "${known_micro[$svc]-}" ]]; then
+    coverage_errors+=("Implemented service is not a known active microservice: $svc")
+  fi
+done
+
 missing=()
+for issue in "${duplicates[@]}"; do
+  missing+=("$issue")
+done
+for issue in "${coverage_errors[@]}"; do
+  missing+=("$issue")
+done
+
 for svc in "${implemented[@]}"; do
   if [[ -z "${known_micro[$svc]-}" ]]; then
-    missing+=("Implemented service is not a known microservice: $svc")
     continue
   fi
 

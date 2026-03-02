@@ -62,13 +62,13 @@ for svc in "${SERVICES[@]}"; do
   fi
 done
 if ((${#queue[@]} > 0)); then
-  mapfile -t queue < <(printf '%s\n' "${queue[@]}" | LC_ALL=C sort -u)
+  mapfile -t queue < <(printf '%s\n' "${queue[@]}" | mesh_sort -u)
 fi
 
 declare -a LEVELS=()
 processed=0
 while ((${#queue[@]} > 0)); do
-  level_block="$(printf '%s\n' "${queue[@]}" | LC_ALL=C sort -u)"
+  level_block="$(printf '%s\n' "${queue[@]}" | mesh_sort -u)"
   LEVELS+=("$level_block")
   next_block=""
   node=""
