@@ -12,7 +12,7 @@ See canonical service specification.
 
 ## Dependency Snapshot
 ### DBR Dependencies
-- M24-Clipping-Tool-Service
+- M24-Clipping-Tool-Service (owner_api)
 
 ### Event Dependencies
 - none
@@ -21,9 +21,10 @@ See canonical service specification.
 - none
 
 ### HTTP Provides
-- yes
+- yes (health + out-of-MVP status only)
 
 ## Implementation Notes
-- Internal service calls: gRPC.
-- External/public interfaces: REST.
-- Follow canonical contracts from viralForge/specs/M25-*.md.
+- Business APIs/events are disabled in MVP scope per canonical spec.
+- Runtime advertises a canonical error envelope (`SERVICE_OUT_OF_MVP`) for
+  non-health endpoints.
+- Follow canonical contracts from `viralForge/specs/M25-Auto-Clipping-AI.md`.

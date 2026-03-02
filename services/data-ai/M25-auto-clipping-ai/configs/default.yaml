@@ -1,11 +1,9 @@
 service:
   id: M25-Auto-Clipping-AI
   cluster: data-ai
-  http_port: 8080
+  http_port: 8086
   grpc_port: 9090
 dependencies:
-  postgres_url: ${POSTGRES_URL}
-  redis_url: ${REDIS_URL}
-  kafka_brokers: ${KAFKA_BROKERS}
+  clipping_tool_owner_api_url: ${M24_CLIPPING_TOOL_OWNER_API_URL}
 observability:
   otlp_endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}

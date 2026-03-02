@@ -16,6 +16,6 @@ spec:
         - name: api
           image: m25-auto-clipping-ai:latest
           ports:
-            - containerPort: 8080
+            - containerPort: 8086
             - containerPort: 9090
 
