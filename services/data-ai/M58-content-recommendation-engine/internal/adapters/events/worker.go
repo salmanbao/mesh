@@ -50,6 +50,11 @@ func (w *Worker) Run(ctx context.Context) error {
 				continue
 			}
 			if err := w.service.HandleInboundEvent(ctx, *event); err != nil {
+				if errors.Is(err, domain.ErrUnsupportedEventType) {
+					// M58 has no canonical inbound event dependencies; ignore unknown bus traffic.
+					w.logger.WarnContext(ctx, "unsupported inbound event ignored", "event_type", event.EventType, "event_id", event.EventID)
+					continue
+				}
 				if event.EventClass == domain.CanonicalEventClassAnalyticsOnly || domain.CanonicalEventClass(event.EventType) == domain.CanonicalEventClassAnalyticsOnly {
 					w.logger.WarnContext(ctx, "analytics-only event dropped", "event_type", event.EventType, "event_id", event.EventID, "error", err)
 					continue

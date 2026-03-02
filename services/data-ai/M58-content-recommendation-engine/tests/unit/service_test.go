@@ -2,6 +2,8 @@ package unit
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -9,6 +11,7 @@ import (
 	grpcadapter "github.com/viralforge/mesh/services/data-ai/M58-content-recommendation-engine/internal/adapters/grpc"
 	"github.com/viralforge/mesh/services/data-ai/M58-content-recommendation-engine/internal/adapters/postgres"
 	"github.com/viralforge/mesh/services/data-ai/M58-content-recommendation-engine/internal/application"
+	"github.com/viralforge/mesh/services/data-ai/M58-content-recommendation-engine/internal/contracts"
 	"github.com/viralforge/mesh/services/data-ai/M58-content-recommendation-engine/internal/domain"
 )
 
@@ -108,4 +111,47 @@ func TestApplyOverrideRequiresAdmin(t *testing.T) {
 	if err != domain.ErrForbidden {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}
+}
+
+func TestWorkerIgnoresUnsupportedInboundEventWithoutDLQ(t *testing.T) {
+	t.Parallel()
+
+	svc, _ := newService()
+	consumer := eventsadapter.NewMemoryConsumer()
+	dlq := &countingDLQPublisher{}
+	worker := eventsadapter.NewWorker(slog.New(slog.NewTextHandler(io.Discard, nil)), consumer, dlq, svc, time.Millisecond)
+
+	consumer.Seed([]contracts.EventEnvelope{
+		{
+			EventID:          "evt-unsupported-1",
+			EventType:        "user.action.clicked",
+			EventClass:       domain.CanonicalEventClassDomain,
+			OccurredAt:       time.Now().UTC(),
+			PartitionKeyPath: "data.user_id",
+			PartitionKey:     "user-1",
+			SourceService:    "web",
+			TraceID:          "trace-unsupported-1",
+			SchemaVersion:    "1.0",
+			Data:             []byte(`{"user_id":"user-1"}`),
+		},
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+
+	if err := worker.Run(ctx); err != nil {
+		t.Fatalf("worker run failed: %v", err)
+	}
+	if dlq.count != 0 {
+		t.Fatalf("expected unsupported inbound event to be ignored without DLQ, got %d DLQ publish call(s)", dlq.count)
+	}
+}
+
+type countingDLQPublisher struct {
+	count int
+}
+
+func (p *countingDLQPublisher) PublishDLQ(context.Context, contracts.DLQRecord) error {
+	p.count++
+	return nil
 }

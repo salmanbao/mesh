@@ -3,6 +3,7 @@ package unit
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/viralforge/mesh/services/trust-compliance/M96-referral-fraud-detection-service/internal/application"
 	"github.com/viralforge/mesh/services/trust-compliance/M96-referral-fraud-detection-service/internal/contracts"
 	"github.com/viralforge/mesh/services/trust-compliance/M96-referral-fraud-detection-service/internal/domain"
+	"github.com/viralforge/mesh/services/trust-compliance/M96-referral-fraud-detection-service/internal/ports"
 )
 
 func newTestService() (*application.Service, *postgres.Repositories) {
@@ -89,4 +91,68 @@ func TestScoreReferralAndDisputeIdempotency(t *testing.T) {
 	if err != domain.ErrConflict {
 		t.Fatalf("expected duplicate dispute conflict, got %v", err)
 	}
+}
+
+func TestFlushOutboxReturnsAnalyticsPublishError(t *testing.T) {
+	t.Parallel()
+
+	repos := postgres.NewRepositories()
+	svc := application.NewService(application.Dependencies{
+		ReferralEvents: repos.ReferralEvents,
+		Decisions:      repos.Decisions,
+		Policies:       repos.Policies,
+		Fingerprints:   repos.Fingerprints,
+		Clusters:       repos.Clusters,
+		Disputes:       repos.Disputes,
+		AuditLogs:      repos.AuditLogs,
+		Idempotency:    repos.Idempotency,
+		EventDedup:     repos.EventDedup,
+		Outbox:         repos.Outbox,
+		Affiliate:      grpcadapter.NewAffiliateClient("stub"),
+		DomainEvents:   eventadapter.NewMemoryDomainPublisher(),
+		Analytics:      failingAnalyticsPublisher{err: errors.New("publish failed")},
+		DLQ:            eventadapter.NewLoggingDLQPublisher(),
+	})
+
+	now := time.Now().UTC()
+	err := repos.Outbox.Enqueue(context.Background(), ports.OutboxRecord{
+		RecordID:   "outbox-analytics-1",
+		EventClass: domain.CanonicalEventClassAnalyticsOnly,
+		Envelope: contracts.EventEnvelope{
+			EventID:          "evt-analytics-1",
+			EventType:        "referral.fraud.analytics.internal",
+			EventClass:       domain.CanonicalEventClassAnalyticsOnly,
+			OccurredAt:       now,
+			PartitionKeyPath: "data.event_id",
+			PartitionKey:     "evt-analytics-1",
+			SourceService:    "M96-Referral-Fraud-Detection-Service",
+			TraceID:          "trace-analytics-1",
+			SchemaVersion:    "1.0",
+			Data:             []byte(`{"event_id":"evt-analytics-1"}`),
+		},
+		CreatedAt: now,
+	})
+	if err != nil {
+		t.Fatalf("enqueue outbox record: %v", err)
+	}
+
+	if err := svc.FlushOutbox(context.Background()); err == nil {
+		t.Fatalf("expected analytics publish error from flush outbox")
+	}
+
+	pending, err := repos.Outbox.ListPending(context.Background(), 10)
+	if err != nil {
+		t.Fatalf("list pending outbox: %v", err)
+	}
+	if len(pending) != 1 || pending[0].RecordID != "outbox-analytics-1" {
+		t.Fatalf("expected analytics record to remain pending after publish failure, got %#v", pending)
+	}
+}
+
+type failingAnalyticsPublisher struct {
+	err error
+}
+
+func (p failingAnalyticsPublisher) PublishAnalytics(context.Context, contracts.EventEnvelope) error {
+	return p.err
 }

@@ -121,7 +121,9 @@ func (s *Service) FlushOutbox(ctx context.Context) error {
 			}
 		case domain.CanonicalEventClassAnalyticsOnly:
 			if s.analytics != nil {
-				_ = s.analytics.PublishAnalytics(ctx, rec.Envelope)
+				if err := s.analytics.PublishAnalytics(ctx, rec.Envelope); err != nil {
+					return err
+				}
 			}
 		default:
 			return fmt.Errorf("%w: %s", domain.ErrUnsupportedEventClass, rec.EventClass)
