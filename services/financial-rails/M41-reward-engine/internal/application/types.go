@@ -35,6 +35,7 @@ type CalculateRewardInput struct {
 	RatePer1K               float64
 	FraudScore              float64
 	VerificationCompletedAt time.Time
+	Reason                  string
 	EventID                 string
 }
 

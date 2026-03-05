@@ -257,37 +257,51 @@ func (s *Service) VoidInvoice(ctx context.Context, actor Actor, input VoidInvoic
 }
 
 func (s *Service) CreateRefund(ctx context.Context, actor Actor, input RefundInput) error {
+	_, err := s.CreateAdminInvoiceRefund(ctx, actor, input)
+	return err
+}
+
+func (s *Service) CreateAdminInvoiceRefund(
+	ctx context.Context,
+	actor Actor,
+	input RefundInput,
+) (AdminInvoiceRefundResult, error) {
 	if actor.Role != "admin" {
-		return domain.ErrForbidden
+		return AdminInvoiceRefundResult{}, domain.ErrForbidden
 	}
 	if strings.TrimSpace(actor.IdempotencyKey) == "" {
-		return domain.ErrIdempotencyRequired
+		return AdminInvoiceRefundResult{}, domain.ErrIdempotencyRequired
 	}
 	requestHash := hashPayload(input)
 	if existing, err := s.idempotency.Get(ctx, actor.IdempotencyKey, s.nowFn()); err != nil {
-		return err
+		return AdminInvoiceRefundResult{}, err
 	} else if existing != nil {
 		if existing.RequestHash != requestHash {
-			return domain.ErrIdempotencyConflict
+			return AdminInvoiceRefundResult{}, domain.ErrIdempotencyConflict
 		}
-		return nil
+		var cached AdminInvoiceRefundResult
+		if err := json.Unmarshal(existing.ResponseBody, &cached); err != nil {
+			return AdminInvoiceRefundResult{}, err
+		}
+		return cached, nil
 	}
 	if err := s.idempotency.Reserve(ctx, actor.IdempotencyKey, requestHash, s.nowFn().Add(s.cfg.IdempotencyTTL)); err != nil {
-		return err
+		return AdminInvoiceRefundResult{}, err
 	}
 
 	invoice, err := s.invoices.GetByID(ctx, input.InvoiceID)
 	if err != nil {
-		return err
+		return AdminInvoiceRefundResult{}, err
 	}
 	now := s.nowFn()
 	invoice.PaymentStatus = domain.PaymentStatusRefunded
 	invoice.UpdatedAt = now
 	if err := s.invoices.Update(ctx, invoice); err != nil {
-		return err
+		return AdminInvoiceRefundResult{}, err
 	}
+	refundID := uuid.NewString()
 	if err := s.invoices.RecordPayment(ctx, domain.InvoicePayment{
-		PaymentID:      uuid.NewString(),
+		PaymentID:      refundID,
 		InvoiceID:      invoice.InvoiceID,
 		TransactionRef: "refund-" + uuid.NewString(),
 		Amount:         input.Amount,
@@ -296,12 +310,27 @@ func (s *Service) CreateRefund(ctx context.Context, actor Actor, input RefundInp
 		Method:         "stripe",
 		ProcessedAt:    now,
 	}); err != nil {
-		return err
+		return AdminInvoiceRefundResult{}, err
 	}
 	if err := s.finance.RecordTransaction(ctx, "refund", invoice.InvoiceID, input.Amount, invoice.Currency); err != nil {
-		return err
+		return AdminInvoiceRefundResult{}, err
 	}
-	return s.idempotency.Complete(ctx, actor.IdempotencyKey, 201, []byte(`{"status":"success"}`), now)
+	result := AdminInvoiceRefundResult{
+		RefundID:    refundID,
+		InvoiceID:   invoice.InvoiceID,
+		LineItemID:  input.LineItemID,
+		Amount:      input.Amount,
+		Reason:      input.Reason,
+		ProcessedAt: now,
+	}
+	payload, err := json.Marshal(result)
+	if err != nil {
+		return AdminInvoiceRefundResult{}, err
+	}
+	if err := s.idempotency.Complete(ctx, actor.IdempotencyKey, 201, payload, now); err != nil {
+		return AdminInvoiceRefundResult{}, err
+	}
+	return result, nil
 }
 
 func (s *Service) RequestBillingExport(ctx context.Context, actor Actor) (string, error) {

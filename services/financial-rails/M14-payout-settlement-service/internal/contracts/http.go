@@ -11,6 +11,10 @@ type RequestPayoutRequest struct {
 	ScheduledAt  time.Time `json:"scheduled_at"`
 }
 
+type RetryFailedPayoutRequest struct {
+	Reason string `json:"reason"`
+}
+
 type Pagination struct {
 	Limit  int `json:"limit"`
 	Offset int `json:"offset"`

@@ -42,6 +42,11 @@ type ApproveDisputeInput struct {
 	ResolutionNotes string
 }
 
+type ReopenDisputeInput struct {
+	Reason string
+	Notes  string
+}
+
 type Service struct {
 	cfg Config
 

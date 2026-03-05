@@ -7,6 +7,7 @@ import (
 	eventadapter "github.com/viralforge/mesh/services/integrations/M89-affiliate-service/internal/adapters/events"
 	"github.com/viralforge/mesh/services/integrations/M89-affiliate-service/internal/adapters/postgres"
 	"github.com/viralforge/mesh/services/integrations/M89-affiliate-service/internal/application"
+	"github.com/viralforge/mesh/services/integrations/M89-affiliate-service/internal/domain"
 )
 
 func newServiceWithPublisher() (*application.Service, *eventadapter.MemoryDomainPublisher) {
@@ -93,6 +94,7 @@ func TestRecordAttributionCreatesPendingEarning(t *testing.T) {
 		ConversionID: "conv-1",
 		Amount:       200,
 		Currency:     "USD",
+		Reason:       "manual attribution",
 	})
 	if err != nil {
 		t.Fatalf("record attribution: %v", err)
@@ -112,5 +114,33 @@ func TestRecordAttributionCreatesPendingEarning(t *testing.T) {
 	}
 	if dashboard.PendingEarnings <= 0 {
 		t.Fatalf("expected pending earnings > 0, got %f", dashboard.PendingEarnings)
+	}
+}
+
+func TestRecordAttributionRequiresAdminActor(t *testing.T) {
+	svc, _ := newServiceWithPublisher()
+	ctx := context.Background()
+
+	affiliateActor := application.Actor{SubjectID: "user-4", Role: "affiliate", IdempotencyKey: "idem-link-4"}
+	link, err := svc.CreateReferralLink(ctx, affiliateActor, application.CreateReferralLinkInput{Channel: "blog"})
+	if err != nil {
+		t.Fatalf("create link: %v", err)
+	}
+	click, err := svc.TrackReferralClick(ctx, application.TrackClickInput{Token: link.Token, ClientIP: "198.51.100.9", UserAgent: "UA", ReferrerURL: "https://ref.example"})
+	if err != nil {
+		t.Fatalf("track click: %v", err)
+	}
+
+	nonAdmin := application.Actor{SubjectID: "user-4", Role: "affiliate", IdempotencyKey: "idem-attr-non-admin"}
+	_, err = svc.RecordAttribution(ctx, nonAdmin, application.RecordAttributionInput{
+		AffiliateID:  click.AffiliateID,
+		OrderID:      "ord-na-1",
+		ConversionID: "conv-na-1",
+		Amount:       50,
+		Currency:     "USD",
+		Reason:       "manual attribution",
+	})
+	if err != domain.ErrForbidden {
+		t.Fatalf("expected forbidden error for non-admin actor, got %v", err)
 	}
 }

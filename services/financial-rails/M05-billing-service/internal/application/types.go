@@ -51,6 +51,15 @@ type RefundInput struct {
 	Reason     string
 }
 
+type AdminInvoiceRefundResult struct {
+	RefundID    string
+	InvoiceID   string
+	LineItemID  string
+	Amount      float64
+	Reason      string
+	ProcessedAt time.Time
+}
+
 type Service struct {
 	cfg          Config
 	invoices     ports.InvoiceRepository

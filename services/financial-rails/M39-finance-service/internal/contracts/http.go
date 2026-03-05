@@ -21,6 +21,11 @@ type CreateRefundRequest struct {
 	Reason        string  `json:"reason"`
 }
 
+type AdminRefundTransactionRequest struct {
+	Amount float64 `json:"amount"`
+	Reason string  `json:"reason"`
+}
+
 type ProviderWebhookRequest struct {
 	WebhookID             string  `json:"webhook_id"`
 	Provider              string  `json:"provider"`

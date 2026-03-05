@@ -8,7 +8,7 @@
 - Architecture: microservice
 
 ## Primary Responsibility
-Manage disputes and refund-resolution workflows, including dispute submission, messaging, approval, and event-driven workflow updates.
+Manage disputes and refund-resolution workflows, including dispute submission, messaging, resolution/reopen actions, and event-driven workflow updates.
 
 ## Dependency Snapshot
 ### DBR Dependencies
@@ -24,7 +24,7 @@ Manage disputes and refund-resolution workflows, including dispute submission, m
 - transaction.refunded (listed in dependencies.yaml but removed here per canonical registry/04-services: M39 Finance is producer; M44 no longer emits)
 
 ### HTTP Provides
-- yes (`POST /api/v1/disputes`, `GET /api/v1/disputes/{dispute_id}`, `POST /api/v1/disputes/{dispute_id}/messages`, `POST /api/v1/admin/disputes/{dispute_id}/approve`)
+- yes (`POST /api/v1/disputes`, `GET /api/v1/disputes/{dispute_id}`, `POST /api/v1/disputes/{dispute_id}/messages`, `POST /api/v1/admin/disputes/{dispute_id}/approve`, `POST /api/v1/admin/disputes/{dispute_id}/resolve`, `POST /api/v1/admin/disputes/{dispute_id}/reopen`)
 
 ## Implementation Notes
 - Internal sync dependency access uses gRPC (`M35` moderation owner API).

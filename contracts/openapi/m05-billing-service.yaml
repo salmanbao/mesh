@@ -197,6 +197,34 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '500': { $ref: '#/components/responses/InternalError' }
+  /v1/admin/invoices/{invoice_id}/refund:
+    post:
+      tags: [Refunds]
+      summary: Create invoice refund (admin owner route)
+      operationId: createAdminInvoiceRefund
+      parameters:
+        - $ref: '#/components/parameters/InvoiceID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminInvoiceRefundRequest'
+      responses:
+        '200':
+          description: Refund created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminInvoiceRefundResponseEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
   /v1/user/billing/export:
     get:
       tags: [Billing]
@@ -445,6 +473,30 @@ components:
         line_item_id: { type: string }
         amount: { type: number, format: double }
         reason: { type: string }
+    AdminInvoiceRefundRequest:
+      type: object
+      required: [line_item_id, amount, reason]
+      properties:
+        line_item_id: { type: string }
+        amount: { type: number, format: double }
+        reason: { type: string }
+    AdminInvoiceRefundResponse:
+      type: object
+      properties:
+        refund_id: { type: string }
+        invoice_id: { type: string }
+        line_item_id: { type: string }
+        amount: { type: number, format: double }
+        reason: { type: string }
+        processed_at:
+          type: string
+          format: date-time
+    AdminInvoiceRefundResponseEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          $ref: '#/components/schemas/AdminInvoiceRefundResponse'
     InvoiceResponse:
       type: object
       properties:

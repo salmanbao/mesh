@@ -28,6 +28,7 @@ func NewRouter(handler *Handler) http.Handler {
 			r.Post("/payouts/request", handler.requestPayout)
 			r.Get("/payouts/{id}", handler.getPayout)
 			r.Get("/payouts/history", handler.listHistory)
+			r.Post("/admin/payouts/{id}/retry", handler.retryFailedPayout)
 		})
 	})
 	return r

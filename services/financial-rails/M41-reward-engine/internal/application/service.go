@@ -200,9 +200,14 @@ func (s *Service) calculateWithKey(ctx context.Context, input CalculateRewardInp
 		Action:       "reward_calculated",
 		Amount:       netAmount,
 		CreatedAt:    now,
-		Metadata: map[string]string{
-			"status": string(status),
-		},
+		Metadata: func() map[string]string {
+			meta := map[string]string{"status": string(status)}
+			if reason := strings.TrimSpace(input.Reason); reason != "" {
+				meta["reason"] = reason
+				meta["source"] = "admin_recalculate"
+			}
+			return meta
+		}(),
 	}); err != nil {
 		return domain.Reward{}, err
 	}

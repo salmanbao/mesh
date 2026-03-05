@@ -33,6 +33,7 @@ func NewRouter(handler *Handler) http.Handler {
 			r.Post("/invoices/{invoice_id}/void", handler.voidInvoice)
 			r.Get("/user/invoices", handler.listUserInvoices)
 			r.Get("/admin/invoices", handler.searchInvoices)
+			r.Post("/admin/invoices/{invoice_id}/refund", handler.createAdminInvoiceRefund)
 			r.Get("/user/billing/export", handler.requestBillingExport)
 			r.Post("/user/billing/delete-request", handler.requestBillingDelete)
 			r.Post("/refunds", handler.createRefund)

@@ -144,6 +144,7 @@ func (h *Handler) manualAttribution(w http.ResponseWriter, r *http.Request) {
 		ConversionID: req.ConversionID,
 		Amount:       req.Amount,
 		Currency:     req.Currency,
+		Reason:       req.Reason,
 	})
 	if err != nil {
 		code, c := mapDomainError(err)

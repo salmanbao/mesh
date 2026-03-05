@@ -98,6 +98,71 @@ func TestHandleDomainEventDedup(t *testing.T) {
 	}
 }
 
+func TestCreateAdminInvoiceRefundIdempotency(t *testing.T) {
+	t.Parallel()
+
+	repos := postgres.NewRepositories()
+	svc := application.NewService(application.Dependencies{
+		Invoices:     repos.Invoices,
+		Idempotency:  repos.Idempotency,
+		EventDedup:   repos.EventDedup,
+		Auth:         stubAuth{},
+		Catalog:      stubCatalog{},
+		Fees:         stubFees{},
+		Finance:      stubFinance{},
+		Subscription: stubSubscription{},
+	})
+
+	actor := application.Actor{
+		SubjectID:      "admin-user",
+		Role:           "admin",
+		IdempotencyKey: "refund-create:test",
+	}
+
+	invoice, err := svc.CreateInvoice(context.Background(), application.Actor{
+		SubjectID:      "admin-user",
+		Role:           "admin",
+		IdempotencyKey: "invoice-create:refund-seed",
+	}, application.CreateInvoiceInput{
+		CustomerID:    "customer-refund-1",
+		CustomerName:  "Customer Refund",
+		CustomerEmail: "customer-refund@example.com",
+		BillingAddress: domain.Address{
+			Line1:      "123 Main",
+			City:       "SF",
+			State:      "CA",
+			PostalCode: "94105",
+			Country:    "US",
+		},
+		InvoiceType: "invoice",
+		LineItems: []domain.InvoiceLineItem{
+			{Description: "Item", Quantity: 1, UnitPrice: 100},
+		},
+		DueDate: time.Now().UTC().Add(24 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("seed invoice: %v", err)
+	}
+
+	input := application.RefundInput{
+		InvoiceID:  invoice.InvoiceID,
+		LineItemID: "line-1",
+		Amount:     25,
+		Reason:     "duplicate charge",
+	}
+	first, err := svc.CreateAdminInvoiceRefund(context.Background(), actor, input)
+	if err != nil {
+		t.Fatalf("first admin refund: %v", err)
+	}
+	second, err := svc.CreateAdminInvoiceRefund(context.Background(), actor, input)
+	if err != nil {
+		t.Fatalf("second admin refund: %v", err)
+	}
+	if first.RefundID == "" || second.RefundID == "" || first.RefundID != second.RefundID {
+		t.Fatalf("expected idempotent refund replay, first=%+v second=%+v", first, second)
+	}
+}
+
 type stubAuth struct{}
 type stubCatalog struct{}
 type stubFees struct{}

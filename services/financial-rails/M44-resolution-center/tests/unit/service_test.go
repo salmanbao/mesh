@@ -88,3 +88,41 @@ func TestHandleCanonicalEventDedup(t *testing.T) {
 		t.Fatalf("duplicate handle should be no-op: %v", err)
 	}
 }
+
+func TestReopenResolvedDispute(t *testing.T) {
+	t.Parallel()
+	svc, _, _, _ := newService()
+
+	user := application.Actor{SubjectID: "user-2", Role: "user", RequestID: "req-u2", IdempotencyKey: "idem-dispute-3"}
+	dispute, err := svc.CreateDispute(context.Background(), user, application.CreateDisputeInput{
+		DisputeType:       domain.DisputeTypeRefundRequest,
+		TransactionID:     "txn-3",
+		ReasonCategory:    "duplicate_charge",
+		JustificationText: "A duplicate charge appears on my statement and I have uploaded matching invoice numbers for review by the team.",
+		RequestedAmount:   75,
+	})
+	if err != nil {
+		t.Fatalf("create dispute: %v", err)
+	}
+	staff := application.Actor{SubjectID: "admin-1", Role: "admin", RequestID: "req-admin-3", IdempotencyKey: "idem-approve-3"}
+	_, err = svc.ApproveDispute(context.Background(), staff, dispute.DisputeID, application.ApproveDisputeInput{
+		RefundAmount:    50,
+		ApprovalReason:  "partial evidence accepted",
+		ResolutionNotes: "partial refund",
+	})
+	if err != nil {
+		t.Fatalf("resolve dispute: %v", err)
+	}
+
+	reopenActor := application.Actor{SubjectID: "admin-1", Role: "admin", RequestID: "req-admin-4", IdempotencyKey: "idem-reopen-1"}
+	reopened, err := svc.ReopenDispute(context.Background(), reopenActor, dispute.DisputeID, application.ReopenDisputeInput{
+		Reason: "new evidence received",
+		Notes:  "re-open for second review",
+	})
+	if err != nil {
+		t.Fatalf("reopen dispute: %v", err)
+	}
+	if reopened.Status != domain.DisputeStatusReopened {
+		t.Fatalf("expected reopened status, got %s", reopened.Status)
+	}
+}

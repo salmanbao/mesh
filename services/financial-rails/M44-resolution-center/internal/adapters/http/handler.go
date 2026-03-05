@@ -104,6 +104,65 @@ func (h *Handler) approveDispute(w http.ResponseWriter, r *http.Request) {
 	writeSuccess(w, http.StatusOK, "", map[string]any{"dispute_id": dispute.DisputeID, "status": dispute.Status, "resolution_type": dispute.ResolutionType, "refund_amount": dispute.ApprovedRefundAmount, "processed_at": dispute.ResolvedAt})
 }
 
+func (h *Handler) resolveDispute(w http.ResponseWriter, r *http.Request) {
+	actor := actorFromContext(r.Context())
+	var req contracts.ResolveDisputeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", err.Error(), requestIDFromContext(r.Context()))
+		return
+	}
+	dispute, err := h.service.ApproveDispute(
+		r.Context(),
+		actor,
+		chi.URLParam(r, "dispute_id"),
+		application.ApproveDisputeInput{
+			RefundAmount:    req.RefundAmount,
+			ApprovalReason:  strings.TrimSpace(req.Reason),
+			ResolutionNotes: strings.TrimSpace(req.Notes),
+		},
+	)
+	if err != nil {
+		status, code := mapDomainError(err)
+		writeError(w, status, code, err.Error(), requestIDFromContext(r.Context()))
+		return
+	}
+	writeSuccess(w, http.StatusOK, "", map[string]any{
+		"dispute_id":      dispute.DisputeID,
+		"status":          dispute.Status,
+		"resolution_type": dispute.ResolutionType,
+		"refund_amount":   dispute.ApprovedRefundAmount,
+		"processed_at":    dispute.ResolvedAt,
+	})
+}
+
+func (h *Handler) reopenDispute(w http.ResponseWriter, r *http.Request) {
+	actor := actorFromContext(r.Context())
+	var req contracts.ReopenDisputeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", err.Error(), requestIDFromContext(r.Context()))
+		return
+	}
+	dispute, err := h.service.ReopenDispute(
+		r.Context(),
+		actor,
+		chi.URLParam(r, "dispute_id"),
+		application.ReopenDisputeInput{
+			Reason: strings.TrimSpace(req.Reason),
+			Notes:  strings.TrimSpace(req.Notes),
+		},
+	)
+	if err != nil {
+		status, code := mapDomainError(err)
+		writeError(w, status, code, err.Error(), requestIDFromContext(r.Context()))
+		return
+	}
+	writeSuccess(w, http.StatusOK, "", map[string]any{
+		"dispute_id":   dispute.DisputeID,
+		"status":       dispute.Status,
+		"processed_at": dispute.UpdatedAt,
+	})
+}
+
 func mapEvidenceFiles(in []contracts.EvidenceFile) []domain.EvidenceFile {
 	out := make([]domain.EvidenceFile, 0, len(in))
 	for _, item := range in {

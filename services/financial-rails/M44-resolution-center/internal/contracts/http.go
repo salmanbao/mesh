@@ -25,6 +25,17 @@ type ApproveDisputeRequest struct {
 	ResolutionNotes string  `json:"resolution_notes"`
 }
 
+type ResolveDisputeRequest struct {
+	Reason       string  `json:"reason"`
+	Notes        string  `json:"notes"`
+	RefundAmount float64 `json:"refund_amount"`
+}
+
+type ReopenDisputeRequest struct {
+	Reason string `json:"reason"`
+	Notes  string `json:"notes"`
+}
+
 type SuccessResponse struct {
 	Status  string      `json:"status"`
 	Message string      `json:"message,omitempty"`

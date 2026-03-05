@@ -181,6 +181,56 @@ func (s *Service) CreateRefund(ctx context.Context, actor Actor, input CreateRef
 	return refund, nil
 }
 
+func (s *Service) RefundTransaction(
+	ctx context.Context,
+	actor Actor,
+	transactionID string,
+	amount float64,
+	reason string,
+) (domain.Refund, error) {
+	if strings.TrimSpace(actor.SubjectID) == "" {
+		return domain.Refund{}, domain.ErrUnauthorized
+	}
+	if actor.Role != "admin" {
+		return domain.Refund{}, domain.ErrForbidden
+	}
+	if strings.TrimSpace(actor.IdempotencyKey) == "" {
+		return domain.Refund{}, domain.ErrIdempotencyRequired
+	}
+
+	transaction, err := s.transactions.GetByID(ctx, strings.TrimSpace(transactionID))
+	if err != nil {
+		return domain.Refund{}, err
+	}
+	if amount <= 0 || amount > transaction.Amount {
+		return domain.Refund{}, domain.ErrInvalidInput
+	}
+	input := CreateRefundInput{
+		TransactionID: transaction.TransactionID,
+		UserID:        transaction.UserID,
+		Amount:        amount,
+		Reason:        strings.TrimSpace(reason),
+	}
+	requestHash := hashPayload(input)
+	now := s.nowFn()
+	existing, err := s.idempotency.Get(ctx, actor.IdempotencyKey, now)
+	if err != nil {
+		return domain.Refund{}, err
+	}
+	if existing != nil {
+		if existing.RequestHash != requestHash {
+			return domain.Refund{}, domain.ErrIdempotencyConflict
+		}
+		var cached domain.Refund
+		if err := json.Unmarshal(existing.ResponseBody, &cached); err != nil {
+			return domain.Refund{}, err
+		}
+		return cached, nil
+	}
+
+	return s.CreateRefund(ctx, actor, input)
+}
+
 func (s *Service) HandleProviderWebhook(ctx context.Context, input HandleWebhookInput) (domain.Transaction, error) {
 	if err := domain.ValidateWebhookInput(input.WebhookID, input.Provider, input.EventType); err != nil {
 		return domain.Transaction{}, err

@@ -44,6 +44,21 @@ type RefundRequest struct {
 	Reason     string  `json:"reason"`
 }
 
+type AdminInvoiceRefundRequest struct {
+	LineItemID string  `json:"line_item_id"`
+	Amount     float64 `json:"amount"`
+	Reason     string  `json:"reason"`
+}
+
+type AdminInvoiceRefundResponse struct {
+	RefundID    string  `json:"refund_id"`
+	InvoiceID   string  `json:"invoice_id"`
+	LineItemID  string  `json:"line_item_id"`
+	Amount      float64 `json:"amount"`
+	Reason      string  `json:"reason"`
+	ProcessedAt string  `json:"processed_at"`
+}
+
 type DeleteRequest struct {
 	Reason string `json:"reason"`
 }

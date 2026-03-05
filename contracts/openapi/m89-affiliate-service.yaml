@@ -282,13 +282,14 @@ components:
         updated_at: { type: string, format: date-time }
     ManualAttributionRequest:
       type: object
-      required: [order_id, conversion_id, amount]
+      required: [order_id, conversion_id, amount, reason]
       properties:
         click_id: { type: string }
         order_id: { type: string }
         conversion_id: { type: string }
         amount: { type: number }
         currency: { type: string }
+        reason: { type: string }
     ManualAttributionResponse:
       type: object
       properties:

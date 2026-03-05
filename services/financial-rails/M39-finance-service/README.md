@@ -17,6 +17,7 @@ Implementation follows canonical layering:
 - `GET /v1/transactions`
 - `GET /v1/balances/{userID}`
 - `POST /v1/refunds`
+- `POST /v1/admin/transactions/{id}/refund`
 - `POST /v1/webhooks/provider`
 
 ### gRPC (internal sync)

@@ -120,6 +120,24 @@ func LoadConfig(path string) (Config, error) {
 	cfg.EventDedupTTL = time.Duration(envInt("EVENT_DEDUP_TTL_HOURS", int(cfg.EventDedupTTL.Hours()))) * time.Hour
 	cfg.ConsumerPollInterval = time.Duration(envInt("CONSUMER_POLL_SECONDS", int(cfg.ConsumerPollInterval.Seconds()))) * time.Second
 
+	if isProductionRuntime() {
+		if strings.TrimSpace(cfg.AuthGRPCURL) == "" {
+			return Config{}, fmt.Errorf("AUTH_GRPC_URL is required in production")
+		}
+		if strings.TrimSpace(cfg.CatalogGRPCURL) == "" {
+			return Config{}, fmt.Errorf("CATALOG_GRPC_URL is required in production")
+		}
+		if strings.TrimSpace(cfg.FeeEngineGRPCURL) == "" {
+			return Config{}, fmt.Errorf("FEE_ENGINE_GRPC_URL is required in production")
+		}
+		if strings.TrimSpace(cfg.FinanceGRPCURL) == "" {
+			return Config{}, fmt.Errorf("FINANCE_GRPC_URL is required in production")
+		}
+		if strings.TrimSpace(cfg.SubscriptionGRPCURL) == "" {
+			return Config{}, fmt.Errorf("SUBSCRIPTION_GRPC_URL is required in production")
+		}
+	}
+
 	return cfg, nil
 }
 
@@ -160,4 +178,14 @@ func trimNonEmpty(values []string) []string {
 		}
 	}
 	return out
+}
+
+func isProductionRuntime() bool {
+	for _, key := range []string{"SERVICE_RUNTIME_MODE", "RUNTIME_MODE", "APP_ENV"} {
+		raw := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+		if raw == "prod" || raw == "production" {
+			return true
+		}
+	}
+	return false
 }

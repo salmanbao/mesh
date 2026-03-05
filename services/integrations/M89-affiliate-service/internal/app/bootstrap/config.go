@@ -2,8 +2,10 @@ package bootstrap
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -48,7 +50,7 @@ func LoadConfig(path string) (Config, error) {
 		ServiceID:            "M89-Affiliate-Service",
 		HTTPPort:             8080,
 		GRPCPort:             9090,
-		PublicBaseURL:        "https://platform.com",
+		PublicBaseURL:        "",
 		CommissionRate:       0.10,
 		PayoutThreshold:      100.0,
 		ReferralCookieTTL:    30 * 24 * time.Hour,
@@ -106,6 +108,19 @@ func LoadConfig(path string) (Config, error) {
 	cfg.EventDedupTTL = time.Duration(envInt("EVENT_DEDUP_TTL_HOURS", int(cfg.EventDedupTTL.Hours()))) * time.Hour
 	cfg.ConsumerPollInterval = time.Duration(envInt("CONSUMER_POLL_SECONDS", int(cfg.ConsumerPollInterval.Seconds()))) * time.Second
 	cfg.OutboxFlushBatchSize = envInt("OUTBOX_FLUSH_BATCH_SIZE", cfg.OutboxFlushBatchSize)
+
+	if isProductionRuntime() {
+		if strings.TrimSpace(cfg.PublicBaseURL) == "" {
+			return Config{}, fmt.Errorf("PUBLIC_BASE_URL is required in production")
+		}
+		parsed, err := url.Parse(strings.TrimSpace(cfg.PublicBaseURL))
+		if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+			return Config{}, fmt.Errorf("PUBLIC_BASE_URL must be an absolute URL in production")
+		}
+	} else if strings.TrimSpace(cfg.PublicBaseURL) == "" {
+		cfg.PublicBaseURL = "https://platform.com"
+	}
+
 	return cfg, nil
 }
 
@@ -132,4 +147,14 @@ func envString(name, fallback string) string {
 		return raw
 	}
 	return fallback
+}
+
+func isProductionRuntime() bool {
+	for _, key := range []string{"SERVICE_RUNTIME_MODE", "RUNTIME_MODE", "APP_ENV"} {
+		raw := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+		if raw == "prod" || raw == "production" {
+			return true
+		}
+	}
+	return false
 }

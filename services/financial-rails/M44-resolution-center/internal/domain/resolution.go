@@ -30,6 +30,7 @@ const (
 	DisputeStatusEscalated      = "escalated"
 	DisputeStatusAwaitingAction = "awaiting_action"
 	DisputeStatusResolved       = "resolved"
+	DisputeStatusReopened       = "reopened"
 	DisputeStatusWithdrawn      = "withdrawn"
 )
 
@@ -235,6 +236,8 @@ func ValidateStatusTransition(from, to string) error {
 		DisputeStatusUnderReview:    {DisputeStatusAwaitingAction: true, DisputeStatusResolved: true, DisputeStatusEscalated: true, DisputeStatusMediation(): true},
 		DisputeStatusEscalated:      {DisputeStatusResolved: true, DisputeStatusAwaitingAction: true},
 		DisputeStatusAwaitingAction: {DisputeStatusResolved: true},
+		DisputeStatusResolved:       {DisputeStatusReopened: true},
+		DisputeStatusReopened:       {DisputeStatusUnderReview: true, DisputeStatusResolved: true, DisputeStatusEscalated: true},
 	}
 	if next, ok := allowed[from]; ok && next[to] {
 		return nil

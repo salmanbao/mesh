@@ -109,3 +109,61 @@ func TestHandleRewardEligibleEventDedup(t *testing.T) {
 		t.Fatalf("handle duplicate event: %v", err)
 	}
 }
+
+func TestRetryFailedPayoutIdempotency(t *testing.T) {
+	t.Parallel()
+
+	repos := postgres.NewRepositories()
+	svc := application.NewService(application.Dependencies{
+		Payouts:      repos.Payouts,
+		Idempotency:  repos.Idempotency,
+		EventDedup:   repos.EventDedup,
+		Outbox:       repos.Outbox,
+		Auth:         grpcadapter.NewAuthClient(""),
+		Profile:      grpcadapter.NewProfileClient(""),
+		Billing:      grpcadapter.NewBillingClient(""),
+		Escrow:       grpcadapter.NewEscrowClient(""),
+		Risk:         grpcadapter.NewRiskClient(""),
+		Finance:      grpcadapter.NewFinanceClient(""),
+		Reward:       grpcadapter.NewRewardClient(""),
+		DomainEvents: eventadapter.NewMemoryDomainPublisher(),
+		Analytics:    eventadapter.NewMemoryAnalyticsPublisher(),
+		DLQ:          eventadapter.NewLoggingDLQPublisher(),
+	})
+
+	failedPayout, err := svc.RequestPayout(context.Background(), application.Actor{
+		SubjectID:      "user-1",
+		Role:           "user",
+		IdempotencyKey: "pay:req:user-1:sub-failed",
+	}, application.RequestPayoutInput{
+		UserID:       "user-1",
+		SubmissionID: "sub-failed",
+		Amount:       20000,
+		Currency:     "USD",
+		Method:       domain.PayoutMethodInstant,
+		ScheduledAt:  time.Now().UTC(),
+	})
+	if err != nil {
+		t.Fatalf("seed failed payout: %v", err)
+	}
+	if failedPayout.Status != domain.PayoutStatusFailed {
+		t.Fatalf("expected failed payout seed status, got %s", failedPayout.Status)
+	}
+
+	adminActor := application.Actor{
+		SubjectID:      "admin-1",
+		Role:           "admin",
+		IdempotencyKey: "pay:retry:admin-1",
+	}
+	first, err := svc.RetryFailedPayout(context.Background(), adminActor, failedPayout.PayoutID, "provider recovered")
+	if err != nil {
+		t.Fatalf("first retry failed: %v", err)
+	}
+	second, err := svc.RetryFailedPayout(context.Background(), adminActor, failedPayout.PayoutID, "provider recovered")
+	if err != nil {
+		t.Fatalf("replay retry failed: %v", err)
+	}
+	if first.PayoutID != second.PayoutID || first.Status != second.Status {
+		t.Fatalf("expected idempotent retry replay")
+	}
+}

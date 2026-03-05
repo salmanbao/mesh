@@ -34,6 +34,7 @@ func NewRouter(handler *Handler) http.Handler {
 			r.Get("/transactions", handler.listTransactions)
 			r.Get("/balances/{userID}", handler.getBalance)
 			r.Post("/refunds", handler.createRefund)
+			r.Post("/admin/transactions/{id}/refund", handler.adminRefundTransaction)
 		})
 	})
 	return r

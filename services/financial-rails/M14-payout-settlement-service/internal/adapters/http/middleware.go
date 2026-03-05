@@ -39,6 +39,10 @@ func isMutatingMethod(method string) bool {
 
 func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isMutatingMethod(r.Method) && strings.TrimSpace(r.Header.Get("Idempotency-Key")) == "" {
+			writeError(w, http.StatusBadRequest, "missing_idempotency_key", "Idempotency-Key is required for mutating operations", requestIDFromContext(r.Context()))
+			return
+		}
 		authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
 		if !strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
 			writeError(w, http.StatusUnauthorized, "unauthorized", "missing bearer token", requestIDFromContext(r.Context()))

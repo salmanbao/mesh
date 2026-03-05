@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/viralforge/mesh/services/financial-rails/M41-reward-engine/internal/application"
@@ -78,6 +79,51 @@ func (h *Handler) listRewardHistory(w http.ResponseWriter, r *http.Request) {
 			Total:  out.Total,
 		},
 	})
+}
+
+func (h *Handler) recalculateAdminReward(w http.ResponseWriter, r *http.Request) {
+	actor := actorFromContext(r.Context())
+	if actor.Role != "admin" {
+		writeError(w, http.StatusForbidden, "forbidden", "admin role required", requestIDFromContext(r.Context()))
+		return
+	}
+	var req contracts.AdminRecalculateRewardRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", err.Error(), requestIDFromContext(r.Context()))
+		return
+	}
+	if strings.TrimSpace(req.Reason) == "" {
+		writeError(w, http.StatusBadRequest, "invalid_input", "reason is required", requestIDFromContext(r.Context()))
+		return
+	}
+	reward, err := h.service.CalculateReward(r.Context(), actor, application.CalculateRewardInput{
+		UserID:                  strings.TrimSpace(req.UserID),
+		SubmissionID:            strings.TrimSpace(req.SubmissionID),
+		CampaignID:              strings.TrimSpace(req.CampaignID),
+		LockedViews:             req.LockedViews,
+		RatePer1K:               req.RatePer1K,
+		FraudScore:              req.FraudScore,
+		VerificationCompletedAt: req.VerificationCompletedAt,
+		Reason:                  strings.TrimSpace(req.Reason),
+	})
+	if err != nil {
+		status, code := mapDomainError(err)
+		writeError(w, status, code, err.Error(), requestIDFromContext(r.Context()))
+		return
+	}
+	resp := contracts.AdminRecalculateRewardResponse{
+		SubmissionID:  reward.SubmissionID,
+		UserID:        reward.UserID,
+		CampaignID:    reward.CampaignID,
+		Status:        string(reward.Status),
+		NetAmount:     reward.NetAmount,
+		RolloverTotal: reward.RolloverBalance,
+		CalculatedAt:  reward.CalculatedAt.UTC().Format(time.RFC3339),
+	}
+	if reward.EligibleAt != nil {
+		resp.EligibleAt = reward.EligibleAt.UTC().Format(time.RFC3339)
+	}
+	writeSuccess(w, http.StatusOK, "", resp)
 }
 
 func parseIntOrDefault(raw string, fallback int) int {

@@ -78,6 +78,7 @@ type ManualAttributionRequest struct {
 	Amount       float64 `json:"amount"`
 	Currency     string  `json:"currency"`
 	ClickID      string  `json:"click_id,omitempty"`
+	Reason       string  `json:"reason"`
 }
 
 type ManualAttributionResponse struct {

@@ -115,3 +115,63 @@ func TestWebhookDedup(t *testing.T) {
 		t.Fatalf("handle duplicate webhook: %v", err)
 	}
 }
+
+func TestAdminRefundTransactionIdempotency(t *testing.T) {
+	t.Parallel()
+
+	repos := postgres.NewRepositories()
+	svc := application.NewService(application.Dependencies{
+		Transactions:   repos.Transactions,
+		Refunds:        repos.Refunds,
+		Balances:       repos.Balances,
+		Webhooks:       repos.Webhooks,
+		Idempotency:    repos.Idempotency,
+		EventDedup:     repos.EventDedup,
+		Outbox:         repos.Outbox,
+		Auth:           grpcadapter.NewAuthClient(""),
+		Campaign:       grpcadapter.NewCampaignClient(""),
+		ContentLibrary: grpcadapter.NewContentLibraryClient(""),
+		Escrow:         grpcadapter.NewEscrowClient(""),
+		FeeEngine:      grpcadapter.NewFeeEngineClient(""),
+		Product:        grpcadapter.NewProductClient(""),
+		DomainEvents:   eventadapter.NewMemoryDomainPublisher(),
+		Analytics:      eventadapter.NewMemoryAnalyticsPublisher(),
+		DLQ:            eventadapter.NewLoggingDLQPublisher(),
+	})
+
+	userActor := application.Actor{
+		SubjectID:      "user-1",
+		Role:           "user",
+		IdempotencyKey: "txn:req:user-1:campaign-2",
+	}
+	tx, err := svc.CreateTransaction(context.Background(), userActor, application.CreateTransactionInput{
+		UserID:        "user-1",
+		CampaignID:    "campaign-2",
+		ProductID:     "product-2",
+		Provider:      domain.ProviderStripe,
+		Amount:        50,
+		Currency:      "USD",
+		TrafficSource: "creator_brought",
+		UserTier:      "free",
+	})
+	if err != nil {
+		t.Fatalf("seed transaction: %v", err)
+	}
+
+	adminActor := application.Actor{
+		SubjectID:      "admin-1",
+		Role:           "admin",
+		IdempotencyKey: "admin-refund-1",
+	}
+	first, err := svc.RefundTransaction(context.Background(), adminActor, tx.TransactionID, 50, "duplicate charge")
+	if err != nil {
+		t.Fatalf("first admin refund: %v", err)
+	}
+	second, err := svc.RefundTransaction(context.Background(), adminActor, tx.TransactionID, 50, "duplicate charge")
+	if err != nil {
+		t.Fatalf("replay admin refund: %v", err)
+	}
+	if first.RefundID != second.RefundID {
+		t.Fatalf("expected idempotent refund replay")
+	}
+}

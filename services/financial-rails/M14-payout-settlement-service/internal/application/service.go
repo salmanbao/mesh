@@ -27,6 +27,120 @@ func (s *Service) RequestPayout(ctx context.Context, actor Actor, input RequestP
 	return s.requestPayoutWithKey(ctx, actor, input, actor.IdempotencyKey)
 }
 
+func (s *Service) RetryFailedPayout(
+	ctx context.Context,
+	actor Actor,
+	payoutID string,
+	reason string,
+) (domain.Payout, error) {
+	if strings.TrimSpace(actor.SubjectID) == "" {
+		return domain.Payout{}, domain.ErrUnauthorized
+	}
+	if actor.Role != "admin" {
+		return domain.Payout{}, domain.ErrForbidden
+	}
+	if strings.TrimSpace(actor.IdempotencyKey) == "" {
+		return domain.Payout{}, domain.ErrIdempotencyRequired
+	}
+	if strings.TrimSpace(payoutID) == "" || strings.TrimSpace(reason) == "" {
+		return domain.Payout{}, domain.ErrInvalidInput
+	}
+
+	requestHash := hashPayload(map[string]string{
+		"payout_id": payoutID,
+		"reason":    strings.TrimSpace(reason),
+	})
+	now := s.nowFn()
+	existing, err := s.idempotency.Get(ctx, actor.IdempotencyKey, now)
+	if err != nil {
+		return domain.Payout{}, err
+	}
+	if existing != nil {
+		if existing.RequestHash != requestHash {
+			return domain.Payout{}, domain.ErrIdempotencyConflict
+		}
+		var cached domain.Payout
+		if err := json.Unmarshal(existing.ResponseBody, &cached); err != nil {
+			return domain.Payout{}, err
+		}
+		return cached, nil
+	}
+	if err := s.idempotency.Reserve(ctx, actor.IdempotencyKey, requestHash, now.Add(s.cfg.IdempotencyTTL)); err != nil {
+		return domain.Payout{}, err
+	}
+
+	payout, err := s.payouts.GetByID(ctx, strings.TrimSpace(payoutID))
+	if err != nil {
+		return domain.Payout{}, err
+	}
+	if payout.Status != domain.PayoutStatusFailed {
+		return domain.Payout{}, domain.ErrConflict
+	}
+
+	if err := s.profile.EnsurePayoutProfile(ctx, payout.UserID); err != nil {
+		return domain.Payout{}, fmt.Errorf("profile payout setup: %w", err)
+	}
+	if err := s.billing.EnsureBillingAccount(ctx, payout.UserID); err != nil {
+		return domain.Payout{}, fmt.Errorf("billing account check: %w", err)
+	}
+	if err := s.risk.EnsureEligible(ctx, payout.UserID, payout.Amount); err != nil {
+		return domain.Payout{}, fmt.Errorf("risk gate: %w", err)
+	}
+	if err := s.finance.EnsureLiquidity(ctx, payout.UserID, payout.Amount, payout.Currency); err != nil {
+		return domain.Payout{}, fmt.Errorf("finance liquidity check: %w", err)
+	}
+
+	processingAt := s.nowFn()
+	payout.Status = domain.PayoutStatusProcessing
+	payout.FailureReason = ""
+	payout.ProcessingAt = &processingAt
+	payout.UpdatedAt = processingAt
+	if err := s.payouts.Update(ctx, payout); err != nil {
+		return domain.Payout{}, err
+	}
+	if err := s.publishAnalyticsProcessing(ctx, payout); err != nil {
+		return domain.Payout{}, err
+	}
+
+	switch {
+	case payout.Method == domain.PayoutMethodInstant && payout.Amount > s.cfg.InstantPayoutLimit:
+		failedAt := s.nowFn()
+		payout.Status = domain.PayoutStatusFailed
+		payout.FailureReason = "instant_limit_exceeded"
+		payout.FailedAt = &failedAt
+		payout.UpdatedAt = failedAt
+		if err := s.payouts.Update(ctx, payout); err != nil {
+			return domain.Payout{}, err
+		}
+		if err := s.enqueueDomainPayoutFailed(ctx, payout); err != nil {
+			return domain.Payout{}, err
+		}
+	default:
+		paidAt := s.nowFn()
+		payout.Status = domain.PayoutStatusPaid
+		payout.PaidAt = &paidAt
+		payout.UpdatedAt = paidAt
+		if err := s.payouts.Update(ctx, payout); err != nil {
+			return domain.Payout{}, err
+		}
+		if err := s.enqueueDomainPayoutPaid(ctx, payout); err != nil {
+			return domain.Payout{}, err
+		}
+	}
+
+	if err := s.FlushOutbox(ctx); err != nil {
+		return domain.Payout{}, err
+	}
+	payload, err := json.Marshal(payout)
+	if err != nil {
+		return domain.Payout{}, err
+	}
+	if err := s.idempotency.Complete(ctx, actor.IdempotencyKey, 200, payload, s.nowFn()); err != nil {
+		return domain.Payout{}, err
+	}
+	return payout, nil
+}
+
 func (s *Service) GetPayout(ctx context.Context, actor Actor, payoutID string) (domain.Payout, error) {
 	if strings.TrimSpace(actor.SubjectID) == "" {
 		return domain.Payout{}, domain.ErrUnauthorized

@@ -85,6 +85,7 @@ type RecordAttributionInput struct {
 	ConversionID string
 	Amount       float64
 	Currency     string
+	Reason       string
 }
 
 type Service struct {

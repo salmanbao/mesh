@@ -67,6 +67,27 @@ func (h *Handler) listHistory(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) retryFailedPayout(w http.ResponseWriter, r *http.Request) {
+	actor := actorFromContext(r.Context())
+	var req contracts.RetryFailedPayoutRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", err.Error(), requestIDFromContext(r.Context()))
+		return
+	}
+	payout, err := h.service.RetryFailedPayout(
+		r.Context(),
+		actor,
+		chi.URLParam(r, "id"),
+		strings.TrimSpace(req.Reason),
+	)
+	if err != nil {
+		status, code := mapDomainError(err)
+		writeError(w, status, code, err.Error(), requestIDFromContext(r.Context()))
+		return
+	}
+	writeSuccess(w, http.StatusOK, "", payout)
+}
+
 func parseIntOrDefault(raw string, fallback int) int {
 	if raw == "" {
 		return fallback

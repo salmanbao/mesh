@@ -25,6 +25,8 @@ func NewRouter(handler *Handler) http.Handler {
 			r.Get("/disputes/{dispute_id}", handler.getDispute)
 			r.Post("/disputes/{dispute_id}/messages", handler.sendMessage)
 			r.Post("/admin/disputes/{dispute_id}/approve", handler.approveDispute)
+			r.Post("/admin/disputes/{dispute_id}/resolve", handler.resolveDispute)
+			r.Post("/admin/disputes/{dispute_id}/reopen", handler.reopenDispute)
 		})
 	})
 	return r

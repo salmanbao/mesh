@@ -104,6 +104,28 @@ func (h *Handler) createRefund(w http.ResponseWriter, r *http.Request) {
 	writeSuccess(w, http.StatusCreated, "", refund)
 }
 
+func (h *Handler) adminRefundTransaction(w http.ResponseWriter, r *http.Request) {
+	actor := actorFromContext(r.Context())
+	var req contracts.AdminRefundTransactionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", err.Error(), requestIDFromContext(r.Context()))
+		return
+	}
+	refund, err := h.service.RefundTransaction(
+		r.Context(),
+		actor,
+		chi.URLParam(r, "id"),
+		req.Amount,
+		strings.TrimSpace(req.Reason),
+	)
+	if err != nil {
+		status, code := mapDomainError(err)
+		writeError(w, status, code, err.Error(), requestIDFromContext(r.Context()))
+		return
+	}
+	writeSuccess(w, http.StatusOK, "", refund)
+}
+
 func (h *Handler) providerWebhook(w http.ResponseWriter, r *http.Request) {
 	var req contracts.ProviderWebhookRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

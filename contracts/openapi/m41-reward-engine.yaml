@@ -40,6 +40,33 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
         '500': { $ref: '#/components/responses/InternalError' }
+  /v1/admin/rewards/recalculate:
+    post:
+      tags: [Rewards]
+      summary: Recalculate reward (admin owner route)
+      operationId: recalculateAdminReward
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminRecalculateRewardRequest'
+      responses:
+        '200':
+          description: Reward recalculated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminRecalculateRewardResponseEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
   /v1/rewards/submissions/{submission_id}:
     get:
       tags: [Rewards]
@@ -169,6 +196,60 @@ components:
         verification_completed_at:
           type: string
           format: date-time
+    AdminRecalculateRewardRequest:
+      type: object
+      required: [user_id, submission_id, campaign_id, reason]
+      properties:
+        user_id:
+          type: string
+        submission_id:
+          type: string
+        campaign_id:
+          type: string
+        locked_views:
+          type: integer
+        rate_per_1k:
+          type: number
+          format: double
+        fraud_score:
+          type: number
+          format: double
+        verification_completed_at:
+          type: string
+          format: date-time
+        reason:
+          type: string
+    AdminRecalculateRewardResponse:
+      type: object
+      properties:
+        submission_id:
+          type: string
+        user_id:
+          type: string
+        campaign_id:
+          type: string
+        status:
+          type: string
+        net_amount:
+          type: number
+          format: double
+        rollover_total:
+          type: number
+          format: double
+        calculated_at:
+          type: string
+          format: date-time
+        eligible_at:
+          type: string
+          format: date-time
+    AdminRecalculateRewardResponseEnvelope:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        data:
+          $ref: '#/components/schemas/AdminRecalculateRewardResponse'
     Reward:
       type: object
       properties:

@@ -15,6 +15,7 @@ Implementation follows canonical layering:
 - `POST /v1/payouts/request`
 - `GET /v1/payouts/{id}`
 - `GET /v1/payouts/history`
+- `POST /v1/admin/payouts/{id}/retry`
 
 ### gRPC (internal sync)
 - Internal server exposes health service in `internal/adapters/grpc/server.go`.
@@ -39,7 +40,9 @@ Implementation follows canonical layering:
 - Event deduplication by `event_id` with TTL `7 days`.
 
 ## Contract and Reliability Semantics
-- Mutating REST API `POST /v1/payouts/request` enforces `Idempotency-Key` with TTL `7 days`.
+- Mutating REST APIs enforce `Idempotency-Key` with TTL `7 days`:
+  - `POST /v1/payouts/request`
+  - `POST /v1/admin/payouts/{id}/retry`
 - Event deduplication TTL: `7 days`.
 - Domain event consume path validates canonical envelope and partition-key invariant.
 - `payout.processing` is emitted via analytics publisher (no outbox/DLQ).

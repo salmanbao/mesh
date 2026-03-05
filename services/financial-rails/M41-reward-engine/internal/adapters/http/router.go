@@ -26,6 +26,7 @@ func NewRouter(handler *Handler) http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware)
 			r.Post("/rewards/calculate", handler.calculateReward)
+			r.Post("/admin/rewards/recalculate", handler.recalculateAdminReward)
 			r.Get("/rewards/submissions/{submission_id}", handler.getReward)
 			r.Get("/rewards/rollovers/{user_id}", handler.getRollover)
 			r.Get("/rewards/history", handler.listRewardHistory)

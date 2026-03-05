@@ -205,7 +205,7 @@ func (s *Service) ApproveDispute(ctx context.Context, actor Actor, disputeID str
 		return cached, nil
 	}
 	switch dispute.Status {
-	case domain.DisputeStatusSubmitted, domain.DisputeStatusUnderReview, domain.DisputeStatusEscalated, domain.DisputeStatusAwaitingAction:
+	case domain.DisputeStatusSubmitted, domain.DisputeStatusUnderReview, domain.DisputeStatusEscalated, domain.DisputeStatusAwaitingAction, domain.DisputeStatusReopened:
 		// Allowed in MVP implementation.
 	default:
 		if err := domain.ValidateStatusTransition(dispute.Status, domain.DisputeStatusResolved); err != nil {
@@ -250,6 +250,58 @@ func (s *Service) ApproveDispute(ctx context.Context, actor Actor, disputeID str
 	_ = s.recordStateTransition(ctx, dispute.DisputeID, prevStatus, dispute.Status, actor.SubjectID, "refund approved", now)
 	_ = s.recordAudit(ctx, dispute.DisputeID, "approved", actor.SubjectID, map[string]string{"approval_id": approval.ApprovalID}, now)
 	_ = s.publishDisputeResolvedAnalytics(ctx, actor, dispute)
+	if err := s.completeIdempotent(ctx, actor.IdempotencyKey, 200, dispute); err != nil {
+		return domain.Dispute{}, err
+	}
+	return dispute, nil
+}
+
+func (s *Service) ReopenDispute(
+	ctx context.Context,
+	actor Actor,
+	disputeID string,
+	input ReopenDisputeInput,
+) (domain.Dispute, error) {
+	if strings.TrimSpace(actor.SubjectID) == "" {
+		return domain.Dispute{}, domain.ErrUnauthorized
+	}
+	if strings.TrimSpace(actor.IdempotencyKey) == "" {
+		return domain.Dispute{}, domain.ErrIdempotencyRequired
+	}
+	if !isStaffRole(actor.Role) {
+		return domain.Dispute{}, domain.ErrForbidden
+	}
+	if strings.TrimSpace(input.Reason) == "" {
+		return domain.Dispute{}, domain.ErrInvalidInput
+	}
+	dispute, err := s.disputes.GetByID(ctx, strings.TrimSpace(disputeID))
+	if err != nil {
+		return domain.Dispute{}, err
+	}
+	if dispute.Status != domain.DisputeStatusResolved {
+		return domain.Dispute{}, domain.ErrConflict
+	}
+
+	requestHash := hashPayload(input)
+	if cached, ok, err := s.getIdempotentDispute(ctx, actor, requestHash); err != nil {
+		return domain.Dispute{}, err
+	} else if ok && cached.DisputeID == dispute.DisputeID {
+		return cached, nil
+	}
+
+	now := s.nowFn()
+	prevStatus := dispute.Status
+	dispute.Status = domain.DisputeStatusReopened
+	dispute.ResolutionNotes = strings.TrimSpace(input.Notes)
+	dispute.UpdatedAt = now
+	dispute.ResolvedAt = nil
+	if s.disputes != nil {
+		if err := s.disputes.Update(ctx, dispute); err != nil {
+			return domain.Dispute{}, err
+		}
+	}
+	_ = s.recordStateTransition(ctx, dispute.DisputeID, prevStatus, dispute.Status, actor.SubjectID, input.Reason, now)
+	_ = s.recordAudit(ctx, dispute.DisputeID, "reopened", actor.SubjectID, map[string]string{"reason": strings.TrimSpace(input.Reason)}, now)
 	if err := s.completeIdempotent(ctx, actor.IdempotencyKey, 200, dispute); err != nil {
 		return domain.Dispute{}, err
 	}

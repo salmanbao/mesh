@@ -210,6 +210,39 @@ func (h *Handler) createRefund(w http.ResponseWriter, r *http.Request) {
 	writeSuccess(w, http.StatusCreated, "Refund processed", nil)
 }
 
+func (h *Handler) createAdminInvoiceRefund(w http.ResponseWriter, r *http.Request) {
+	actor := actorFromContext(r.Context())
+	invoiceID := strings.TrimSpace(chi.URLParam(r, "invoice_id"))
+	if invoiceID == "" {
+		writeError(w, http.StatusBadRequest, "invalid_input", "invoice_id is required", requestIDFromContext(r.Context()))
+		return
+	}
+	var req contracts.AdminInvoiceRefundRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", err.Error(), requestIDFromContext(r.Context()))
+		return
+	}
+	result, err := h.service.CreateAdminInvoiceRefund(r.Context(), actor, application.RefundInput{
+		InvoiceID:  invoiceID,
+		LineItemID: req.LineItemID,
+		Amount:     req.Amount,
+		Reason:     req.Reason,
+	})
+	if err != nil {
+		status, code := mapDomainError(err)
+		writeError(w, status, code, err.Error(), requestIDFromContext(r.Context()))
+		return
+	}
+	writeSuccess(w, http.StatusOK, "", contracts.AdminInvoiceRefundResponse{
+		RefundID:    result.RefundID,
+		InvoiceID:   result.InvoiceID,
+		LineItemID:  result.LineItemID,
+		Amount:      result.Amount,
+		Reason:      result.Reason,
+		ProcessedAt: result.ProcessedAt.UTC().Format(time.RFC3339),
+	})
+}
+
 func parseInvoiceQuery(r *http.Request) ports.InvoiceQuery {
 	query := ports.InvoiceQuery{
 		Status:        r.URL.Query().Get("status"),

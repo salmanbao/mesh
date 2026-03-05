@@ -205,6 +205,9 @@ func (s *Service) RecordAttribution(ctx context.Context, actor Actor, in RecordA
 	if strings.TrimSpace(actor.SubjectID) == "" {
 		return domain.ReferralAttribution{}, domain.ErrUnauthorized
 	}
+	if !isAdmin(actor) {
+		return domain.ReferralAttribution{}, domain.ErrForbidden
+	}
 	if strings.TrimSpace(actor.IdempotencyKey) == "" {
 		return domain.ReferralAttribution{}, domain.ErrIdempotencyRequired
 	}
@@ -213,13 +216,14 @@ func (s *Service) RecordAttribution(ctx context.Context, actor Actor, in RecordA
 	in.OrderID = strings.TrimSpace(in.OrderID)
 	in.ConversionID = strings.TrimSpace(in.ConversionID)
 	in.Currency = strings.ToUpper(strings.TrimSpace(in.Currency))
+	in.Reason = strings.TrimSpace(in.Reason)
 	if in.Currency == "" {
 		in.Currency = "USD"
 	}
-	if in.AffiliateID == "" || in.OrderID == "" || in.ConversionID == "" || in.Amount <= 0 {
+	if in.AffiliateID == "" || in.OrderID == "" || in.ConversionID == "" || in.Amount <= 0 || in.Reason == "" {
 		return domain.ReferralAttribution{}, domain.ErrInvalidInput
 	}
-	requestHash := hashJSON(map[string]any{"op": "record_attribution", "affiliate_id": in.AffiliateID, "order_id": in.OrderID, "conversion_id": in.ConversionID, "amount": in.Amount, "currency": in.Currency})
+	requestHash := hashJSON(map[string]any{"op": "record_attribution", "affiliate_id": in.AffiliateID, "order_id": in.OrderID, "conversion_id": in.ConversionID, "amount": in.Amount, "currency": in.Currency, "reason": in.Reason})
 	if raw, ok, err := s.getIdempotent(ctx, actor.IdempotencyKey, requestHash); err != nil {
 		return domain.ReferralAttribution{}, err
 	} else if ok {
@@ -258,7 +262,7 @@ func (s *Service) RecordAttribution(ctx context.Context, actor Actor, in RecordA
 		_ = s.payouts.Create(ctx, payout)
 		_ = s.enqueueAffiliatePayoutQueued(ctx, payout, uuid.NewString(), now)
 	}
-	_ = s.appendAudit(ctx, aff.AffiliateID, "affiliate.attribution.recorded", actor.SubjectID, "", map[string]string{"order_id": attr.OrderID, "conversion_id": attr.ConversionID})
+	_ = s.appendAudit(ctx, aff.AffiliateID, "affiliate.attribution.recorded", actor.SubjectID, in.Reason, map[string]string{"order_id": attr.OrderID, "conversion_id": attr.ConversionID})
 	_ = s.enqueueAffiliateAttributionCreated(ctx, attr, uuid.NewString(), now)
 	_ = s.enqueueAffiliateEarningCalculated(ctx, earning, uuid.NewString(), now)
 	_ = s.completeIdempotencyJSON(ctx, actor.IdempotencyKey, 201, attr)

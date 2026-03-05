@@ -172,6 +172,24 @@ func LoadConfig(path string) (Config, error) {
 	cfg.EnableDomainEventConsumption = envBool("ENABLE_DOMAIN_EVENT_CONSUMPTION", cfg.EnableDomainEventConsumption)
 	cfg.EnablePayoutEligibleEmission = envBool("ENABLE_PAYOUT_ELIGIBLE_EMISSION", cfg.EnablePayoutEligibleEmission)
 
+	if isProductionRuntime() {
+		if strings.TrimSpace(cfg.AuthGRPCURL) == "" {
+			return Config{}, fmt.Errorf("AUTH_GRPC_URL is required in production")
+		}
+		if strings.TrimSpace(cfg.CampaignGRPCURL) == "" {
+			return Config{}, fmt.Errorf("CAMPAIGN_GRPC_URL is required in production")
+		}
+		if strings.TrimSpace(cfg.VotingGRPCURL) == "" {
+			return Config{}, fmt.Errorf("VOTING_GRPC_URL is required in production")
+		}
+		if strings.TrimSpace(cfg.TrackingGRPCURL) == "" {
+			return Config{}, fmt.Errorf("TRACKING_GRPC_URL is required in production")
+		}
+		if strings.TrimSpace(cfg.SubmissionGRPCURL) == "" {
+			return Config{}, fmt.Errorf("SUBMISSION_GRPC_URL is required in production")
+		}
+	}
+
 	return cfg, nil
 }
 
@@ -227,4 +245,14 @@ func trimNonEmpty(values []string) []string {
 		}
 	}
 	return out
+}
+
+func isProductionRuntime() bool {
+	for _, key := range []string{"SERVICE_RUNTIME_MODE", "RUNTIME_MODE", "APP_ENV"} {
+		raw := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+		if raw == "prod" || raw == "production" {
+			return true
+		}
+	}
+	return false
 }
