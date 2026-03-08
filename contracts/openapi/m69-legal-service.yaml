@@ -1,0 +1,262 @@
+openapi: 3.0.3
+info:
+  title: M69 Legal Service API
+  version: 1.0.0
+  description: Legal hold, compliance scan, and legal operations endpoints with admin aliases.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Legal
+  - name: Admin
+paths:
+  /api/v1/legal/holds/check:
+    get:
+      tags: [Legal]
+      summary: Check whether an entity is under legal hold
+      operationId: checkLegalHold
+      parameters:
+        - $ref: '#/components/parameters/EntityTypeQuery'
+        - $ref: '#/components/parameters/EntityIDQuery'
+      responses:
+        '200':
+          description: Hold check result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HoldCheckEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/legal/holds/{id}/release:
+    post:
+      tags: [Legal]
+      summary: Release legal hold
+      operationId: releaseLegalHold
+      parameters:
+        - $ref: '#/components/parameters/HoldID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReleaseHoldRequest' }
+      responses:
+        '200':
+          description: Hold released
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HoldEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/legal/compliance/scan:
+    post:
+      tags: [Legal]
+      summary: Run compliance scan
+      operationId: runComplianceScan
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ComplianceScanRequest' }
+      responses:
+        '200':
+          description: Compliance report
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ComplianceReportEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/legal/compliance/reports/{report_id}:
+    get:
+      tags: [Legal]
+      summary: Get compliance report by id
+      operationId: getComplianceReport
+      parameters:
+        - $ref: '#/components/parameters/ReportID'
+      responses:
+        '200':
+          description: Compliance report
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ComplianceReportEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/admin/legal/holds/check:
+    get:
+      tags: [Admin]
+      summary: Check legal hold (admin alias)
+      operationId: adminCheckLegalHold
+      parameters:
+        - $ref: '#/components/parameters/EntityTypeQuery'
+        - $ref: '#/components/parameters/EntityIDQuery'
+      responses:
+        '200':
+          description: Hold check result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HoldCheckEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/admin/legal/holds/{id}/release:
+    post:
+      tags: [Admin]
+      summary: Release legal hold (admin alias)
+      operationId: adminReleaseLegalHold
+      parameters:
+        - $ref: '#/components/parameters/HoldID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReleaseHoldRequest' }
+      responses:
+        '200':
+          description: Hold released
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HoldEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/admin/legal/compliance/scan:
+    post:
+      tags: [Admin]
+      summary: Run compliance scan (admin alias)
+      operationId: adminRunComplianceScan
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ComplianceScanRequest' }
+      responses:
+        '200':
+          description: Compliance report
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ComplianceReportEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    HoldID:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+    ReportID:
+      in: path
+      name: report_id
+      required: true
+      schema: { type: string }
+    EntityTypeQuery:
+      in: query
+      name: entity_type
+      required: true
+      schema: { type: string }
+    EntityIDQuery:
+      in: query
+      name: entity_id
+      required: true
+      schema: { type: string }
+  schemas:
+    Hold:
+      type: object
+      properties:
+        hold_id: { type: string }
+        entity_type: { type: string }
+        entity_id: { type: string }
+        reason: { type: string }
+        status: { type: string }
+        issued_by: { type: string }
+        created_at:
+          type: string
+          format: date-time
+        released_at:
+          type: string
+          format: date-time
+    HoldCheck:
+      type: object
+      properties:
+        entity_type: { type: string }
+        entity_id: { type: string }
+        held: { type: boolean }
+        hold_id: { type: string }
+    ComplianceReport:
+      type: object
+      properties:
+        report_id: { type: string }
+        report_type: { type: string }
+        status: { type: string }
+        findings_count: { type: integer }
+        download_url: { type: string }
+        created_by: { type: string }
+        created_at:
+          type: string
+          format: date-time
+    ReleaseHoldRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string }
+    ComplianceScanRequest:
+      type: object
+      properties:
+        report_type: { type: string }
+    HoldEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data: { $ref: '#/components/schemas/Hold' }
+    HoldCheckEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data: { $ref: '#/components/schemas/HoldCheck' }
+    ComplianceReportEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data: { $ref: '#/components/schemas/ComplianceReport' }
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Insufficient access
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }

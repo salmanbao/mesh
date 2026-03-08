@@ -1,0 +1,250 @@
+openapi: 3.0.3
+info:
+  title: M84 Data Migration Service API
+  version: 1.0.0
+  description: Migration plan and run orchestration for controlled backfill operations. Includes owner routes used by M86 AFR-015 control-plane endpoints.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Health
+  - name: Migrations
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: m84Health
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+  /healthz:
+    get:
+      tags: [Health]
+      summary: Health check alias
+      operationId: m84Healthz
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+  /readyz:
+    get:
+      tags: [Health]
+      summary: Readiness check
+      operationId: m84Readyz
+      responses:
+        '200':
+          description: Service ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+  /plans:
+    post:
+      tags: [Migrations]
+      summary: Create migration/backfill plan
+      operationId: m84CreatePlan
+      description: Owner contract called by M86 POST /api/admin/v1/platform-ops/migrations/plans.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlanRequest'
+      responses:
+        '201':
+          description: Migration plan created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationPlanEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    get:
+      tags: [Migrations]
+      summary: List migration/backfill plans
+      operationId: m84ListPlans
+      description: Owner contract called by M86 GET /api/admin/v1/platform-ops/migrations/plans.
+      responses:
+        '200':
+          description: Migration plans
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationPlanListEnvelope'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /runs:
+    post:
+      tags: [Migrations]
+      summary: Start migration/backfill run
+      operationId: m84CreateRun
+      description: Owner contract called by M86 POST /api/admin/v1/platform-ops/migrations/runs.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/MFAVerified'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRunRequest'
+      responses:
+        '201':
+          description: Migration run created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationRunEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string }
+      description: Required for mutating operations. Uses 7-day request-hash replay protection.
+    MFAVerified:
+      in: header
+      name: X-MFA-Verified
+      required: false
+      schema:
+        type: string
+        enum: ['true', 'false']
+      description: Required as true by run execution policy for operator-level actions.
+  schemas:
+    SuccessEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        message: { type: string }
+        data: {}
+    CreatePlanRequest:
+      type: object
+      required: [service_name, environment, version, plan]
+      properties:
+        service_name: { type: string }
+        environment: { type: string }
+        version: { type: string }
+        plan:
+          type: object
+          additionalProperties: true
+        dry_run: { type: boolean }
+        risk_level: { type: string }
+    CreateRunRequest:
+      type: object
+      required: [plan_id]
+      properties:
+        plan_id: { type: string }
+    MigrationPlan:
+      type: object
+      properties:
+        plan_id: { type: string }
+        service_name: { type: string }
+        environment: { type: string }
+        version: { type: string }
+        plan:
+          type: object
+          additionalProperties: true
+        status: { type: string }
+        dry_run: { type: boolean }
+        risk_level: { type: string }
+        staging_validated: { type: boolean }
+        backup_required: { type: boolean }
+        created_by: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    MigrationRun:
+      type: object
+      properties:
+        run_id: { type: string }
+        plan_id: { type: string }
+        status: { type: string }
+        operator_id: { type: string }
+        snapshot_created: { type: boolean }
+        rollback_available: { type: boolean }
+        validation_status: { type: string }
+        backfill_job_id: { type: string }
+        started_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time }
+    MigrationPlanEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/MigrationPlan' }
+    MigrationPlanListEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/MigrationPlan' }
+    MigrationRunEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/MigrationRun' }
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        code: { type: string }
+        message: { type: string }
+        request_id: { type: string }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Insufficient access
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Idempotency or state conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }

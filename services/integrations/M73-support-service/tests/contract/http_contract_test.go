@@ -119,6 +119,34 @@ func TestSupportRoutes(t *testing.T) {
 		t.Fatalf("assign ticket failed: status=%d body=%s", assignRR.Code, assignRR.Body.String())
 	}
 
+	adminGetReq := httptest.NewRequest(http.MethodGet, "/api/v1/support/admin/tickets/"+ticket.TicketID, nil)
+	adminGetReq.Header.Set("Authorization", "Bearer manager-1")
+	adminGetReq.Header.Set("X-Actor-Role", "support_manager")
+	adminGetRR := httptest.NewRecorder()
+	router.ServeHTTP(adminGetRR, adminGetReq)
+	if adminGetRR.Code != http.StatusOK {
+		t.Fatalf("admin get ticket failed: status=%d body=%s", adminGetRR.Code, adminGetRR.Body.String())
+	}
+
+	adminPatchReq := httptest.NewRequest(http.MethodPatch, "/api/v1/support/admin/tickets/"+ticket.TicketID, strings.NewReader(`{"status":"open","sub_status":"escalated","priority":"high"}`))
+	adminPatchReq.Header.Set("Authorization", "Bearer manager-1")
+	adminPatchReq.Header.Set("X-Actor-Role", "support_manager")
+	adminPatchReq.Header.Set("Idempotency-Key", "idem-admin-patch")
+	adminPatchRR := httptest.NewRecorder()
+	router.ServeHTTP(adminPatchRR, adminPatchReq)
+	if adminPatchRR.Code != http.StatusOK {
+		t.Fatalf("admin patch ticket failed: status=%d body=%s", adminPatchRR.Code, adminPatchRR.Body.String())
+	}
+
+	adminSearchReq := httptest.NewRequest(http.MethodGet, "/api/v1/support/admin/tickets/search?q=refund", nil)
+	adminSearchReq.Header.Set("Authorization", "Bearer manager-1")
+	adminSearchReq.Header.Set("X-Actor-Role", "support_manager")
+	adminSearchRR := httptest.NewRecorder()
+	router.ServeHTTP(adminSearchRR, adminSearchReq)
+	if adminSearchRR.Code != http.StatusOK {
+		t.Fatalf("admin search tickets failed: status=%d body=%s", adminSearchRR.Code, adminSearchRR.Body.String())
+	}
+
 	searchReq := httptest.NewRequest(http.MethodGet, "/api/v1/support/tickets/search?q=refund", nil)
 	searchReq.Header.Set("Authorization", "Bearer manager-1")
 	searchReq.Header.Set("X-Actor-Role", "support_manager")
@@ -145,5 +173,17 @@ func TestSupportRoutes(t *testing.T) {
 	router.ServeHTTP(deleteRR, deleteReq)
 	if deleteRR.Code != http.StatusOK {
 		t.Fatalf("delete ticket failed: status=%d body=%s", deleteRR.Code, deleteRR.Body.String())
+	}
+}
+
+func TestSupportAdminRoutesEnforceRoleScope(t *testing.T) {
+	router := newRouter()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/support/admin/tickets/search?q=refund", nil)
+	req.Header.Set("Authorization", "Bearer user-1")
+	req.Header.Set("X-Actor-Role", "user")
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("expected forbidden for user role on admin search route: status=%d body=%s", rr.Code, rr.Body.String())
 	}
 }

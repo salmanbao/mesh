@@ -2,209 +2,352 @@ openapi: 3.0.3
 info:
   title: M68 Retention Service API
   version: 1.0.0
-  description: Manage retention policies, legal holds, deletion previews/runs, restorations, and compliance reports.
+  description: Retention policy, preview, legal hold, restoration, and compliance report routes with admin aliases.
 servers:
   - url: /
 security:
   - bearerAuth: []
 tags:
-  - name: Policies
-  - name: LegalHolds
-  - name: Deletions
-  - name: Restorations
-  - name: Reports
+  - name: Retention
+  - name: Admin
 paths:
   /api/v1/retention/policies:
     get:
-      tags: [Policies]
+      tags: [Retention]
       summary: List retention policies
-      operationId: listPolicies
-      parameters:
-        - $ref: '#/components/parameters/XRequestID'
+      operationId: listRetentionPolicies
       responses:
         '200':
           description: Policies
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/PoliciesResponse'
+              schema: { $ref: '#/components/schemas/PoliciesEnvelope' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
-      tags: [Policies]
-      summary: Create or update a retention policy
-      operationId: upsertPolicy
+      tags: [Retention]
+      summary: Create retention policy
+      operationId: createRetentionPolicy
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/XRequestID'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/UpsertPolicyRequest' }
-      responses:
-        '201':
-          description: Policy created/updated
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/PolicyResponse' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '500': { $ref: '#/components/responses/InternalError' }
-
-  /api/v1/retention/legal-holds:
-    post:
-      tags: [LegalHolds]
-      summary: Issue a legal hold
-      operationId: issueLegalHold
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/XRequestID'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/IssueLegalHoldRequest' }
-      responses:
-        '201':
-          description: Legal hold created
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/LegalHoldResponse' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '500': { $ref: '#/components/responses/InternalError' }
-
-  /api/v1/retention/legal-holds/{hold_id}/release:
-    post:
-      tags: [LegalHolds]
-      summary: Release a legal hold
-      operationId: releaseLegalHold
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/XRequestID'
-        - in: path
-          name: hold_id
-          required: true
-          schema: { type: string }
+            schema: { $ref: '#/components/schemas/CreatePolicyRequest' }
       responses:
         '200':
-          description: Legal hold released
+          description: Policy created
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LegalHoldResponse' }
+              schema: { $ref: '#/components/schemas/PolicyEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/retention/preview:
+    post:
+      tags: [Retention]
+      summary: Create deletion preview
+      operationId: createRetentionPreview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePreviewRequest' }
+      responses:
+        '200':
+          description: Preview created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PreviewEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/retention/preview/{preview_id}/approve:
+    post:
+      tags: [Retention]
+      summary: Approve deletion preview
+      operationId: approveRetentionPreview
+      parameters:
+        - $ref: '#/components/parameters/PreviewID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApprovalRequest' }
+      responses:
+        '200':
+          description: Preview approved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScheduledDeletionEnvelope' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '500': { $ref: '#/components/responses/InternalError' }
-
-  /api/v1/retention/preview:
-    post:
-      tags: [Deletions]
-      summary: Preview records scheduled for deletion (dry run)
-      operationId: previewDeletion
+  /api/v1/retention/legal-holds:
+    get:
+      tags: [Retention]
+      summary: List legal holds
+      operationId: listRetentionLegalHolds
       parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/XRequestID'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/PreviewRequest' }
+        - $ref: '#/components/parameters/StatusQuery'
       responses:
         '200':
-          description: Deletion preview
+          description: Legal holds
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PreviewResponse' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+              schema: { $ref: '#/components/schemas/LegalHoldsEnvelope' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '500': { $ref: '#/components/responses/InternalError' }
-
-  /api/v1/retention/deletions/run:
     post:
-      tags: [Deletions]
-      summary: Trigger deletion batch execution
-      operationId: runDeletion
+      tags: [Retention]
+      summary: Create legal hold
+      operationId: createRetentionLegalHold
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/XRequestID'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/RunDeletionRequest' }
+            schema: { $ref: '#/components/schemas/CreateLegalHoldRequest' }
       responses:
-        '202':
-          description: Deletion job accepted
+        '200':
+          description: Legal hold created
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/RunDeletionResponse' }
+              schema: { $ref: '#/components/schemas/LegalHoldEnvelope' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '500': { $ref: '#/components/responses/InternalError' }
-
   /api/v1/retention/restorations:
     post:
-      tags: [Restorations]
-      summary: Request restoration from archive
-      operationId: requestRestoration
+      tags: [Retention]
+      summary: Create restoration request
+      operationId: createRetentionRestoration
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/XRequestID'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/RestorationRequest' }
+            schema: { $ref: '#/components/schemas/CreateRestorationRequest' }
       responses:
-        '202':
-          description: Restoration initiated
+        '200':
+          description: Restoration created
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/RestorationResponse' }
+              schema: { $ref: '#/components/schemas/RestorationEnvelope' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '500': { $ref: '#/components/responses/InternalError' }
-
-  /api/v1/retention/reports:
-    get:
-      tags: [Reports]
-      summary: Retrieve compliance or deletion reports
-      operationId: getReports
+  /api/v1/retention/restorations/{restoration_id}/approve:
+    post:
+      tags: [Retention]
+      summary: Approve restoration request
+      operationId: approveRetentionRestoration
       parameters:
-        - $ref: '#/components/parameters/XRequestID'
-        - in: query
-          name: type
-          required: true
-          schema: { type: string, enum: [compliance, deletion, legal_hold, restoration] }
-        - in: query
-          name: date_range
-          schema: { type: string, example: "2026-01" }
-        - in: query
-          name: format
-          schema: { type: string, enum: [json, csv, pdf], default: json }
+        - $ref: '#/components/parameters/RestorationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApprovalRequest' }
       responses:
         '200':
-          description: Report payload or download link
+          description: Restoration approved
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ReportResponse' }
+              schema: { $ref: '#/components/schemas/RestorationEnvelope' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/retention/reports/compliance:
+    get:
+      tags: [Retention]
+      summary: Get compliance report snapshot
+      operationId: getRetentionComplianceReport
+      responses:
+        '200':
+          description: Compliance report
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ComplianceReportEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/admin/retention/policies:
+    get:
+      tags: [Admin]
+      summary: List retention policies (admin alias)
+      operationId: adminListRetentionPolicies
+      responses:
+        '200':
+          description: Policies
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PoliciesEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Admin]
+      summary: Create retention policy (admin alias)
+      operationId: adminCreateRetentionPolicy
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePolicyRequest' }
+      responses:
+        '200':
+          description: Policy created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PolicyEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/admin/retention/preview:
+    post:
+      tags: [Admin]
+      summary: Create deletion preview (admin alias)
+      operationId: adminCreateRetentionPreview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePreviewRequest' }
+      responses:
+        '200':
+          description: Preview created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PreviewEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/admin/retention/preview/{preview_id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve deletion preview (admin alias)
+      operationId: adminApproveRetentionPreview
+      parameters:
+        - $ref: '#/components/parameters/PreviewID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApprovalRequest' }
+      responses:
+        '200':
+          description: Preview approved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScheduledDeletionEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/admin/retention/legal-holds:
+    get:
+      tags: [Admin]
+      summary: List legal holds (admin alias)
+      operationId: adminListRetentionLegalHolds
+      parameters:
+        - $ref: '#/components/parameters/StatusQuery'
+      responses:
+        '200':
+          description: Legal holds
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalHoldsEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Admin]
+      summary: Create legal hold (admin alias)
+      operationId: adminCreateRetentionLegalHold
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateLegalHoldRequest' }
+      responses:
+        '200':
+          description: Legal hold created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalHoldEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/admin/retention/restorations:
+    post:
+      tags: [Admin]
+      summary: Create restoration request (admin alias)
+      operationId: adminCreateRetentionRestoration
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRestorationRequest' }
+      responses:
+        '200':
+          description: Restoration created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RestorationEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/admin/retention/restorations/{restoration_id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve restoration request (admin alias)
+      operationId: adminApproveRetentionRestoration
+      parameters:
+        - $ref: '#/components/parameters/RestorationID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApprovalRequest' }
+      responses:
+        '200':
+          description: Restoration approved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RestorationEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/admin/retention/reports/compliance:
+    get:
+      tags: [Admin]
+      summary: Get compliance report snapshot (admin alias)
+      operationId: adminGetRetentionComplianceReport
+      responses:
+        '200':
+          description: Compliance report
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ComplianceReportEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
 components:
   securitySchemes:
@@ -213,35 +356,217 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
+    PreviewID:
+      in: path
+      name: preview_id
+      required: true
+      schema: { type: string }
+    RestorationID:
+      in: path
+      name: restoration_id
+      required: true
+      schema: { type: string }
     IdempotencyKey:
       in: header
       name: Idempotency-Key
       required: true
       schema: { type: string }
-      description: Required for mutating routes; 7-day TTL with body hash replay detection.
-    XRequestID:
-      in: header
-      name: X-Request-Id
+    StatusQuery:
+      in: query
+      name: status
       schema: { type: string }
-      description: Correlation id; generated if absent.
+  schemas:
+    CreatePolicyRequest:
+      type: object
+      required: [data_type, retention_years]
+      properties:
+        data_type: { type: string }
+        retention_years: { type: integer }
+        soft_delete_grace_days: { type: integer }
+        selective_retention_rules:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+    CreatePreviewRequest:
+      type: object
+      properties:
+        policy_id: { type: string }
+        data_type: { type: string }
+    CreateLegalHoldRequest:
+      type: object
+      required: [entity_id, data_type, reason]
+      properties:
+        entity_id: { type: string }
+        data_type: { type: string }
+        reason: { type: string }
+        expires_at:
+          type: string
+          format: date-time
+    CreateRestorationRequest:
+      type: object
+      required: [entity_id, data_type, reason]
+      properties:
+        entity_id: { type: string }
+        data_type: { type: string }
+        reason: { type: string }
+        archive_location: { type: string }
+    ApprovalRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string }
+    Policy:
+      type: object
+      properties:
+        policy_id: { type: string }
+        data_type: { type: string }
+        retention_years: { type: integer }
+        soft_delete_grace_days: { type: integer }
+        status: { type: string }
+        created_by: { type: string }
+        created_at:
+          type: string
+          format: date-time
+    Preview:
+      type: object
+      properties:
+        preview_id: { type: string }
+        policy_id: { type: string }
+        data_type: { type: string }
+        total_records_to_delete: { type: integer }
+        estimated_bytes: { type: integer }
+        will_be_archived_to: { type: string }
+        status: { type: string }
+        requested_by: { type: string }
+        created_at:
+          type: string
+          format: date-time
+    ScheduledDeletion:
+      type: object
+      properties:
+        deletion_id: { type: string }
+        preview_id: { type: string }
+        policy_id: { type: string }
+        data_type: { type: string }
+        status: { type: string }
+        records_count: { type: integer }
+        reason: { type: string }
+        scheduled_at:
+          type: string
+          format: date-time
+    LegalHold:
+      type: object
+      properties:
+        hold_id: { type: string }
+        entity_id: { type: string }
+        data_type: { type: string }
+        reason: { type: string }
+        status: { type: string }
+        issued_by: { type: string }
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    Restoration:
+      type: object
+      properties:
+        restoration_id: { type: string }
+        entity_id: { type: string }
+        data_type: { type: string }
+        reason: { type: string }
+        archive_location: { type: string }
+        status: { type: string }
+        requested_by: { type: string }
+        created_at:
+          type: string
+          format: date-time
+        approved_at:
+          type: string
+          format: date-time
+    ComplianceReport:
+      type: object
+      properties:
+        policy_count: { type: integer }
+        active_legal_holds: { type: integer }
+        pending_deletions: { type: integer }
+        total_scheduled_records: { type: integer }
+        restoration_requests: { type: integer }
+    PolicyEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data: { $ref: '#/components/schemas/Policy' }
+    PoliciesEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/Policy' }
+    PreviewEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data: { $ref: '#/components/schemas/Preview' }
+    ScheduledDeletionEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data: { $ref: '#/components/schemas/ScheduledDeletion' }
+    LegalHoldEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data: { $ref: '#/components/schemas/LegalHold' }
+    LegalHoldsEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/LegalHold' }
+    RestorationEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data: { $ref: '#/components/schemas/Restoration' }
+    ComplianceReportEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data: { $ref: '#/components/schemas/ComplianceReport' }
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
   responses:
     BadRequest:
-      description: Invalid input
+      description: Invalid request
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
     Unauthorized:
-      description: Missing or invalid bearer token
+      description: Missing or invalid auth
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
     Forbidden:
-      description: Caller not permitted
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-    Conflict:
-      description: Idempotency conflict or conflicting state
+      description: Insufficient access
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -250,181 +575,8 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
-    RateLimited:
-      description: Too many requests
+    Conflict:
+      description: State conflict
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
-    InternalError:
-      description: Unexpected failure
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-  schemas:
-    SuccessResponse:
-      type: object
-      properties:
-        status: { type: string, example: success }
-        data: {}
-    ErrorResponse:
-      type: object
-      required: [message]
-      properties:
-        status: { type: string, example: error }
-        code: { type: string }
-        message: { type: string }
-        retry_after_seconds: { type: integer }
-    Policy:
-      type: object
-      properties:
-        policy_id: { type: string }
-        data_type: { type: string }
-        retention_years: { type: integer }
-        soft_delete_grace_days: { type: integer }
-        archived_to_glacier: { type: boolean }
-        applies_to: { type: string, example: "global" }
-        selective_retention_rules:
-          type: object
-          additionalProperties: true
-        status: { type: string }
-        updated_at: { type: string, format: date-time }
-    UpsertPolicyRequest:
-      type: object
-      required: [policy_id, data_type, retention_years]
-      properties:
-        policy_id: { type: string }
-        data_type: { type: string }
-        retention_years: { type: integer, minimum: 0, maximum: 99 }
-        soft_delete_grace_days: { type: integer, minimum: 0, maximum: 365, default: 30 }
-        archived_to_glacier: { type: boolean, default: true }
-        applies_to: { type: string }
-        selective_retention_rules:
-          type: object
-          additionalProperties: true
-        status: { type: string, enum: [active, paused] }
-    PoliciesResponse:
-      allOf:
-        - $ref: '#/components/schemas/SuccessResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              items: { $ref: '#/components/schemas/Policy' }
-    PolicyResponse:
-      allOf:
-        - $ref: '#/components/schemas/SuccessResponse'
-        - type: object
-          properties:
-            data: { $ref: '#/components/schemas/Policy' }
-    IssueLegalHoldRequest:
-      type: object
-      required: [hold_id, user_ids, data_types, hold_reason]
-      properties:
-        hold_id: { type: string }
-        user_ids:
-          type: array
-          items: { type: string }
-        data_types:
-          type: array
-          items: { type: string }
-        date_range_start: { type: string, format: date-time }
-        date_range_end: { type: string, format: date-time }
-        hold_reason: { type: string }
-        issued_by: { type: string }
-        expires_at: { type: string, format: date-time }
-    LegalHoldResponse:
-      allOf:
-        - $ref: '#/components/schemas/SuccessResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              properties:
-                hold_id: { type: string }
-                status: { type: string, enum: [active, released, expired, suspended] }
-                issued_at: { type: string, format: date-time }
-                expires_at: { type: string, format: date-time }
-                hold_reason: { type: string }
-                user_ids:
-                  type: array
-                  items: { type: string }
-                data_types:
-                  type: array
-                  items: { type: string }
-    PreviewRequest:
-      type: object
-      required: [policy_id, data_type]
-      properties:
-        policy_id: { type: string }
-        data_type: { type: string }
-        limit: { type: integer, minimum: 1, maximum: 100, default: 10 }
-    PreviewResponse:
-      allOf:
-        - $ref: '#/components/schemas/SuccessResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              properties:
-                preview_id: { type: string }
-                policy_id: { type: string }
-                data_type: { type: string }
-                total_records_to_delete: { type: integer }
-                estimated_size_mb: { type: number }
-                sample_records:
-                  type: array
-                  items: { type: object }
-                will_be_archived_to: { type: string }
-                affected_date_range: { type: string }
-                legal_holds_count: { type: integer }
-    RunDeletionRequest:
-      type: object
-      required: [policy_id, data_type]
-      properties:
-        policy_id: { type: string }
-        data_type: { type: string }
-        dry_run: { type: boolean, default: false }
-        force: { type: boolean, default: false }
-    RunDeletionResponse:
-      allOf:
-        - $ref: '#/components/schemas/SuccessResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              properties:
-                deletion_id: { type: string }
-                status: { type: string }
-                scheduled_at: { type: string, format: date-time }
-    RestorationRequest:
-      type: object
-      required: [restoration_id, entity_id, data_type]
-      properties:
-        restoration_id: { type: string }
-        entity_id: { type: string }
-        data_type: { type: string }
-        reason: { type: string }
-    RestorationResponse:
-      allOf:
-        - $ref: '#/components/schemas/SuccessResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              properties:
-                restoration_id: { type: string }
-                status: { type: string }
-                requested_at: { type: string, format: date-time }
-                estimated_completion: { type: string, format: date-time }
-    ReportResponse:
-      allOf:
-        - $ref: '#/components/schemas/SuccessResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              properties:
-                type: { type: string }
-                format: { type: string }
-                url: { type: string }
-                generated_at: { type: string, format: date-time }

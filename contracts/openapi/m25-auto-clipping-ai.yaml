@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: M25 Auto-Clipping AI API
+  version: 1.0.0
+  description: |
+    Admin owner execution contract for model deployment orchestration in creator workflow control-plane.
+servers:
+  - url: /
+tags:
+  - name: Health
+  - name: Admin
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Service health
+      operationId: m25Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /v1/admin/models/deploy:
+    post:
+      tags: [Admin]
+      summary: Deploy auto-clipping model version
+      operationId: deployAutoClippingModel
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ActorRole'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeployModelRequest'
+      responses:
+        '201':
+          description: Model deployment accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeployModelSuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+components:
+  parameters:
+    Authorization:
+      in: header
+      name: Authorization
+      required: true
+      schema:
+        type: string
+    ActorRole:
+      in: header
+      name: X-Actor-Role
+      required: true
+      schema:
+        type: string
+        enum: [admin]
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema:
+        type: string
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: M25-Auto-Clipping-AI
+        mode:
+          type: string
+          example: out_of_mvp
+    DeployModelRequest:
+      type: object
+      required:
+        - model_name
+        - version_tag
+        - model_artifact_key
+        - reason
+      properties:
+        model_name:
+          type: string
+        version_tag:
+          type: string
+        model_artifact_key:
+          type: string
+        canary_percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+          default: 0
+        description:
+          type: string
+        reason:
+          type: string
+    DeployModelResponse:
+      type: object
+      properties:
+        model_version_id:
+          type: string
+        deployment_status:
+          type: string
+        deployed_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+    DeployModelSuccessEnvelope:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        data:
+          $ref: '#/components/schemas/DeployModelResponse'
+    ErrorDetails:
+      type: object
+      additionalProperties: true
+    ErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          $ref: '#/components/schemas/ErrorDetails'
+    ErrorEnvelope:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+        timestamp:
+          type: string
+          format: date-time
+  responses:
+    BadRequest:
+      description: Invalid request or missing idempotency key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Forbidden:
+      description: Admin scope required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Conflict:
+      description: Idempotency collision
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'

@@ -1,0 +1,287 @@
+openapi: 3.0.3
+info:
+  title: M51 Data Portability Service API
+  version: 1.0.0
+  description: Manage DSAR export and erase requests, including admin aliases.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Portability
+  - name: Admin
+paths:
+  /v1/exports:
+    post:
+      tags: [Portability]
+      summary: Create data export request
+      operationId: createExport
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateExportRequest' }
+      responses:
+        '200':
+          description: Export request created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    get:
+      tags: [Portability]
+      summary: List export history
+      operationId: listExports
+      parameters:
+        - $ref: '#/components/parameters/UserIDQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Export history
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportHistoryEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/exports/erase:
+    post:
+      tags: [Portability]
+      summary: Create right-to-erasure request
+      operationId: createEraseRequest
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateEraseRequest' }
+      responses:
+        '200':
+          description: Erase request created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/exports/{request_id}:
+    get:
+      tags: [Portability]
+      summary: Get export request
+      operationId: getExport
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Export request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/admin/exports:
+    post:
+      tags: [Admin]
+      summary: Create data export request (admin alias)
+      operationId: adminCreateExport
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateExportRequest' }
+      responses:
+        '200':
+          description: Export request created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    get:
+      tags: [Admin]
+      summary: List export history (admin alias)
+      operationId: adminListExports
+      parameters:
+        - $ref: '#/components/parameters/UserIDQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Export history
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportHistoryEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/admin/exports/erase:
+    post:
+      tags: [Admin]
+      summary: Create right-to-erasure request (admin alias)
+      operationId: adminCreateEraseRequest
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateEraseRequest' }
+      responses:
+        '200':
+          description: Erase request created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/admin/exports/{request_id}:
+    get:
+      tags: [Admin]
+      summary: Get export request (admin alias)
+      operationId: adminGetExport
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Export request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    RequestID:
+      in: path
+      name: request_id
+      required: true
+      schema: { type: string }
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string }
+    XRequestID:
+      in: header
+      name: X-Request-Id
+      schema: { type: string }
+    UserIDQuery:
+      in: query
+      name: user_id
+      schema: { type: string }
+    LimitQuery:
+      in: query
+      name: limit
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+  schemas:
+    CreateExportRequest:
+      type: object
+      required: [user_id]
+      properties:
+        user_id: { type: string }
+        format: { type: string, enum: [json, csv], default: json }
+    CreateEraseRequest:
+      type: object
+      required: [user_id, reason]
+      properties:
+        user_id: { type: string }
+        reason: { type: string }
+    ExportRequest:
+      type: object
+      properties:
+        request_id: { type: string }
+        user_id: { type: string }
+        request_type: { type: string }
+        format: { type: string }
+        status: { type: string }
+        reason: { type: string }
+        requested_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        download_url: { type: string }
+        failure_cause: { type: string }
+    ExportEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data: { $ref: '#/components/schemas/ExportRequest' }
+    ExportHistoryEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/ExportRequest' }
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Insufficient access
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: State conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }

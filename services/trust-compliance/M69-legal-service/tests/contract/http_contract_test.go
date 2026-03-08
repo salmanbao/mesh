@@ -209,3 +209,55 @@ func TestLegalRoutes(t *testing.T) {
 		t.Fatalf("filing status failed: status=%d body=%s", statusRR.Code, statusRR.Body.String())
 	}
 }
+
+func TestLegalAdminRoutes(t *testing.T) {
+	router := newRouter()
+
+	holdReq := httptest.NewRequest(http.MethodPost, "/api/v1/legal/holds", strings.NewReader(`{"entity_type":"user","entity_id":"user-90","reason":"litigation"}`))
+	holdReq.Header.Set("Authorization", "Bearer legal-1")
+	holdReq.Header.Set("X-Actor-Role", "legal")
+	holdReq.Header.Set("Idempotency-Key", "idem-http-admin-route-hold")
+	holdRR := httptest.NewRecorder()
+	router.ServeHTTP(holdRR, holdReq)
+	if holdRR.Code != http.StatusOK {
+		t.Fatalf("seed hold failed: status=%d body=%s", holdRR.Code, holdRR.Body.String())
+	}
+	var holdOut contracts.SuccessResponse
+	if err := json.Unmarshal(holdRR.Body.Bytes(), &holdOut); err != nil {
+		t.Fatalf("decode hold response: %v", err)
+	}
+	holdData, _ := json.Marshal(holdOut.Data)
+	var hold contracts.HoldResponse
+	if err := json.Unmarshal(holdData, &hold); err != nil {
+		t.Fatalf("decode hold: %v", err)
+	}
+
+	checkReq := httptest.NewRequest(http.MethodGet, "/api/v1/admin/legal/holds/check?entity_type=user&entity_id=user-90", nil)
+	checkReq.Header.Set("Authorization", "Bearer admin-1")
+	checkReq.Header.Set("X-Actor-Role", "admin")
+	checkRR := httptest.NewRecorder()
+	router.ServeHTTP(checkRR, checkReq)
+	if checkRR.Code != http.StatusOK {
+		t.Fatalf("admin hold check failed: status=%d body=%s", checkRR.Code, checkRR.Body.String())
+	}
+
+	releaseReq := httptest.NewRequest(http.MethodPost, "/api/v1/admin/legal/holds/"+hold.HoldID+"/release", strings.NewReader(`{"reason":"released"}`))
+	releaseReq.Header.Set("Authorization", "Bearer admin-1")
+	releaseReq.Header.Set("X-Actor-Role", "admin")
+	releaseReq.Header.Set("Idempotency-Key", "idem-http-admin-route-release")
+	releaseRR := httptest.NewRecorder()
+	router.ServeHTTP(releaseRR, releaseReq)
+	if releaseRR.Code != http.StatusOK {
+		t.Fatalf("admin hold release failed: status=%d body=%s", releaseRR.Code, releaseRR.Body.String())
+	}
+
+	scanReq := httptest.NewRequest(http.MethodPost, "/api/v1/admin/legal/compliance/scan", strings.NewReader(`{"report_type":"manual"}`))
+	scanReq.Header.Set("Authorization", "Bearer admin-1")
+	scanReq.Header.Set("X-Actor-Role", "admin")
+	scanReq.Header.Set("Idempotency-Key", "idem-http-admin-route-scan")
+	scanRR := httptest.NewRecorder()
+	router.ServeHTTP(scanRR, scanReq)
+	if scanRR.Code != http.StatusOK {
+		t.Fatalf("admin scan failed: status=%d body=%s", scanRR.Code, scanRR.Body.String())
+	}
+}

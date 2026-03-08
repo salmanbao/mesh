@@ -155,3 +155,25 @@ func TestRetentionRoutes(t *testing.T) {
 		t.Fatalf("report failed: status=%d body=%s", reportRR.Code, reportRR.Body.String())
 	}
 }
+
+func TestRetentionAdminRoutes(t *testing.T) {
+	router := newRouter()
+	holdReq := httptest.NewRequest(http.MethodPost, "/api/v1/admin/retention/legal-holds", strings.NewReader(`{"entity_id":"user-88","data_type":"messages","reason":"litigation"}`))
+	holdReq.Header.Set("Authorization", "Bearer admin-1")
+	holdReq.Header.Set("X-Actor-Role", "admin")
+	holdReq.Header.Set("Idempotency-Key", "idem-http-admin-hold")
+	holdRR := httptest.NewRecorder()
+	router.ServeHTTP(holdRR, holdReq)
+	if holdRR.Code != http.StatusOK {
+		t.Fatalf("admin create hold failed: status=%d body=%s", holdRR.Code, holdRR.Body.String())
+	}
+
+	reportReq := httptest.NewRequest(http.MethodGet, "/api/v1/admin/retention/reports/compliance", nil)
+	reportReq.Header.Set("Authorization", "Bearer admin-1")
+	reportReq.Header.Set("X-Actor-Role", "admin")
+	reportRR := httptest.NewRecorder()
+	router.ServeHTTP(reportRR, reportReq)
+	if reportRR.Code != http.StatusOK {
+		t.Fatalf("admin report failed: status=%d body=%s", reportRR.Code, reportRR.Body.String())
+	}
+}

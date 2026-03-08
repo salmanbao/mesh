@@ -53,6 +53,20 @@ func NewRouter(handler *Handler) http.Handler {
 		}
 		handler.releaseHold(w, r)
 	})))
+	mux.Handle("/api/v1/admin/legal/holds/check", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+			return
+		}
+		handler.checkHold(w, r)
+	})))
+	mux.Handle("/api/v1/admin/legal/holds/{id}/release", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+			return
+		}
+		handler.releaseHold(w, r)
+	})))
 
 	complianceRoute := authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -63,6 +77,7 @@ func NewRouter(handler *Handler) http.Handler {
 	}))
 	mux.Handle("/api/v1/legal/compliance/scan", complianceRoute)
 	mux.Handle("/legal/compliance/scan", complianceRoute)
+	mux.Handle("/api/v1/admin/legal/compliance/scan", complianceRoute)
 	mux.Handle("/api/v1/legal/compliance/reports/{report_id}", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))

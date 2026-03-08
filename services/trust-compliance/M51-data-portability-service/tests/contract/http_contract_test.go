@@ -85,3 +85,35 @@ func TestExportsHistoryEndpoint(t *testing.T) {
 		t.Fatalf("history failed: status=%d body=%s", rr.Code, rr.Body.String())
 	}
 }
+
+func TestAdminExportsRoutes(t *testing.T) {
+	router := newRouter()
+	createReq := httptest.NewRequest(http.MethodPost, "/v1/admin/exports", strings.NewReader(`{"user_id":"u-admin-target","format":"json"}`))
+	createReq.Header.Set("Authorization", "Bearer admin-1")
+	createReq.Header.Set("X-Actor-Role", "admin")
+	createReq.Header.Set("Idempotency-Key", "idem-http-admin-export")
+	createRR := httptest.NewRecorder()
+	router.ServeHTTP(createRR, createReq)
+	if createRR.Code != http.StatusOK {
+		t.Fatalf("admin create failed: status=%d body=%s", createRR.Code, createRR.Body.String())
+	}
+
+	var createOut contracts.SuccessResponse
+	if err := json.Unmarshal(createRR.Body.Bytes(), &createOut); err != nil {
+		t.Fatalf("decode create response: %v", err)
+	}
+	dataBytes, _ := json.Marshal(createOut.Data)
+	var row contracts.ExportRequestResponse
+	if err := json.Unmarshal(dataBytes, &row); err != nil {
+		t.Fatalf("decode export row: %v", err)
+	}
+
+	getReq := httptest.NewRequest(http.MethodGet, "/v1/admin/exports/"+row.RequestID, nil)
+	getReq.Header.Set("Authorization", "Bearer admin-1")
+	getReq.Header.Set("X-Actor-Role", "admin")
+	getRR := httptest.NewRecorder()
+	router.ServeHTTP(getRR, getReq)
+	if getRR.Code != http.StatusOK {
+		t.Fatalf("admin get failed: status=%d body=%s", getRR.Code, getRR.Body.String())
+	}
+}

@@ -72,13 +72,33 @@ func NewRouter(handler *Handler) http.Handler {
 		handler.submitCSAT(w, r)
 	})))
 
-	mux.Handle("/api/v1/support/admin/tickets/{id}/assign", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	adminRoles := roleGateMiddleware("admin", "support_manager", "team_lead")
+	mux.Handle("/api/v1/support/admin/tickets/search", authMiddleware(adminRoles(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+			return
+		}
+		handler.searchTickets(w, r)
+	}))))
+
+	mux.Handle("/api/v1/support/admin/tickets/{id}", authMiddleware(adminRoles(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handler.getTicket(w, r)
+		case http.MethodPatch:
+			handler.updateTicket(w, r)
+		default:
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
+		}
+	}))))
+
+	mux.Handle("/api/v1/support/admin/tickets/{id}/assign", authMiddleware(adminRoles(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed", requestIDFromContext(r.Context()))
 			return
 		}
 		handler.assignTicket(w, r)
-	})))
+	}))))
 
 	mux.Handle("/api/internal/tickets/create-from-email", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {

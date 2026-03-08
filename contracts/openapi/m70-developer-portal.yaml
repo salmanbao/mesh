@@ -1,0 +1,348 @@
+openapi: 3.0.3
+info:
+  title: M70 Developer Portal API
+  version: 1.0.0
+  description: Developer portal key and webhook management APIs. Includes owner routes used by the M86 control-plane integrations slice.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Health
+  - name: Developers
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: m70Healthz
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+  /readyz:
+    get:
+      tags: [Health]
+      summary: Readiness check
+      operationId: m70Readyz
+      responses:
+        '200':
+          description: Service ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+  /api/v1/developers/register:
+    post:
+      tags: [Developers]
+      summary: Register developer account
+      operationId: m70RegisterDeveloper
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDeveloperRequest'
+      responses:
+        '200':
+          description: Developer registration created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterDeveloperEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/developers/api-keys:
+    post:
+      tags: [Developers]
+      summary: Create developer API key
+      operationId: m70CreateAPIKey
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAPIKeyRequest'
+      responses:
+        '200':
+          description: API key created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKeyEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/developers/api-keys/{id}/rotate:
+    post:
+      tags: [Developers]
+      summary: Rotate API key
+      operationId: m70RotateAPIKey
+      description: Owner contract called by M86 POST /api/admin/v1/integrations/keys/rotate.
+      parameters:
+        - $ref: '#/components/parameters/DeveloperKeyID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: API key rotated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKeyRotationEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/developers/api-keys/{id}/revoke:
+    post:
+      tags: [Developers]
+      summary: Revoke API key
+      operationId: m70RevokeAPIKey
+      parameters:
+        - $ref: '#/components/parameters/DeveloperKeyID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: API key revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKeyEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/developers/webhooks:
+    post:
+      tags: [Developers]
+      summary: Create developer webhook
+      operationId: m70CreateWebhook
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+      responses:
+        '200':
+          description: Webhook created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/developers/webhooks/{id}/test:
+    post:
+      tags: [Developers]
+      summary: Send webhook test event
+      operationId: m70TestWebhook
+      parameters:
+        - $ref: '#/components/parameters/WebhookID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Webhook test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string }
+      description: Required for mutating operations. Backed by 7-day request-hash idempotency store.
+    DeveloperKeyID:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+    WebhookID:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+  schemas:
+    SuccessEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        message: { type: string }
+        data: {}
+    RegisterDeveloperRequest:
+      type: object
+      required: [email, app_name]
+      properties:
+        email: { type: string, format: email }
+        app_name: { type: string }
+    CreateAPIKeyRequest:
+      type: object
+      required: [label]
+      properties:
+        developer_id: { type: string }
+        label: { type: string }
+    CreateWebhookRequest:
+      type: object
+      required: [url, event_type]
+      properties:
+        developer_id: { type: string }
+        url: { type: string, format: uri }
+        event_type: { type: string }
+    Developer:
+      type: object
+      properties:
+        developer_id: { type: string }
+        email: { type: string }
+        app_name: { type: string }
+        tier: { type: string }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+    Session:
+      type: object
+      properties:
+        session_id: { type: string }
+        developer_id: { type: string }
+        session_token: { type: string }
+        status: { type: string }
+        expires_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+    RegisterDeveloperResponse:
+      type: object
+      properties:
+        developer: { $ref: '#/components/schemas/Developer' }
+        session: { $ref: '#/components/schemas/Session' }
+    APIKey:
+      type: object
+      properties:
+        key_id: { type: string }
+        developer_id: { type: string }
+        label: { type: string }
+        masked_key: { type: string }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+        revoked_at: { type: string, format: date-time }
+    APIKeyRotation:
+      type: object
+      properties:
+        rotation_id: { type: string }
+        old_key: { $ref: '#/components/schemas/APIKey' }
+        new_key: { $ref: '#/components/schemas/APIKey' }
+        developer_id: { type: string }
+        created_at: { type: string, format: date-time }
+    Webhook:
+      type: object
+      properties:
+        webhook_id: { type: string }
+        developer_id: { type: string }
+        url: { type: string }
+        event_type: { type: string }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+    WebhookDelivery:
+      type: object
+      properties:
+        delivery_id: { type: string }
+        webhook_id: { type: string }
+        status: { type: string }
+        test_event: { type: boolean }
+        created_at: { type: string, format: date-time }
+    RegisterDeveloperEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/RegisterDeveloperResponse' }
+    APIKeyEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/APIKey' }
+    APIKeyRotationEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/APIKeyRotation' }
+    WebhookEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/Webhook' }
+    WebhookDeliveryEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/WebhookDelivery' }
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        code: { type: string }
+        message: { type: string }
+        request_id: { type: string }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Insufficient access
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Idempotency or state conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }

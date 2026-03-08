@@ -1,0 +1,277 @@
+openapi: 3.0.3
+info:
+  title: M73 Support Service API
+  version: 1.0.0
+  description: Support ticket operations with admin aliases for control-plane orchestration.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Support
+  - name: Admin
+paths:
+  /api/v1/support/tickets/search:
+    get:
+      tags: [Support]
+      summary: Search support tickets
+      operationId: searchSupportTickets
+      parameters:
+        - $ref: '#/components/parameters/QueryQ'
+        - $ref: '#/components/parameters/QueryStatus'
+        - $ref: '#/components/parameters/QueryCategory'
+        - $ref: '#/components/parameters/QueryAssignedTo'
+        - $ref: '#/components/parameters/QueryLimit'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/support/tickets/{id}:
+    get:
+      tags: [Support]
+      summary: Get support ticket by id
+      operationId: getSupportTicket
+      parameters:
+        - $ref: '#/components/parameters/TicketID'
+      responses:
+        '200':
+          description: Ticket details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Support]
+      summary: Update support ticket
+      operationId: updateSupportTicket
+      parameters:
+        - $ref: '#/components/parameters/TicketID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTicketRequest' }
+      responses:
+        '200':
+          description: Updated ticket
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/support/admin/tickets/search:
+    get:
+      tags: [Admin]
+      summary: Search support tickets (admin alias)
+      operationId: adminSearchSupportTickets
+      parameters:
+        - $ref: '#/components/parameters/QueryQ'
+        - $ref: '#/components/parameters/QueryStatus'
+        - $ref: '#/components/parameters/QueryCategory'
+        - $ref: '#/components/parameters/QueryAssignedTo'
+        - $ref: '#/components/parameters/QueryLimit'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/support/admin/tickets/{id}:
+    get:
+      tags: [Admin]
+      summary: Get support ticket by id (admin alias)
+      operationId: adminGetSupportTicket
+      parameters:
+        - $ref: '#/components/parameters/TicketID'
+      responses:
+        '200':
+          description: Ticket details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Admin]
+      summary: Update support ticket (admin alias)
+      operationId: adminUpdateSupportTicket
+      parameters:
+        - $ref: '#/components/parameters/TicketID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTicketRequest' }
+      responses:
+        '200':
+          description: Updated ticket
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/support/admin/tickets/{id}/assign:
+    post:
+      tags: [Admin]
+      summary: Assign support ticket to an agent (admin alias)
+      operationId: adminAssignSupportTicket
+      parameters:
+        - $ref: '#/components/parameters/TicketID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignTicketRequest' }
+      responses:
+        '200':
+          description: Updated ticket assignment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TicketID:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string }
+    QueryQ:
+      in: query
+      name: q
+      required: false
+      schema: { type: string }
+    QueryStatus:
+      in: query
+      name: status
+      required: false
+      schema: { type: string }
+    QueryCategory:
+      in: query
+      name: category
+      required: false
+      schema: { type: string }
+    QueryAssignedTo:
+      in: query
+      name: assigned_to
+      required: false
+      schema: { type: string }
+    QueryLimit:
+      in: query
+      name: limit
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+  schemas:
+    Ticket:
+      type: object
+      properties:
+        ticket_id: { type: string }
+        user_id: { type: string }
+        subject: { type: string }
+        description: { type: string }
+        category: { type: string }
+        priority: { type: string }
+        status: { type: string }
+        sub_status: { type: string }
+        assigned_agent_id: { type: string }
+        sla_response_due_at:
+          type: string
+          format: date-time
+        last_activity_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    UpdateTicketRequest:
+      type: object
+      properties:
+        status: { type: string }
+        sub_status: { type: string }
+        priority: { type: string }
+    AssignTicketRequest:
+      type: object
+      required: [agent_id]
+      properties:
+        agent_id: { type: string }
+        reason: { type: string }
+    TicketEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data: { $ref: '#/components/schemas/Ticket' }
+    TicketListEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Ticket' }
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        code: { type: string }
+        message: { type: string }
+        request_id: { type: string }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Insufficient access
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }

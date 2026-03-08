@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/viralforge/mesh/services/integrations/M73-support-service/internal/application"
+	"github.com/viralforge/mesh/services/trust-compliance/M50-consent-service/internal/application"
 )
 
 type contextKey string
@@ -46,7 +46,6 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 		if id == "" {
 			id = nextRequestID()
 		}
-		w.Header().Set("X-Request-Id", id)
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), requestIDKey, id)))
 	})
 }
@@ -58,8 +57,8 @@ func authMiddleware(next http.Handler) http.Handler {
 			writeError(w, http.StatusUnauthorized, "unauthorized", "missing bearer token", requestIDFromContext(r.Context()))
 			return
 		}
-		subject := strings.TrimSpace(auth[7:])
-		if subject == "" {
+		sub := strings.TrimSpace(auth[7:])
+		if sub == "" {
 			writeError(w, http.StatusUnauthorized, "unauthorized", "empty bearer token", requestIDFromContext(r.Context()))
 			return
 		}
@@ -68,7 +67,7 @@ func authMiddleware(next http.Handler) http.Handler {
 			role = "user"
 		}
 		actor := application.Actor{
-			SubjectID:      subject,
+			SubjectID:      sub,
 			Role:           role,
 			RequestID:      requestIDFromContext(r.Context()),
 			IdempotencyKey: strings.TrimSpace(r.Header.Get("Idempotency-Key")),
@@ -77,34 +76,10 @@ func authMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func roleGateMiddleware(allowedRoles ...string) func(http.Handler) http.Handler {
-	allowed := map[string]struct{}{}
-	for _, role := range allowedRoles {
-		trimmed := strings.ToLower(strings.TrimSpace(role))
-		if trimmed != "" {
-			allowed[trimmed] = struct{}{}
-		}
-	}
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			actor := actorFromContext(r.Context())
-			role := strings.ToLower(strings.TrimSpace(actor.Role))
-			if role == "" {
-				role = "user"
-			}
-			if _, ok := allowed[role]; !ok {
-				writeError(w, http.StatusForbidden, "forbidden", "insufficient role scope", requestIDFromContext(r.Context()))
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
 func actorFromContext(ctx context.Context) application.Actor {
 	if v := ctx.Value(actorKey); v != nil {
-		if actor, ok := v.(application.Actor); ok {
-			return actor
+		if a, ok := v.(application.Actor); ok {
+			return a
 		}
 	}
 	return application.Actor{}
@@ -112,8 +87,8 @@ func actorFromContext(ctx context.Context) application.Actor {
 
 func requestIDFromContext(ctx context.Context) string {
 	if v := ctx.Value(requestIDKey); v != nil {
-		if id, ok := v.(string); ok {
-			return id
+		if s, ok := v.(string); ok {
+			return s
 		}
 	}
 	return ""

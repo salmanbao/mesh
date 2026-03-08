@@ -1,0 +1,358 @@
+openapi: 3.0.3
+info:
+  title: M71 Integration Hub API
+  version: 1.0.0
+  description: Integration workflows and webhook orchestration. Includes owner route used by M86 integration workflow testing.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Health
+  - name: Integrations
+  - name: Workflows
+  - name: Webhooks
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: m71Healthz
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+  /readyz:
+    get:
+      tags: [Health]
+      summary: Readiness check
+      operationId: m71Readyz
+      responses:
+        '200':
+          description: Service ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+  /api/v1/integrations/{type}/authorize:
+    post:
+      tags: [Integrations]
+      summary: Authorize external integration
+      operationId: m71AuthorizeIntegration
+      parameters:
+        - $ref: '#/components/parameters/IntegrationType'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorizeIntegrationRequest'
+      responses:
+        '200':
+          description: Integration authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/workflows:
+    post:
+      tags: [Workflows]
+      summary: Create workflow
+      operationId: m71CreateWorkflow
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkflowRequest'
+      responses:
+        '200':
+          description: Workflow created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/workflows/{id}/publish:
+    post:
+      tags: [Workflows]
+      summary: Publish workflow
+      operationId: m71PublishWorkflow
+      parameters:
+        - $ref: '#/components/parameters/WorkflowID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Workflow published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/workflows/{id}/test:
+    post:
+      tags: [Workflows]
+      summary: Test workflow execution
+      operationId: m71TestWorkflowPost
+      description: Owner contract called by M86 POST /api/admin/v1/integrations/workflows/test.
+      parameters:
+        - $ref: '#/components/parameters/WorkflowID'
+      responses:
+        '200':
+          description: Workflow test execution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowExecutionEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    get:
+      tags: [Workflows]
+      summary: Test workflow execution (GET compatibility)
+      operationId: m71TestWorkflowGet
+      parameters:
+        - $ref: '#/components/parameters/WorkflowID'
+      responses:
+        '200':
+          description: Workflow test execution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowExecutionEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/webhooks:
+    post:
+      tags: [Webhooks]
+      summary: Create webhook
+      operationId: m71CreateWebhook
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+      responses:
+        '200':
+          description: Webhook created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/webhooks/{id}/test:
+    post:
+      tags: [Webhooks]
+      summary: Send webhook test event
+      operationId: m71TestWebhook
+      parameters:
+        - $ref: '#/components/parameters/WebhookID'
+      responses:
+        '200':
+          description: Webhook test delivery result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryEnvelope'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string }
+      description: Required for mutating operations that support replay protection.
+    IntegrationType:
+      in: path
+      name: type
+      required: true
+      schema: { type: string }
+    WorkflowID:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+    WebhookID:
+      in: path
+      name: id
+      required: true
+      schema: { type: string }
+  schemas:
+    SuccessEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        message: { type: string }
+        data: {}
+    AuthorizeIntegrationRequest:
+      type: object
+      properties:
+        user_id: { type: string }
+        integration_name: { type: string }
+    CreateWorkflowRequest:
+      type: object
+      required: [workflow_name, trigger_event_type, action_type]
+      properties:
+        user_id: { type: string }
+        workflow_name: { type: string }
+        workflow_description: { type: string }
+        trigger_event_type: { type: string }
+        action_type: { type: string }
+        integration_id: { type: string }
+    CreateWebhookRequest:
+      type: object
+      required: [endpoint_url, event_type]
+      properties:
+        user_id: { type: string }
+        endpoint_url: { type: string, format: uri }
+        event_type: { type: string }
+    Integration:
+      type: object
+      properties:
+        integration_id: { type: string }
+        user_id: { type: string }
+        integration_type: { type: string }
+        integration_name: { type: string }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+    Workflow:
+      type: object
+      properties:
+        workflow_id: { type: string }
+        user_id: { type: string }
+        workflow_name: { type: string }
+        workflow_description: { type: string }
+        trigger_event_type: { type: string }
+        action_type: { type: string }
+        integration_id: { type: string }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+    WorkflowExecution:
+      type: object
+      properties:
+        execution_id: { type: string }
+        workflow_id: { type: string }
+        status: { type: string }
+        test_run: { type: boolean }
+        started_at: { type: string, format: date-time }
+    Webhook:
+      type: object
+      properties:
+        webhook_id: { type: string }
+        user_id: { type: string }
+        endpoint_url: { type: string }
+        event_type: { type: string }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+    WebhookDelivery:
+      type: object
+      properties:
+        delivery_id: { type: string }
+        webhook_id: { type: string }
+        status: { type: string }
+        test_event: { type: boolean }
+        created_at: { type: string, format: date-time }
+    IntegrationEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/Integration' }
+    WorkflowEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/Workflow' }
+    WorkflowExecutionEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/WorkflowExecution' }
+    WebhookEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/Webhook' }
+    WebhookDeliveryEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/WebhookDelivery' }
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        code: { type: string }
+        message: { type: string }
+        request_id: { type: string }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Insufficient access
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Idempotency or state conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }

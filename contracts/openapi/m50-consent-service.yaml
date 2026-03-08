@@ -1,0 +1,300 @@
+openapi: 3.0.3
+info:
+  title: M50 Consent Service API
+  version: 1.0.0
+  description: Manage consent read/update/withdraw workflows with admin aliases.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: Consent
+  - name: Admin
+paths:
+  /v1/consent/{user_id}:
+    get:
+      tags: [Consent]
+      summary: Get consent record
+      operationId: getConsent
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Consent record
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentRecordEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/consent/{user_id}/update:
+    post:
+      tags: [Consent]
+      summary: Update consent preferences
+      operationId: updateConsent
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateConsentRequest' }
+      responses:
+        '200':
+          description: Consent updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentRecordEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/consent/{user_id}/withdraw:
+    post:
+      tags: [Consent]
+      summary: Withdraw consent for a category or all categories
+      operationId: withdrawConsent
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WithdrawConsentRequest' }
+      responses:
+        '200':
+          description: Consent withdrawn
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentRecordEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/consent/{user_id}/history:
+    get:
+      tags: [Consent]
+      summary: List consent history events
+      operationId: listConsentHistory
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/LimitQuery'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: History entries
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentHistoryEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1/admin/consent/{user_id}:
+    get:
+      tags: [Admin]
+      summary: Get consent record (admin alias)
+      operationId: adminGetConsent
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: Consent record
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentRecordEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/admin/consent/{user_id}/update:
+    post:
+      tags: [Admin]
+      summary: Update consent preferences (admin alias)
+      operationId: adminUpdateConsent
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateConsentRequest' }
+      responses:
+        '200':
+          description: Consent updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentRecordEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/admin/consent/{user_id}/withdraw:
+    post:
+      tags: [Admin]
+      summary: Withdraw consent (admin alias)
+      operationId: adminWithdrawConsent
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XRequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WithdrawConsentRequest' }
+      responses:
+        '200':
+          description: Consent withdrawn
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentRecordEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/admin/consent/{user_id}/history:
+    get:
+      tags: [Admin]
+      summary: List consent history (admin alias)
+      operationId: adminListConsentHistory
+      parameters:
+        - $ref: '#/components/parameters/UserID'
+        - $ref: '#/components/parameters/LimitQuery'
+        - $ref: '#/components/parameters/XRequestID'
+      responses:
+        '200':
+          description: History entries
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentHistoryEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    UserID:
+      in: path
+      name: user_id
+      required: true
+      schema: { type: string }
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string }
+    XRequestID:
+      in: header
+      name: X-Request-Id
+      schema: { type: string }
+    LimitQuery:
+      in: query
+      name: limit
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+  schemas:
+    ConsentRecord:
+      type: object
+      properties:
+        user_id: { type: string }
+        preferences:
+          type: object
+          additionalProperties:
+            type: boolean
+        status: { type: string }
+        updated_at:
+          type: string
+          format: date-time
+        updated_by: { type: string }
+    ConsentHistoryEntry:
+      type: object
+      properties:
+        event_id: { type: string }
+        event_type: { type: string }
+        user_id: { type: string }
+        category: { type: string }
+        reason: { type: string }
+        changed_by: { type: string }
+        occurred_at:
+          type: string
+          format: date-time
+    UpdateConsentRequest:
+      type: object
+      required: [preferences, reason]
+      properties:
+        preferences:
+          type: object
+          additionalProperties:
+            type: boolean
+        reason: { type: string }
+    WithdrawConsentRequest:
+      type: object
+      required: [reason]
+      properties:
+        category: { type: string, default: all }
+        reason: { type: string }
+    ConsentRecordEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data: { $ref: '#/components/schemas/ConsentRecord' }
+    ConsentHistoryEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/ConsentHistoryEntry' }
+    ErrorResponse:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Insufficient access
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: State conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }

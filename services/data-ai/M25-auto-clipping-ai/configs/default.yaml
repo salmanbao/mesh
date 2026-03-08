@@ -5,5 +5,7 @@ service:
   grpc_port: 9090
 dependencies:
   clipping_tool_owner_api_url: ${M24_CLIPPING_TOOL_OWNER_API_URL}
+persistence:
+  idempotency_store_path: ${M25_IDEMPOTENCY_STORE_PATH}
 observability:
   otlp_endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}
